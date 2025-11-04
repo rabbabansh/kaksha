@@ -13,6 +13,7 @@ type Question = {
     section: string | null;
     topic: string | null;
     subtopic: string | null;
+    source: string | null;
     set_html: string | null;
     question_html: string | null;
     question_type: string | null;
@@ -35,6 +36,7 @@ export function QuestionBrowser({ allQuestions, topics, subtopics }: QuestionBro
   const [selectedSection, setSelectedSection] = useState('Quantitative Ability');
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
   const [selectedSubtopic, setSelectedSubtopic] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const [activeQuestion, setActiveQuestion] = useState<Question | null>(null);
   const [userAnswer, setUserAnswer] = useState('');
@@ -42,12 +44,32 @@ export function QuestionBrowser({ allQuestions, topics, subtopics }: QuestionBro
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
 
   const filteredQuestions = useMemo(() => {
-    return allQuestions.filter(q => 
+    let filtered = allQuestions.filter(q => 
       q.section === selectedSection &&
       (!selectedTopic || q.topic === selectedTopic) &&
       (!selectedSubtopic || q.subtopic === selectedSubtopic)
     );
-  }, [allQuestions, selectedSection, selectedTopic, selectedSubtopic]);
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      filtered = filtered.filter(q => {
+        const questionText = (q.question_html || '').toLowerCase();
+        const topic = (q.topic || '').toLowerCase();
+        const subtopic = (q.subtopic || '').toLowerCase();
+        const source = (q.source || '').toLowerCase();
+        
+        return (
+          questionText.includes(query) ||
+          topic.includes(query) ||
+          subtopic.includes(query) ||
+          source.includes(query)
+        );
+      });
+    }
+
+    return filtered;
+  }, [allQuestions, selectedSection, selectedTopic, selectedSubtopic, searchQuery]);
 
   const handleCheckAnswer = () => {
     if (!activeQuestion || !activeQuestion.answer) return;
@@ -73,6 +95,22 @@ export function QuestionBrowser({ allQuestions, topics, subtopics }: QuestionBro
             <CardTitle>Filters & Questions</CardTitle>
           </CardHeader>
           <CardContent>
+            {/* Search Input */}
+            <div className="mb-4">
+              <Input
+                type="text"
+                placeholder="Search questions, topics, or subtopics..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full"
+              />
+              {searchQuery && (
+                <p className="text-sm text-muted-foreground mt-2">
+                  Found {filteredQuestions.length} result{filteredQuestions.length !== 1 ? 's' : ''}
+                </p>
+              )}
+            </div>
+
             <div className="flex gap-2 mb-4">
               <Button onClick={() => setSelectedSection('Quantitative Ability')} variant={selectedSection === 'Quantitative Ability' ? 'default' : 'outline'}>QA</Button>
               <Button onClick={() => setSelectedSection('Data Interpretation & Logical Reasoning')} variant={selectedSection === 'Data Interpretation & Logical Reasoning' ? 'default' : 'outline'}>DILR</Button>

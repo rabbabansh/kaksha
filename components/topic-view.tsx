@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { QuestionDisplay } from './question-display';
 import { groupQuestionsBySet } from '@/lib/grouping'; // Import the helper
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Question = any;
 type GroupedByTopic = Record<string, Record<string, Question[]>>;
 

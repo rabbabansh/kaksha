@@ -6,28 +6,50 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Question = any;
 
 interface QuestionDisplayProps {
   question: Question | null;
   // This prop should contain all questions *within the current context* // (e.g., from one year/slot, or from all topics)
-  allQuestionsInContext: Question[]; 
+  allQuestionsInContext: Question[];
+  // Test mode props
+  isTestMode?: boolean;
+  testFinished?: boolean;
+  testAnswers?: Record<string, string>;
+  onAnswerChange?: (questionId: string, answer: string) => void;
 }
 
-export function QuestionDisplay({ question, allQuestionsInContext }: QuestionDisplayProps) {
+export function QuestionDisplay({ 
+  question, 
+  allQuestionsInContext,
+  isTestMode = false,
+  testFinished = false,
+  testAnswers = {},
+  onAnswerChange
+}: QuestionDisplayProps) {
   const [userAnswers, setUserAnswers] = useState<Record<string, string>>({});
   const [showSolutions, setShowSolutions] = useState<Record<string, boolean>>({});
 
-  // Reset state when the active question changes
+  // In test mode, use testAnswers instead of local state
+  // In normal mode, use local state
+  const currentAnswers = isTestMode ? testAnswers : userAnswers;
+  const currentShowSolutions = isTestMode ? {} : showSolutions; // Don't show solutions in test mode until finished
+
+  // Reset local state when the active question changes (only in non-test mode)
   useEffect(() => {
-    setUserAnswers({});
-    setShowSolutions({});
-  }, [question]);
+    if (!isTestMode) {
+      setUserAnswers({});
+      setShowSolutions({});
+    }
+  }, [question, isTestMode]);
 
   if (!question) {
     return (
       <Card className="flex items-center justify-center min-h-[400px]">
-        <p className="text-muted-foreground">Select a question or set to begin.</p>
+        <p className="text-muted-foreground">
+          {isTestMode ? 'Select a question to answer in test mode.' : 'Select a question or set to begin.'}
+        </p>
       </Card>
     );
   }
@@ -45,13 +67,39 @@ export function QuestionDisplay({ question, allQuestionsInContext }: QuestionDis
   const setHtml = isSet ? questionsToDisplay[0].set_html : null;
 
   const handleCheckAnswer = (q_id: string) => {
-    setShowSolutions(prev => ({ ...prev, [q_id]: true }));
+    if (!isTestMode) {
+      setShowSolutions(prev => ({ ...prev, [q_id]: true }));
+    }
+  };
+
+  const handleAnswerChange = (q_id: string, answer: string) => {
+    if (isTestMode && onAnswerChange) {
+      onAnswerChange(q_id, answer);
+    } else {
+      setUserAnswers(prev => ({ ...prev, [q_id]: answer }));
+    }
+  };
+
+  // Determine if solutions should be shown
+  const shouldShowSolution = (q_id: string) => {
+    if (isTestMode && testFinished) {
+      return true; // Show all solutions after test is finished
+    }
+    if (isTestMode) {
+      return false; // Don't show solutions during test
+    }
+    return currentShowSolutions[q_id] || false;
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{question.topic} - {question.subtopic}</CardTitle>
+        <CardTitle>
+          {isTestMode && !testFinished && (
+            <span className="text-sm font-normal text-primary mr-2">[Test Mode]</span>
+          )}
+          {question.topic} - {question.subtopic}
+        </CardTitle>
         <CardDescription>{question.source}</CardDescription>
       </CardHeader>
       <CardContent>
@@ -66,9 +114,11 @@ export function QuestionDisplay({ question, allQuestionsInContext }: QuestionDis
         
         {/* Map over all questions in the set (or the single question) */}
         {questionsToDisplay.map((q, index) => {
-          const userAnswer = userAnswers[q.question_id] || '';
-          const showSolution = showSolutions[q.question_id] || false;
-          const isCorrect = showSolution ? userAnswer.trim().toUpperCase() === q.answer?.trim().toUpperCase() : null;
+          const userAnswer = currentAnswers[q.question_id] || '';
+          const showSolution = shouldShowSolution(q.question_id);
+          const isCorrect = showSolution && q.answer 
+            ? userAnswer.trim().toUpperCase() === q.answer.trim().toUpperCase() 
+            : null;
 
           return (
             <div key={q.question_id}>
@@ -86,13 +136,18 @@ export function QuestionDisplay({ question, allQuestionsInContext }: QuestionDis
                   ['A', 'B', 'C', 'D', 'E'].map(opt => {
                     const optionKey = `option_${opt.toLowerCase()}_html`;
                     if (q[optionKey] && q[optionKey] !== 'N/A') {
+                      const isSelected = userAnswer === opt;
                       return (
                         <Button
                           key={opt}
-                          variant={userAnswer === opt ? 'secondary' : 'outline'}
-                          className="w-full justify-start h-auto text-left whitespace-normal p-4"
-                          onClick={() => !showSolution && setUserAnswers(prev => ({ ...prev, [q.question_id]: opt }))}
-                          disabled={showSolution}
+                          variant={isSelected ? 'secondary' : 'outline'}
+                          className={`w-full justify-start h-auto text-left whitespace-normal p-4 ${
+                            isTestMode && testFinished && isSelected 
+                              ? (isCorrect ? 'border-green-500 border-2' : 'border-red-500 border-2')
+                              : ''
+                          }`}
+                          onClick={() => !showSolution && handleAnswerChange(q.question_id, opt)}
+                          disabled={showSolution || (isTestMode && testFinished)}
                         >
                           <div className="flex items-start gap-4">
                             <span className="font-bold">({opt})</span>
@@ -107,23 +162,32 @@ export function QuestionDisplay({ question, allQuestionsInContext }: QuestionDis
                   <Input 
                     placeholder="Type your answer..."
                     value={userAnswer}
-                    onChange={(e) => !showSolution && setUserAnswers(prev => ({ ...prev, [q.question_id]: e.target.value }))}
-                    disabled={showSolution}
+                    onChange={(e) => !showSolution && handleAnswerChange(q.question_id, e.target.value)}
+                    disabled={showSolution || (isTestMode && testFinished)}
+                    className={isTestMode && testFinished && userAnswer
+                      ? (isCorrect ? 'border-green-500 border-2' : 'border-red-500 border-2')
+                      : ''
+                    }
                   />
                 )}
               </div>
 
-              {/* Check Answer Button */}
-              <Button onClick={() => handleCheckAnswer(q.question_id)} className="ml-8 mt-4" disabled={showSolution}>
-                Check Answer
-              </Button>
+              {/* Check Answer Button - Only show in non-test mode or after test is finished */}
+              {!isTestMode && (
+                <Button onClick={() => handleCheckAnswer(q.question_id)} className="ml-8 mt-4" disabled={showSolution}>
+                  Check Answer
+                </Button>
+              )}
 
-              {/* Solution Display */}
+              {/* Solution Display - Show in normal mode when checked, or in test mode after finishing */}
               {showSolution && (
                 <div className="ml-8 mt-4 p-4 border rounded-md bg-muted/50">
                   <h3 className={`font-bold text-lg ${isCorrect ? 'text-green-600' : 'text-red-600'}`}>
                     {isCorrect ? 'Correct!' : 'Incorrect.'} The correct answer is: {q.answer}
                   </h3>
+                  {isTestMode && !userAnswer && (
+                    <p className="text-sm text-muted-foreground mt-2">You did not answer this question.</p>
+                  )}
                   <Separator className="my-2" />
                   <div className="prose dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: q.explanation_html || 'No explanation available.' }} />
                 </div>

@@ -2,6 +2,7 @@
 type Question = {
     question_id: string;
     set_id: string | null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     [key: string]: any; // Allow other properties
   };
   
