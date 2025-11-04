@@ -1,0 +1,31 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./master_cat_questions.db"
+}
+
+model questions {
+  set_id                 String?
+  question_id            String @id
+  source                 String?
+  year                   String?
+  slot                   String?
+  section                String?
+  topic                  String?
+  subtopic               String?
+  set_html               String?
+  question_html          String?
+  question_type          String?
+  option_a_html          String?
+  option_b_html          String?
+  option_c_html          String?
+  option_d_html          String?
+  option_e_html          String?
+  answer                 String?
+  explanation_html       String?
+  video_explanation_link String?
+}
