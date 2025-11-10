@@ -4,8 +4,8 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./master_cat_questions.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model questions {
@@ -28,4 +28,94 @@ model questions {
   answer                 String?
   explanation_html       String?
   video_explanation_link String?
+  
+  // 1-to-1 link to its vector
+  vector                 QuestionVector?
+}
+
+// Vector storage model for embeddings
+model QuestionVector {
+  id         String   @id @default(uuid())
+  // The 1-to-1 relationship
+  questionId String   @unique
+  question   questions @relation(fields: [questionId], references: [question_id], onDelete: Cascade)
+  // The vector from local model (Xenova/all-MiniLM-L6-v2 has 384 dimensions)
+  vector     Unsupported("vector(384)")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String?
+  image         String?
+  emailVerified DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  testProgress  TestProgress[]
+  questionAttempts QuestionAttempt[]
+  userProgress  UserProgress[]
+  profile       UserProfile?
+}
+
+model TestProgress {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  year            String
+  slot            String
+  section         String?  // VARC, DILR, QA
+  answers         String   @default("{}") // JSON string of { questionId: answer }
+  flagged         String   @default("[]") // JSON string of [questionId]
+  timeRemaining   Int?     // seconds remaining for current section
+  currentSection  String?  // current active section
+  completed       Boolean  @default(false)
+  score           Int?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([userId, year, slot])
+  @@index([userId])
+}
+
+model QuestionAttempt {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questionId  String
+  userAnswer  String
+  isCorrect   Boolean
+  source      String   // 'chat' or 'test'
+  attemptedAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([questionId])
+  @@index([userId, questionId])
+}
+
+model UserProgress {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  section         String
+  topic           String
+  subtopic        String
+  totalQuestions  Int      @default(0)
+  correctCount    Int      @default(0)
+  lastAttemptedAt DateTime?
+  updatedAt       DateTime @updatedAt
+
+  @@unique([userId, section, topic, subtopic])
+  @@index([userId])
+}
+
+model UserProfile {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kakshaScore   Float    @default(0) // Overall score 0-100
+  totalAttempts Int      @default(0)
+  totalCorrect  Int      @default(0)
+  strengths     String   @default("[]") // JSON array of top 3 subtopics
+  weaknesses    String   @default("[]") // JSON array of bottom 3 subtopics
+  updatedAt     DateTime @updatedAt
 }
