@@ -70,8 +70,14 @@ export async function POST(request: NextRequest) {
 
 async function handleChatRequest(userId: string, request: NextRequest) {
   try {
+    let body;
+    try {
+      body = await request.json();
+    } catch (parseError) {
+      console.error('Error parsing request body:', parseError);
+      return NextResponse.json({ error: 'Invalid request format' }, { status: 400 });
+    }
 
-    const body = await request.json();
     const { message, history, questionAnswer } = body;
 
     if (!message || typeof message !== 'string') {
