@@ -116,7 +116,6 @@ export function TopicViewWrapper({ allQuestions }: TopicViewWrapperProps) {
 
       {/* Topic View */}
       <TopicView
-        section={selectedSection}
         data={groupedByTopic}
         allQuestions={sectionQuestions}
       />

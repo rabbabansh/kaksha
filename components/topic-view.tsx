@@ -12,12 +12,11 @@ type Question = any;
 type GroupedByTopic = Record<string, Record<string, Question[]>>;
 
 interface TopicViewProps {
-  section: string;
   data: GroupedByTopic;
   allQuestions: Question[]; // This holds ALL questions from all topics for context
 }
 
-export function TopicView({ section, data, allQuestions }: TopicViewProps) {
+export function TopicView({ data, allQuestions }: TopicViewProps) {
   // This state will hold the list of grouped sets/questions for the right panel
   const [activeSubtopicContent, setActiveSubtopicContent] = useState<Question[][] | null>(null);
   

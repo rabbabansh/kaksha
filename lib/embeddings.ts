@@ -1,6 +1,5 @@
 import prisma from './prisma';
 import { embed } from './embeddingClient';
-import { createFusedDocument } from './fusedDocument';
 import type { questions } from './generated/prisma';
 
 type Question = questions;
