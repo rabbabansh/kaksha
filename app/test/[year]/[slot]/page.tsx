@@ -18,7 +18,7 @@ export default async function TestPage({
 
   const { year, slot } = await params;
   const { mode } = await searchParams;
-  const userId = (session.user as any)?.id;
+  const userId = (session.user as { id?: string })?.id;
 
   // Fetch questions for this test
   const questions = await prisma.questions.findMany({

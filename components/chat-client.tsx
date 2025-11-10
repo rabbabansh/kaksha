@@ -164,20 +164,26 @@ export function ChatClient() {
   // Render markdown with math support
   const renderMarkdownContent = (content: string) => {
     // Custom components for markdown that handle math
-    const components: any = {
-      p: ({ children }: any) => {
+    const components: {
+      p: ({ children }: { children?: React.ReactNode }) => React.ReactElement;
+      li: ({ children }: { children?: React.ReactNode }) => React.ReactElement;
+      strong: ({ children }: { children?: React.ReactNode }) => React.ReactElement;
+      em: ({ children }: { children?: React.ReactNode }) => React.ReactElement;
+      code: ({ children, className }: { children?: React.ReactNode; className?: string }) => React.ReactElement;
+    } = {
+      p: ({ children }) => {
         return <p>{processMathInChildren(children)}</p>;
       },
-      li: ({ children }: any) => {
+      li: ({ children }) => {
         return <li>{processMathInChildren(children)}</li>;
       },
-      strong: ({ children }: any) => {
+      strong: ({ children }) => {
         return <strong>{processMathInChildren(children)}</strong>;
       },
-      em: ({ children }: any) => {
+      em: ({ children }) => {
         return <em>{processMathInChildren(children)}</em>;
       },
-      code: ({ children, className }: any) => {
+      code: ({ children, className }) => {
         return <code className={className}>{children}</code>;
       },
     };
@@ -195,7 +201,7 @@ export function ChatClient() {
   };
   
   // Process children to render math expressions
-  const processMathInChildren = (children: any): React.ReactNode => {
+  const processMathInChildren = (children: React.ReactNode): React.ReactNode => {
     if (typeof children === 'string') {
       return renderMathInText(children);
     }
@@ -247,7 +253,7 @@ export function ChatClient() {
         } else {
           parts.push(<InlineMath key={`math-${idx}`} math={mathMatch.content} />);
         }
-      } catch (e) {
+      } catch {
         parts.push(<span key={`math-${idx}`}>{mathMatch.content}</span>);
       }
       

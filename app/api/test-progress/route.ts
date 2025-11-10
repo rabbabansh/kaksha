@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Year and slot are required' }, { status: 400 });
     }
 
-    let userId = (session.user as any)?.id;
+    let userId = (session.user as { id?: string })?.id;
     if (!userId && session.user?.email) {
       // Fallback: fetch user by email
       const dbUser = await prisma.user.findUnique({
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    let userId = (session.user as any)?.id;
+    let userId = (session.user as { id?: string })?.id;
     if (!userId && session.user?.email) {
       // Fallback: fetch user by email
       const dbUser = await prisma.user.findUnique({

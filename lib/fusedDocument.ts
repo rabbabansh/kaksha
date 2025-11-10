@@ -1,9 +1,11 @@
+import type { questions } from './generated/prisma';
+
 /**
  * Creates a single, rich text document from a Question object
  * including ALL metadata for embedding.
  * @param {object} question - The Question object from Prisma
  */
-export function createFusedDocument(question: any): string {
+export function createFusedDocument(question: questions): string {
   // Format options
   const options: string[] = [];
   if (question.option_a_html) options.push(`- A: ${question.option_a_html}`);

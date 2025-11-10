@@ -1,9 +1,9 @@
 import prisma from './prisma';
 import { embed } from './embeddingClient';
 import { createFusedDocument } from './fusedDocument';
+import type { questions } from './generated/prisma';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Question = any;
+type Question = questions;
 
 /**
  * Search questions using vector similarity search
@@ -77,7 +77,12 @@ async function searchQuestionsBySubtopicFallback(
   excludeIds: string[] = [],
   limit: number = 10
 ): Promise<Question[]> {
-  const where: any = {};
+  const where: {
+    subtopic?: string;
+    topic?: string;
+    section?: string;
+    question_id?: { notIn: string[] };
+  } = {};
   if (subtopic) where.subtopic = subtopic;
   if (topic) where.topic = topic;
   if (section) where.section = section;
@@ -119,7 +124,12 @@ export async function getQuestionMetadata(): Promise<{
     },
   });
 
-  const metadata: Record<string, any> = {};
+  const metadata: Record<string, {
+    topics: Record<string, {
+      subtopics: string[];
+      count: number;
+    }>;
+  }> = {};
 
   questions.forEach((q) => {
     if (!q.section || !q.topic || !q.subtopic) return;
@@ -142,6 +152,6 @@ export async function getQuestionMetadata(): Promise<{
     metadata[q.section].topics[q.topic].count++;
   });
 
-  return metadata as any;
+  return { sections: metadata };
 }
 

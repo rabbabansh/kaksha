@@ -5,6 +5,15 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { getQuestionMetadata, searchQuestionsBySubtopic } from '@/lib/embeddings';
 import { getUserProgressStats, updateUserProgress } from '@/lib/progress';
 import prisma from '@/lib/prisma';
+import type { questions } from '@/lib/generated/prisma';
+
+interface ChatMessage {
+  role: string;
+  content?: string;
+  type?: string;
+  questionData?: questions;
+  questionsData?: questions[];
+}
 
 const EXAM_DATE = new Date('2025-11-30');
 const TODAY = new Date();
@@ -17,13 +26,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const userId = (session.user as any)?.id;
+    const userId = (session.user as { id?: string })?.id;
     if (!userId) {
       console.error('[Chat API] User ID not found in session:', {
         hasSession: !!session,
         hasUser: !!session?.user,
         userEmail: session?.user?.email,
-        userId: (session?.user as any)?.id,
+        userId: (session?.user as { id?: string })?.id,
       });
       
       // Try to fetch user by email as fallback
@@ -35,7 +44,7 @@ export async function POST(request: NextRequest) {
           });
           if (dbUser) {
             // Update session user ID for this request
-            (session.user as any).id = dbUser.id;
+            (session.user as { id?: string }).id = dbUser.id;
             const fallbackUserId = dbUser.id;
             console.log('[Chat API] Found user by email, using ID:', fallbackUserId);
             // Continue with fallbackUserId
@@ -151,7 +160,7 @@ Remember: Always use questions from the database. Never make up questions.`;
       const chatHistory = (history || []).slice(-15); // Get more history for better context
 
       // Convert history to Gemini format, including question context
-      const historyForGemini = chatHistory.map((msg: { role: string; content?: string; type?: string; questionData?: any; questionsData?: any[] }) => {
+      const historyForGemini = chatHistory.map((msg: ChatMessage) => {
         // If this is a question message, include the question context in the assistant's message
         if (msg.role === 'assistant' && (msg.type === 'question' || msg.type === 'set')) {
           const questionData = msg.questionsData?.[0] || msg.questionData;
@@ -177,7 +186,7 @@ Remember: Always use questions from the database. Never make up questions.`;
         }
         // Skip messages without content
         return null;
-      }).filter((msg): msg is { role: string; parts: Array<{ text: string }> } => msg !== null);
+      }).filter((msg: { role: string; parts: Array<{ text: string }> } | null): msg is { role: string; parts: Array<{ text: string }> } => msg !== null);
 
       // Build enhanced prompt that references the conversation history
       const answerContextPrompt = `The user just submitted their answer: "${questionAnswer.answer}".
@@ -248,7 +257,7 @@ IMPORTANT: This is just feedback on their answer. DO NOT ask a new question auto
     const chatHistory = (history || []).slice(-15);
 
     // Convert history to Gemini format, including question context
-    const historyForGemini = chatHistory.map((msg: { role: string; content?: string; type?: string; questionData?: any; questionsData?: any[] }) => {
+    const historyForGemini = chatHistory.map((msg: ChatMessage) => {
       // Include question data in the assistant's message
       if (msg.role === 'assistant' && (msg.type === 'question' || msg.type === 'set')) {
         const questionData = msg.questionsData?.[0] || msg.questionData;
@@ -272,7 +281,7 @@ IMPORTANT: This is just feedback on their answer. DO NOT ask a new question auto
         };
       }
       return null;
-    }).filter((msg): msg is { role: string; parts: Array<{ text: string }> } => msg !== null);
+      }).filter((msg: { role: string; parts: Array<{ text: string }> } | null): msg is { role: string; parts: Array<{ text: string }> } => msg !== null);
 
     // Initialize Gemini
     const genAI = new GoogleGenerativeAI(apiKey);
@@ -405,7 +414,7 @@ Provide a brief introduction (1-2 sentences) before presenting this question. Th
     // If this looks like an answer (single letter A-E), find the question from history and provide feedback
     if (isAnswerSubmission) {
       // Find the most recent question in the history
-      let questionToCheck: any = null;
+      let questionToCheck: questions | null = null;
       for (let i = chatHistory.length - 1; i >= 0; i--) {
         const msg = chatHistory[i];
         if (msg.role === 'assistant' && (msg.type === 'question' || msg.type === 'set')) {

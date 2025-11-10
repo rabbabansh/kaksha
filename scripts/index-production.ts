@@ -90,22 +90,18 @@ async function indexProduction() {
         // Generate embedding
         const embedding = await embed(fusedDoc);
         
-        // Upsert vector
+        // Upsert vector using raw SQL (Prisma doesn't support vector type directly)
+        const vectorString = `[${embedding.join(',')}]`;
+        await prisma.$executeRaw`
+          INSERT INTO "QuestionVector" ("id", "questionId", vector)
+          VALUES (gen_random_uuid(), ${question.question_id}, ${vectorString}::vector)
+          ON CONFLICT ("questionId") 
+          DO UPDATE SET vector = ${vectorString}::vector
+        `;
+        
         if (question.vector) {
-          // Update existing vector
-          await prisma.questionVector.update({
-            where: { questionId: question.question_id },
-            data: { vector: embedding },
-          });
           updated++;
         } else {
-          // Create new vector
-          await prisma.questionVector.create({
-            data: {
-              questionId: question.question_id,
-              vector: embedding,
-            },
-          });
           created++;
         }
 
