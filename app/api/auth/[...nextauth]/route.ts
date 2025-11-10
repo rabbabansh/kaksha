@@ -227,8 +227,8 @@ export const authOptions: NextAuthOptions = {
     },
   },
   secret: process.env.NEXTAUTH_SECRET || "fallback-secret-for-development",
-  debug: true,
-  useSecureCookies: false, // Disable secure cookies for development
+  debug: process.env.NODE_ENV === "development",
+  useSecureCookies: process.env.NODE_ENV === "production", // Use secure cookies in production
 };
 
 const handler = NextAuth(authOptions);

@@ -1,0 +1,24 @@
+# Ignore files that shouldn't be deployed to Vercel
+
+# Local database files
+prisma/master_cat_questions.db
+chroma_db/
+
+# Development files
+.env.local
+.env*.local
+
+# Scripts (not needed in production)
+scripts/
+
+# Documentation
+*.md
+!README.md
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Build artifacts
+*.tsbuildinfo
+
