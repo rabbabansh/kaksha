@@ -41,3 +41,13 @@ yarn-error.log*
 next-env.d.ts
 
 /lib/generated/prisma
+
+# database files
+prisma/master_cat_questions.db
+
+# python cache
+__pycache__/
+*.pyc
+
+# old vector database
+chroma_db/
