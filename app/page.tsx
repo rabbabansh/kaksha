@@ -1,26 +1,18 @@
 import prisma from '@/lib/prisma';
-import { QuestionBrowser } from '@/components/question-browser';
-import { PYQView } from '@/components/pyq-view';
-import { TopicViewWrapper } from '@/components/topic-view-wrapper';
-import { ViewSwitcher } from '@/components/view-switcher';
-import { getServerSession } from 'next-auth';
+import { getAuthSession } from '@/lib/auth';
+import { redirect } from 'next/navigation';
+import { TestSelectionClient } from '@/components/test-selection-client';
 
 export default async function HomePage() {
-  const session = await getServerSession();
+  const session = await getAuthSession();
 
   if (!session) {
-    // You can create a more user-friendly login prompt here
-    return <p>Please log in to view questions.</p>;
+    redirect('/login');
   }
 
   const questions = await prisma.questions.findMany();
 
-  // Get unique topics and subtopics for the filters
-  const topics = [...new Set(questions.map(q => q.topic).filter((t): t is string => Boolean(t)))];
-  const subtopics = [...new Set(questions.map(q => q.subtopic).filter((s): s is string => Boolean(s)))];
-
-  // Organize questions by year -> slot for PYQView
-  // Structure: { year: { slot: [questions] } }
+  // Organize questions by year -> slot
   const byYearSlot: Record<string, Record<string, typeof questions>> = {};
   
   questions.forEach(q => {
@@ -36,20 +28,18 @@ export default async function HomePage() {
     byYearSlot[year][slot].push(q);
   });
 
+  // Get user's test progress
+  const userId = (session.user as any)?.id;
+  const userProgress = userId ? await prisma.testProgress.findMany({
+    where: { userId },
+    select: { year: true, slot: true, completed: true, score: true },
+  }) : [];
+
+  const progressMap = new Map(
+    userProgress.map(p => [`${p.year}-${p.slot}`, p])
+  );
+
   return (
-    <main className="container mx-auto p-4">
-      <h1 className="text-3xl font-bold mb-4">CAT Question Bank</h1>
-      <ViewSwitcher
-        pyqView={<PYQView byYearSlot={byYearSlot} />}
-        topicView={<TopicViewWrapper allQuestions={questions} />}
-        browserView={
-          <QuestionBrowser 
-            allQuestions={questions}
-            topics={topics}
-            subtopics={subtopics}
-          />
-        }
-      />
-    </main>
+    <TestSelectionClient byYearSlot={byYearSlot} progressMap={progressMap} />
   );
 }
