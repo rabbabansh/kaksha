@@ -153,7 +153,6 @@ export function TestSelectionClient({ byYearSlot, progressMap }: TestSelectionCl
                   <div className="space-y-2">
                     {yearSlots.map((slot) => {
                       const slotQuestions = byYearSlot[year][slot];
-                      const slotProgress = progressMap.get(`${year}-${slot}`);
                       const showSlotLabel = slot !== 'NA' && slot !== 'Unknown';
                       return (
                         <div key={slot} className="flex items-center justify-between p-2 rounded border">

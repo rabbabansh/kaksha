@@ -42,7 +42,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Fallback to database query for topic/section only
-    const where: any = {};
+    const where: {
+      section?: string;
+      topic?: string;
+      question_id?: { notIn: string[] };
+    } = {};
     if (section) where.section = section;
     if (topic) where.topic = topic;
     if (excludeIds.length > 0) {

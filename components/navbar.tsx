@@ -4,7 +4,8 @@ import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { MessageSquare, BookOpen, Search, Menu as MenuIcon, LogOut, User, TrendingUp } from 'lucide-react';
+import { MessageSquare, BookOpen, Search, LogOut, TrendingUp } from 'lucide-react';
+import Image from 'next/image';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -66,9 +67,11 @@ export function Navbar() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="gap-2">
                 {session.user?.image ? (
-                  <img
+                  <Image
                     src={session.user.image}
                     alt={session.user.name || 'User'}
+                    width={24}
+                    height={24}
                     className="h-6 w-6 rounded-full"
                   />
                 ) : (

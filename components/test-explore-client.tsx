@@ -22,7 +22,6 @@ interface TestExploreClientProps {
 export function TestExploreClient({
   year,
   slot,
-  questions,
   questionsBySection,
   sections,
 }: TestExploreClientProps) {
@@ -30,7 +29,7 @@ export function TestExploreClient({
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
   const currentSection = sections[currentSectionIndex] || sections[0];
-  const currentQuestions = questionsBySection[currentSection] || [];
+  const currentQuestions = useMemo(() => questionsBySection[currentSection] || [], [questionsBySection, currentSection]);
   const groupedQuestions = useMemo(() => groupQuestionsBySet(currentQuestions), [currentQuestions]);
   const currentQuestion = groupedQuestions[currentQuestionIndex]?.[0] || null;
 

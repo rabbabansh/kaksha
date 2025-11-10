@@ -4,7 +4,6 @@ import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 
 // Define the type based on Prisma's generated types
@@ -32,9 +31,11 @@ interface QuestionBrowserProps {
   subtopics: string[];
 }
 
-export function QuestionBrowser({ allQuestions, topics, subtopics }: QuestionBrowserProps) {
+export function QuestionBrowser({ allQuestions }: QuestionBrowserProps) {
   const [selectedSection, setSelectedSection] = useState('Quantitative Ability');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [selectedSubtopic, setSelectedSubtopic] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 

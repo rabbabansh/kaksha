@@ -190,7 +190,8 @@ export async function getUserProgressStats(
 export async function updateUserProgress(
   userId: string,
   questionId: string,
-  isCorrect: boolean
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _isCorrect: boolean
 ): Promise<void> {
   // Get question details
   const question = await prisma.questions.findUnique({

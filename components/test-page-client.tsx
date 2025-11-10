@@ -61,7 +61,7 @@ export function TestPageClient({
   const calculatorInputRef = useRef<HTMLDivElement>(null);
 
   const currentSection = sections[currentSectionIndex] || sections[0];
-  const currentQuestions = questionsBySection[currentSection] || [];
+  const currentQuestions = useMemo(() => questionsBySection[currentSection] || [], [questionsBySection, currentSection]);
   // Show one square per question, not grouped by set
   const allQuestionsInSection = useMemo(() => {
     return currentQuestions.sort((a, b) => {
@@ -161,6 +161,27 @@ export function TestPageClient({
     return () => clearInterval(interval);
   }, [completed, timeRemaining, currentSectionIndex, completedSections]);
 
+  // Calculator functions
+  const handleCalculatorInput = useCallback((value: string) => {
+    if (value === 'C') {
+      setCalculatorValue('0');
+    } else if (value === '=') {
+      setCalculatorValue((prev) => {
+        try {
+          const result = eval(prev.replace(/×/g, '*').replace(/÷/g, '/'));
+          return String(result);
+        } catch {
+          return 'Error';
+        }
+      });
+    } else {
+      setCalculatorValue((prev) => {
+        if (prev === '0' || prev === 'Error') return value;
+        return prev + value;
+      });
+    }
+  }, []);
+
   // Auto-save every 10 seconds
   useEffect(() => {
     const interval = setInterval(() => {
@@ -205,7 +226,7 @@ export function TestPageClient({
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [calculatorOpen]);
+  }, [calculatorOpen, handleCalculatorInput]);
 
   const handleAnswerChange = (questionId: string, answer: string) => {
     setAnswers((prev) => ({ ...prev, [questionId]: answer }));
@@ -240,25 +261,6 @@ export function TestPageClient({
     return 'bg-white hover:bg-gray-100 border border-gray-300 text-gray-900';
   };
 
-  // Calculator functions
-  const handleCalculatorInput = (value: string) => {
-    if (value === 'C') {
-      setCalculatorValue('0');
-    } else if (value === '=') {
-      try {
-        // eslint-disable-next-line no-eval
-        const result = eval(calculatorValue.replace(/×/g, '*').replace(/÷/g, '/'));
-        setCalculatorValue(String(result));
-      } catch {
-        setCalculatorValue('Error');
-      }
-    } else {
-      setCalculatorValue((prev) => {
-        if (prev === '0' || prev === 'Error') return value;
-        return prev + value;
-      });
-    }
-  };
 
   const canSwitchSection = completedSections.has(currentSectionIndex) || completed;
   const isCurrentSectionCompleted = completedSections.has(currentSectionIndex);

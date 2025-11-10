@@ -98,8 +98,8 @@ export const authOptions: NextAuthOptions = {
             dbUser = await prisma.user.create({
               data: {
                 email: user.email,
-                name: user.name || (profile as any)?.name || null,
-                image: user.image || (profile as any)?.picture || null,
+                name: user.name || (profile as { name?: string } | undefined)?.name || null,
+                image: user.image || (profile as { picture?: string } | undefined)?.picture || null,
               },
             });
             console.log("[NextAuth] User created successfully:", dbUser.id);
@@ -227,8 +227,8 @@ export const authOptions: NextAuthOptions = {
     },
   },
   secret: process.env.NEXTAUTH_SECRET || "fallback-secret-for-development",
-  debug: true,
-  useSecureCookies: false, // Disable secure cookies for development
+  debug: process.env.NODE_ENV === "development",
+  useSecureCookies: process.env.NODE_ENV === "production", // Use secure cookies in production
 };
 
 const handler = NextAuth(authOptions);
