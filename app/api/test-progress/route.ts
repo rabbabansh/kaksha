@@ -82,7 +82,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User ID not found' }, { status: 400 });
     }
 
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch (parseError) {
+      console.error('Error parsing request body:', parseError);
+      return NextResponse.json({ error: 'Invalid request format' }, { status: 400 });
+    }
     const { year, slot, answers, flagged, timeRemaining, currentSection, completed, score } = body;
 
     if (!year || !slot) {
