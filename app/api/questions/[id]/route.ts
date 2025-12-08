@@ -15,6 +15,11 @@ export async function GET(
 
     const { id } = await params;
 
+    // Validate question ID
+    if (!id || typeof id !== 'string') {
+      return NextResponse.json({ error: 'Invalid question ID' }, { status: 400 });
+    }
+
     // Fetch the full question with all fields
     const question = await prisma.questions.findUnique({
       where: { question_id: id },
@@ -25,22 +30,42 @@ export async function GET(
     }
 
     // If this question belongs to a set, also fetch all questions in the set
+    // Note: This could be large, but sets are typically small (2-5 questions)
     let setQuestions = null;
-    if (question.set_id && question.set_id !== 'N/A') {
-      setQuestions = await prisma.questions.findMany({
-        where: { set_id: question.set_id },
-        orderBy: { question_id: 'asc' },
-      });
+    if (question.set_id && question.set_id !== 'N/A' && question.set_id.trim() !== '') {
+      try {
+        setQuestions = await prisma.questions.findMany({
+          where: { set_id: question.set_id },
+          orderBy: { question_id: 'asc' },
+        });
+        
+        // Safety check: if set is too large, only return the first question
+        // This prevents exceeding response size limits
+        if (setQuestions.length > 10) {
+          console.warn(`Large set detected (${setQuestions.length} questions), limiting response`);
+          setQuestions = [question];
+        }
+      } catch (setError) {
+        console.error('Error fetching set questions:', setError);
+        // Continue without set questions if there's an error
+        setQuestions = null;
+      }
     }
 
     return NextResponse.json({
       question,
-      setQuestions,
+      setQuestions: setQuestions && setQuestions.length > 1 ? setQuestions : null,
     });
   } catch (error) {
     console.error('Error fetching question:', error);
+    
+    // Provide more detailed error information in development
+    const errorMessage = process.env.NODE_ENV === 'development' 
+      ? error instanceof Error ? error.message : 'Failed to fetch question'
+      : 'Failed to fetch question';
+    
     return NextResponse.json(
-      { error: 'Failed to fetch question' },
+      { error: errorMessage },
       { status: 500 }
     );
   }
