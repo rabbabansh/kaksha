@@ -10,7 +10,22 @@ export default async function BrowsePage() {
     redirect('/login');
   }
 
-  const questions = await prisma.questions.findMany();
+  // Fetch only minimal metadata to avoid exceeding Prisma Accelerate's 5MB limit
+  // Full question data (HTML, options, explanations) will be fetched on demand via API
+  const questions = await prisma.questions.findMany({
+    select: {
+      question_id: true,
+      year: true,
+      slot: true,
+      section: true,
+      topic: true,
+      subtopic: true,
+      question_type: true,
+      set_id: true,
+      // Exclude all HTML fields - they'll be fetched on demand when viewing a question
+      // This keeps the response well under 5MB
+    },
+  });
 
   // Get unique topics and subtopics
   const topics = [...new Set(questions.map(q => q.topic).filter((t): t is string => Boolean(t)))].sort();

@@ -10,7 +10,15 @@ export default async function HomePage() {
     redirect('/login');
   }
 
-  const questions = await prisma.questions.findMany();
+  // Only fetch minimal fields needed for test selection (year, slot, question_id)
+  // This avoids exceeding Prisma Accelerate's 5MB response limit
+  const questions = await prisma.questions.findMany({
+    select: {
+      question_id: true,
+      year: true,
+      slot: true,
+    },
+  });
 
   // Organize questions by year -> slot
   const byYearSlot: Record<string, Record<string, typeof questions>> = {};

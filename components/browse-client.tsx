@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { QuestionDisplay } from './question-display';
-import { Search, Filter } from 'lucide-react';
+import { Search, Filter, Loader2 } from 'lucide-react';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Question = any;
@@ -24,18 +24,76 @@ export function BrowseClient({ questions, topics, subtopics, sections }: BrowseC
   const [selectedSubtopic, setSelectedSubtopic] = useState<string>('all');
   const [selectedSection, setSelectedSection] = useState<string>('all');
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
+  const [fullQuestionData, setFullQuestionData] = useState<Question | null>(null);
+  const [setQuestions, setSetQuestions] = useState<Question[]>([]);
+  const [loadingQuestion, setLoadingQuestion] = useState(false);
+
+  // Fetch full question data when a question is selected
+  useEffect(() => {
+    // Create AbortController to cancel in-flight requests
+    const abortController = new AbortController();
+    const currentQuestionId = selectedQuestion?.question_id;
+
+    if (currentQuestionId) {
+      setLoadingQuestion(true);
+      fetch(`/api/questions/${currentQuestionId}`, {
+        signal: abortController.signal,
+      })
+        .then(res => {
+          if (!res.ok) {
+            throw new Error(`Failed to fetch question: ${res.statusText}`);
+          }
+          return res.json();
+        })
+        .then(data => {
+          // Verify the response matches the currently selected question
+          // This prevents stale data from overwriting state if user clicked another question
+          if (data.question && data.question.question_id === currentQuestionId) {
+            setFullQuestionData(data.question);
+            // If it's a set, store all set questions
+            if (data.setQuestions && data.setQuestions.length > 1) {
+              setSetQuestions(data.setQuestions);
+            } else {
+              setSetQuestions([data.question]);
+            }
+          }
+        })
+        .catch(err => {
+          // Ignore abort errors (they're expected when cancelling requests)
+          if (err.name !== 'AbortError') {
+            console.error('Error fetching question:', err);
+          }
+        })
+        .finally(() => {
+          // Only update loading state if this is still the current question
+          if (currentQuestionId === selectedQuestion?.question_id) {
+            setLoadingQuestion(false);
+          }
+        });
+    } else {
+      setFullQuestionData(null);
+      setSetQuestions([]);
+      setLoadingQuestion(false);
+    }
+
+    // Cleanup: cancel the request if the component unmounts or selectedQuestion changes
+    return () => {
+      abortController.abort();
+    };
+  }, [selectedQuestion]);
 
   const filteredQuestions = useMemo(() => {
     return questions.filter((q) => {
-      // Search filter
+      // Search filter (metadata only - question_html is fetched on demand)
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase();
         const matchesSearch =
-          (q.question_html || '').toLowerCase().includes(query) ||
           (q.topic || '').toLowerCase().includes(query) ||
           (q.subtopic || '').toLowerCase().includes(query) ||
+          (q.section || '').toLowerCase().includes(query) ||
           (q.year || '').includes(query) ||
-          (q.slot || '').toLowerCase().includes(query);
+          (q.slot || '').toLowerCase().includes(query) ||
+          (q.question_id || '').toLowerCase().includes(query);
         if (!matchesSearch) return false;
       }
 
@@ -190,9 +248,9 @@ export function BrowseClient({ questions, topics, subtopics, sections }: BrowseC
                             </span>
                           )}
                         </div>
-                        <div className="text-sm line-clamp-2" dangerouslySetInnerHTML={{
-                          __html: (q.question_html || '').substring(0, 100) + '...'
-                        }} />
+                        <div className="text-sm text-muted-foreground line-clamp-2">
+                          {q.question_type || 'Question'} • ID: {q.question_id}
+                        </div>
                         {q.topic && (
                           <div className="text-xs text-muted-foreground mt-1">
                             {q.topic} {q.subtopic && `• ${q.subtopic}`}
@@ -206,10 +264,23 @@ export function BrowseClient({ questions, topics, subtopics, sections }: BrowseC
                 {/* Question Display */}
                 {selectedQuestion && (
                   <div className="mt-6">
-                    <QuestionDisplay
-                      question={selectedQuestion}
-                      allQuestionsInContext={filteredQuestions}
-                    />
+                    {loadingQuestion ? (
+                      <Card className="flex items-center justify-center min-h-[400px]">
+                        <div className="flex flex-col items-center gap-2">
+                          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                          <p className="text-muted-foreground">Loading question...</p>
+                        </div>
+                      </Card>
+                    ) : fullQuestionData ? (
+                      <QuestionDisplay
+                        question={fullQuestionData}
+                        allQuestionsInContext={setQuestions}
+                      />
+                    ) : (
+                      <Card className="flex items-center justify-center min-h-[400px]">
+                        <p className="text-muted-foreground">Failed to load question</p>
+                      </Card>
+                    )}
                   </div>
                 )}
               </div>
