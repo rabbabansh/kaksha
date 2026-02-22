@@ -43,10 +43,16 @@ export function ProgressClient() {
     try {
       const response = await fetch('/api/progress/stats');
       if (response.ok) {
-        const data = await response.json();
-        setStats(data);
-        if (data.sections && data.sections.length > 0) {
-          setSelectedSection(data.sections[0].section);
+        const payload = await response.json();
+
+        if (payload.success) {
+          const data = payload.data;
+          setStats(data);
+          if (data.sections && data.sections.length > 0) {
+            setSelectedSection(data.sections[0].section);
+          }
+        } else {
+          console.error('API returned an error:', payload.error);
         }
       }
     } catch (error) {
