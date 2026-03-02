@@ -4,7 +4,7 @@ import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { MessageSquare, BookOpen, Search, LogOut, TrendingUp } from 'lucide-react';
+import { MessageSquare, BookOpen, Search, LogOut, TrendingUp, Sparkles } from 'lucide-react';
 import Image from 'next/image';
 import {
   DropdownMenu,
@@ -24,6 +24,7 @@ export function Navbar() {
     { href: '/chat', label: 'Chat', icon: MessageSquare },
     { href: '/browse', label: 'Browse', icon: Search },
     { href: '/progress', label: 'Progress', icon: TrendingUp },
+    { href: '/insights', label: 'AI Coach', icon: Sparkles },
   ];
 
   const isActive = (href: string) => {
@@ -43,7 +44,7 @@ export function Navbar() {
             </div>
             <span className="text-xl font-semibold">Kaksha</span>
           </Link>
-          
+
           <div className="hidden md:flex items-center gap-1">
             {navItems.map((item) => {
               const Icon = item.icon;

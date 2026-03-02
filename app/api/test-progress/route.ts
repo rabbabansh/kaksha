@@ -4,6 +4,7 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import prisma from '@/lib/prisma';
 import { logger, createTimer } from '@/lib/logger';
 import { ErrorCode, generateCorrelationId } from '@/lib/action-response';
+import { updateUserProgress } from '@/lib/progress';
 
 export async function GET(request: NextRequest) {
   const correlationId = generateCorrelationId();
@@ -172,6 +173,72 @@ export async function POST(request: NextRequest) {
         score: score ?? undefined,
       },
     });
+
+    // When a test is submitted as completed, create QuestionAttempt records
+    // so that Progress tab and Chat AI have full context of test performance.
+    if (completed && answers && typeof answers === 'object') {
+      const questionIds = Object.keys(answers);
+
+      if (questionIds.length > 0) {
+        // Fetch the correct answers for all submitted questions
+        const questionRecords = await prisma.questions.findMany({
+          where: { question_id: { in: questionIds } },
+          select: { question_id: true, answer: true },
+        });
+
+        const correctAnswerMap = new Map(
+          questionRecords.map((q) => [q.question_id, q.answer])
+        );
+
+        // Create QuestionAttempt records for any question not yet recorded via this test
+        const existingAttempts = await prisma.questionAttempt.findMany({
+          where: {
+            userId,
+            questionId: { in: questionIds },
+            source: 'test',
+          },
+          select: { questionId: true },
+        });
+        const alreadyRecorded = new Set(existingAttempts.map((a) => a.questionId));
+
+        const attemptsToCreate = questionIds
+          .filter((qId) => {
+            const userAnswer = answers[qId];
+            // Only record answered questions not already recorded
+            return userAnswer && userAnswer.trim() !== '' && !alreadyRecorded.has(qId);
+          })
+          .map((qId) => {
+            const userAnswer = String(answers[qId]).trim();
+            const correctAnswer = (correctAnswerMap.get(qId) || '').trim().toUpperCase();
+            const isCorrect = userAnswer.toUpperCase() === correctAnswer;
+            return {
+              userId,
+              questionId: qId,
+              userAnswer,
+              isCorrect,
+              source: 'test',
+            };
+          });
+
+        if (attemptsToCreate.length > 0) {
+          await prisma.questionAttempt.createMany({ data: attemptsToCreate });
+
+          // Recalculate UserProgress for every question that was answered
+          const uniqueQuestionIds = [...new Set(attemptsToCreate.map((a) => a.questionId))];
+          await Promise.allSettled(
+            uniqueQuestionIds.map((qId) =>
+              updateUserProgress(userId, qId, attemptsToCreate.find((a) => a.questionId === qId)!.isCorrect)
+            )
+          );
+
+          logger.info(`${operation} created ${attemptsToCreate.length} question attempts from test`, {
+            operation,
+            correlationId,
+            userId,
+          });
+        }
+      }
+    }
 
     logger.info(`${operation} completed successfully`, {
       operation,

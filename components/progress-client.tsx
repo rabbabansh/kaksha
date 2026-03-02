@@ -44,7 +44,6 @@ export function ProgressClient() {
       const response = await fetch('/api/progress/stats');
       if (response.ok) {
         const payload = await response.json();
-
         if (payload.success) {
           const data = payload.data;
           setStats(data);
@@ -62,6 +61,13 @@ export function ProgressClient() {
     }
   };
 
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return 'text-green-600';
+    if (score >= 60) return 'text-yellow-600';
+    if (score >= 40) return 'text-orange-600';
+    return 'text-red-600';
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -73,18 +79,10 @@ export function ProgressClient() {
   if (!stats) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-muted-foreground">No progress data available yet.</div>
+        <div className="text-muted-foreground">No progress data available yet. Complete a test to get started!</div>
       </div>
     );
   }
-
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-green-600';
-    if (score >= 60) return 'text-yellow-600';
-    if (score >= 40) return 'text-orange-600';
-    return 'text-red-600';
-  };
-
 
   return (
     <div className="space-y-6">
@@ -169,61 +167,58 @@ export function ProgressClient() {
       </div>
 
       {/* Detailed Progress by Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Detailed Progress</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Tabs value={selectedSection || stats.sections[0]?.section} onValueChange={setSelectedSection}>
-            <TabsList className="grid w-full grid-cols-3">
-              {stats.sections.map((section) => (
-                <TabsTrigger key={section.section} value={section.section}>
-                  {section.section} ({section.percentage}%)
-                </TabsTrigger>
-              ))}
-            </TabsList>
+      {stats.sections.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Detailed Progress</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Tabs value={selectedSection || stats.sections[0]?.section} onValueChange={setSelectedSection}>
+              <TabsList className="grid w-full grid-cols-3">
+                {stats.sections.map((section) => (
+                  <TabsTrigger key={section.section} value={section.section}>
+                    {section.section} ({section.percentage}%)
+                  </TabsTrigger>
+                ))}
+              </TabsList>
 
-            {stats.sections.map((section) => (
-              <TabsContent key={section.section} value={section.section} className="mt-4">
-                <Accordion type="single" collapsible className="w-full">
-                  {section.topics.map((topic) => (
-                    <AccordionItem key={topic.topic} value={topic.topic}>
-                      <AccordionTrigger>
-                        <div className="flex items-center justify-between w-full pr-4">
-                          <span className="font-semibold">{topic.topic}</span>
-                          <span className={`text-sm font-medium ${getScoreColor(topic.percentage)}`}>
-                            {topic.percentage}%
-                          </span>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent>
-                        <div className="space-y-3 pt-2">
-                          {topic.subtopics.map((subtopic) => (
-                            <div key={subtopic.subtopic} className="space-y-2">
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm font-medium">{subtopic.subtopic}</span>
-                                <span className={`text-sm font-medium ${getScoreColor(subtopic.percentage)}`}>
-                                  {subtopic.percentage}% ({subtopic.correctCount}/{subtopic.totalQuestions})
-                                </span>
+              {stats.sections.map((section) => (
+                <TabsContent key={section.section} value={section.section} className="mt-4">
+                  <Accordion type="single" collapsible className="w-full">
+                    {section.topics.map((topic) => (
+                      <AccordionItem key={topic.topic} value={topic.topic}>
+                        <AccordionTrigger>
+                          <div className="flex items-center justify-between w-full pr-4">
+                            <span className="font-semibold">{topic.topic}</span>
+                            <span className={`text-sm font-medium ${getScoreColor(topic.percentage)}`}>
+                              {topic.percentage}%
+                            </span>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <div className="space-y-3 pt-2">
+                            {topic.subtopics.map((subtopic) => (
+                              <div key={subtopic.subtopic} className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm font-medium">{subtopic.subtopic}</span>
+                                  <span className={`text-sm font-medium ${getScoreColor(subtopic.percentage)}`}>
+                                    {subtopic.percentage}% ({subtopic.correctCount}/{subtopic.totalQuestions})
+                                  </span>
+                                </div>
+                                <Progress value={subtopic.percentage} className="h-2" />
                               </div>
-                              <Progress
-                                value={subtopic.percentage}
-                                className="h-2"
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
-                </Accordion>
-              </TabsContent>
-            ))}
-          </Tabs>
-        </CardContent>
-      </Card>
+                            ))}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
+                  </Accordion>
+                </TabsContent>
+              ))}
+            </Tabs>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
-
-
