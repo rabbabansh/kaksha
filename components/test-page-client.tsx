@@ -279,11 +279,10 @@ export function TestPageClient({
           </div>
           <div className="flex items-center gap-4">
             {!isCurrentSectionCompleted && (
-              <div className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
-                timeRemaining <= 60 ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
-                timeRemaining <= 300 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
-                'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-              }`}>
+              <div className={`flex items-center gap-2 px-4 py-2 rounded-lg ${timeRemaining <= 60 ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                  timeRemaining <= 300 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                    'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                }`}>
                 <Clock className="h-5 w-5" />
                 <span className="text-xl font-mono font-bold">{formatTime(timeRemaining)}</span>
               </div>
@@ -396,7 +395,7 @@ export function TestPageClient({
                 testAnswers={answers}
                 onAnswerChange={handleAnswerChange}
               />
-              
+
               {currentQuestion && (
                 <div className="mt-6 flex items-center justify-between">
                   <Button
@@ -407,7 +406,7 @@ export function TestPageClient({
                     <Flag className={`h-4 w-4 mr-2 ${flagged.includes(currentQuestion.question_id) ? 'fill-yellow-500' : ''}`} />
                     {flagged.includes(currentQuestion.question_id) ? 'Unflag' : 'Flag'}
                   </Button>
-                  
+
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
@@ -471,7 +470,7 @@ export function TestPageClient({
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  <div 
+                  <div
                     ref={calculatorInputRef}
                     className="p-4 bg-muted rounded text-right text-2xl font-mono min-h-[60px] flex items-center justify-end"
                     tabIndex={0}

@@ -3,40 +3,66 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { getUserProgressStats } from '@/lib/progress';
 import prisma from '@/lib/prisma';
+import { logger, createTimer } from '@/lib/logger';
+import { ErrorCode, generateCorrelationId } from '@/lib/action-response';
 
 export async function GET() {
+  const correlationId = generateCorrelationId();
+  const timer = createTimer();
+  const operation = 'get_progress_stats';
+
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      logger.warn(`${operation} unauthorized access attempt`, { operation, correlationId });
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized', code: ErrorCode.UNAUTHORIZED, correlationId },
+        { status: 401 }
+      );
     }
 
     let userId = (session.user as { id?: string })?.id;
     if (!userId && session.user?.email) {
-      // Fallback: fetch user by email
       const dbUser = await prisma.user.findUnique({
         where: { email: session.user.email },
         select: { id: true },
       });
-      if (dbUser) {
-        userId = dbUser.id;
-      }
+      if (dbUser) userId = dbUser.id;
     }
-    
+
     if (!userId) {
-      return NextResponse.json({ error: 'User ID not found' }, { status: 400 });
+      logger.warn(`${operation} user ID not found`, { operation, correlationId });
+      return NextResponse.json(
+        { success: false, error: 'User ID not found', code: ErrorCode.NOT_FOUND, correlationId },
+        { status: 400 }
+      );
     }
 
     const stats = await getUserProgressStats(userId);
 
-    return NextResponse.json(stats);
+    logger.info(`${operation} completed successfully`, {
+      operation,
+      correlationId,
+      duration: timer.elapsed(),
+      userId
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: stats,
+      correlationId
+    });
   } catch (error) {
-    console.error('Error fetching progress stats:', error);
+    logger.error(`${operation} failed`, {
+      operation,
+      correlationId,
+      duration: timer.elapsed(),
+      error: error instanceof Error ? error.message : String(error)
+    });
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { success: false, error: 'Internal server error', code: ErrorCode.INTERNAL_ERROR, correlationId },
       { status: 500 }
     );
   }
 }
-
 

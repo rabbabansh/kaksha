@@ -3,47 +3,60 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import prisma from '@/lib/prisma';
 import { updateUserProgress } from '@/lib/progress';
+import { logger, createTimer } from '@/lib/logger';
+import { ErrorCode, generateCorrelationId } from '@/lib/action-response';
 
 export async function POST(request: NextRequest) {
+  const correlationId = generateCorrelationId();
+  const timer = createTimer();
+  const operation = 'record_progress_attempt';
+
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      logger.warn(`${operation} unauthorized access attempt`, { operation, correlationId });
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized', code: ErrorCode.UNAUTHORIZED, correlationId },
+        { status: 401 }
+      );
     }
 
     let userId = (session.user as { id?: string })?.id;
     if (!userId && session.user?.email) {
-      // Fallback: fetch user by email
       const dbUser = await prisma.user.findUnique({
         where: { email: session.user.email },
         select: { id: true },
       });
-      if (dbUser) {
-        userId = dbUser.id;
-      }
+      if (dbUser) userId = dbUser.id;
     }
-    
+
     if (!userId) {
-      return NextResponse.json({ error: 'User ID not found' }, { status: 400 });
+      logger.warn(`${operation} user ID not found`, { operation, correlationId });
+      return NextResponse.json(
+        { success: false, error: 'User ID not found', code: ErrorCode.NOT_FOUND, correlationId },
+        { status: 400 }
+      );
     }
 
     let body;
     try {
       body = await request.json();
     } catch (parseError) {
-      console.error('Error parsing request body:', parseError);
-      return NextResponse.json({ error: 'Invalid request format' }, { status: 400 });
+      logger.warn(`${operation} invalid request format`, { operation, correlationId, error: String(parseError) });
+      return NextResponse.json(
+        { success: false, error: 'Invalid request format', code: ErrorCode.VALIDATION_ERROR, correlationId },
+        { status: 400 }
+      );
     }
     const { questionId, userAnswer, source = 'chat' } = body;
 
     if (!questionId || !userAnswer) {
       return NextResponse.json(
-        { error: 'questionId and userAnswer are required' },
+        { success: false, error: 'questionId and userAnswer are required', code: ErrorCode.VALIDATION_ERROR, correlationId },
         { status: 400 }
       );
     }
 
-    // Get question to verify answer
     const question = await prisma.questions.findUnique({
       where: { question_id: questionId },
       select: { answer: true },
@@ -51,7 +64,7 @@ export async function POST(request: NextRequest) {
 
     if (!question) {
       return NextResponse.json(
-        { error: 'Question not found' },
+        { success: false, error: 'Question not found', code: ErrorCode.NOT_FOUND, correlationId },
         { status: 404 }
       );
     }
@@ -59,7 +72,6 @@ export async function POST(request: NextRequest) {
     const isCorrect =
       question.answer?.trim().toUpperCase() === userAnswer.trim().toUpperCase();
 
-    // Record attempt
     await prisma.questionAttempt.create({
       data: {
         userId,
@@ -70,21 +82,35 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Update progress
     await updateUserProgress(userId, questionId, isCorrect);
+
+    logger.info(`${operation} completed successfully`, {
+      operation,
+      correlationId,
+      duration: timer.elapsed(),
+      userId,
+      questionId,
+      isCorrect
+    });
 
     return NextResponse.json({
       success: true,
-      isCorrect,
-      correctAnswer: question.answer,
+      data: {
+        isCorrect,
+        correctAnswer: question.answer,
+      },
+      correlationId
     });
   } catch (error) {
-    console.error('Error recording attempt:', error);
+    logger.error(`${operation} failed`, {
+      operation,
+      correlationId,
+      duration: timer.elapsed(),
+      error: error instanceof Error ? error.message : String(error)
+    });
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { success: false, error: 'Internal server error', code: ErrorCode.INTERNAL_ERROR, correlationId },
       { status: 500 }
     );
   }
 }
-
-

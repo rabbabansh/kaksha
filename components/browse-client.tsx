@@ -45,17 +45,19 @@ export function BrowseClient({ questions, topics, subtopics, sections }: BrowseC
           }
           return res.json();
         })
-        .then(data => {
-          // Verify the response matches the currently selected question
-          // This prevents stale data from overwriting state if user clicked another question
-          if (data.question && data.question.question_id === currentQuestionId) {
-            setFullQuestionData(data.question);
-            // If it's a set, store all set questions
-            if (data.setQuestions && data.setQuestions.length > 1) {
-              setSetQuestions(data.setQuestions);
-            } else {
-              setSetQuestions([data.question]);
+        .then(payload => {
+          if (payload.success) {
+            const data = payload.data;
+            if (data.question && data.question.question_id === currentQuestionId) {
+              setFullQuestionData(data.question);
+              if (data.setQuestions && data.setQuestions.length > 1) {
+                setSetQuestions(data.setQuestions);
+              } else {
+                setSetQuestions([data.question]);
+              }
             }
+          } else {
+            console.error('API returned an error:', payload.error);
           }
         })
         .catch(err => {
