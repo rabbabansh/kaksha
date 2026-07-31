@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useSession } from 'next-auth/react';
-import { Loader2, Save, AlertTriangle, RefreshCw, Trash2 } from 'lucide-react';
+import { Loader2, Save, AlertTriangle, RefreshCw, Trash2, BrainCircuit } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 export default function SettingsPage() {
@@ -23,7 +23,7 @@ export default function SettingsPage() {
   const [age, setAge] = useState('');
   const [targetYear, setTargetYear] = useState('');
 
-  const [confirmDialog, setConfirmDialog] = useState<'reset' | 'retake' | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<'reset' | 'reset_ai' | 'retake' | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
@@ -74,6 +74,10 @@ export default function SettingsPage() {
       if (res.ok) {
         if (action === 'retake_diagnostic') {
           router.push('/onboarding');
+        } else if (action === 'reset_ai') {
+          alert('AI Analysis has been reset successfully.');
+          setConfirmDialog(null);
+          router.refresh();
         } else {
           alert('Progress has been reset completely.');
           setConfirmDialog(null);
@@ -161,6 +165,16 @@ export default function SettingsPage() {
 
             <div className="flex flex-col sm:flex-row items-center justify-between p-4 border rounded-xl bg-destructive/5 border-destructive/20 gap-4">
               <div>
+                <h4 className="font-semibold text-destructive">Recalibrate AI Analysis</h4>
+                <p className="text-sm text-muted-foreground mt-1">This will clear your current weaknesses, strengths, and AI plans. It will recalculate everything purely based on your past attempts without erasing any actual test history.</p>
+              </div>
+              <Button variant="outline" className="border-destructive text-destructive hover:bg-destructive hover:text-white w-full sm:w-auto shrink-0" onClick={() => setConfirmDialog('reset_ai')}>
+                <BrainCircuit className="mr-2 h-4 w-4" /> Reset AI Engine
+              </Button>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-between p-4 border rounded-xl bg-destructive/5 border-destructive/20 gap-4">
+              <div>
                 <h4 className="font-semibold text-destructive">Reset All Progress</h4>
                 <p className="text-sm text-muted-foreground mt-1">This will permanently delete ALL your solved questions, mock attempts, Kaksha Score, and AI Action Plans. This cannot be undone.</p>
               </div>
@@ -178,11 +192,13 @@ export default function SettingsPage() {
           <DialogHeader>
             <DialogTitle className="text-destructive flex items-center gap-2">
               <AlertTriangle className="h-5 w-5" />
-              {confirmDialog === 'reset' ? 'Absolute Data Reset' : 'Retake Diagnostic Test'}
+              {confirmDialog === 'reset' ? 'Absolute Data Reset' : confirmDialog === 'reset_ai' ? 'Recalibrate AI Engine' : 'Retake Diagnostic Test'}
             </DialogTitle>
             <DialogDescription className="pt-4">
               {confirmDialog === 'reset' 
                 ? "Are you absolutely sure you want to delete all your progress? Every question you've answered, every mock you've taken, and all your analytics will be permanently erased. You will start fresh as a day 1 user."
+                : confirmDialog === 'reset_ai'
+                ? "This will clear your AI action plans, strengths, and weaknesses, and recalculate them based on your historical attempts. Your test scores will NOT be lost. Proceed?"
                 : "Are you sure you want to retake the diagnostic test? This will redirect you to the onboarding flow to set a new baseline."}
             </DialogDescription>
           </DialogHeader>
@@ -190,7 +206,7 @@ export default function SettingsPage() {
             <Button variant="outline" onClick={() => setConfirmDialog(null)} disabled={actionLoading}>Cancel</Button>
             <Button variant="destructive" onClick={handleDangerAction} disabled={actionLoading}>
               {actionLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              {confirmDialog === 'reset' ? 'Yes, Reset Everything' : 'Yes, Retake Diagnostic'}
+              {confirmDialog === 'reset' ? 'Yes, Reset Everything' : confirmDialog === 'reset_ai' ? 'Yes, Recalibrate AI' : 'Yes, Retake Diagnostic'}
             </Button>
           </DialogFooter>
         </DialogContent>

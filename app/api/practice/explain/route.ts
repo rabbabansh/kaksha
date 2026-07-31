@@ -19,6 +19,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'AI not configured' }, { status: 500 });
     }
 
+    const stripBloat = (html: string | undefined | null) => {
+      if (!html) return '';
+      // Remove class, style, id, and data-* attributes to save AI tokens
+      return html.replace(/\s+(class|style|id|data-[a-zA-Z0-9-]+)="[^"]*"/g, '');
+    };
+
     const body = await request.json();
     const { 
       question_id, 
@@ -29,7 +35,8 @@ export async function POST(request: NextRequest) {
       option_d_html,
       answer,
       explanation_html,
-      userQuery 
+      userQuery,
+      chatHistory
     } = body;
 
     const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' });
@@ -37,15 +44,23 @@ export async function POST(request: NextRequest) {
     let prompt = '';
     
     if (userQuery) {
+      let historyText = '';
+      if (chatHistory && chatHistory.length > 0) {
+        historyText = chatHistory.map((msg: any) => `${msg.role === 'user' ? 'STUDENT' : 'TUTOR'}: ${msg.text}`).join('\n\n');
+      }
+
       // Interactive Follow-up Chat Mode
       prompt = `
       You are an expert CAT tutor. A student is asking a follow-up doubt about a question.
       
-      Question Context: ${question_html}
+      Question Context: ${stripBloat(question_html)}
       Correct Answer: Option ${answer}
-      Official Solution Context: ${explanation_html || 'Not provided'}
+      Official Solution Context: ${stripBloat(explanation_html) || 'Not provided'}
       
-      Student's Doubt: "${userQuery}"
+      Previous Conversation:
+      ${historyText || 'No previous context.'}
+
+      Student's New Doubt: "${userQuery}"
       
       Provide a highly targeted, crisp, and intuitive explanation specifically addressing the student's doubt. Use standard markdown and perfectly rendered LaTeX for any math equations.
       `;
@@ -53,19 +68,23 @@ export async function POST(request: NextRequest) {
       // One-Time Generation Mode (Dual-Method)
       prompt = `
       You are an elite CAT coach. Generate a world-class, intuitive, and step-by-step solution for the following question.
+      Assume the student has NOT seen any other explanation. Your explanation must be completely self-sufficient and simple to follow.
       
-      Question: ${question_html}
+      Question: ${stripBloat(question_html)}
       Options: 
-      A: ${option_a_html} | B: ${option_b_html} | C: ${option_c_html} | D: ${option_d_html}
+      A: ${stripBloat(option_a_html)} | B: ${stripBloat(option_b_html)} | C: ${stripBloat(option_c_html)} | D: ${stripBloat(option_d_html)}
       Correct Answer: Option ${answer}
-      Official Base Solution (for grounding/accuracy): ${explanation_html || 'Not provided'}
+      Official Base Solution (for grounding/accuracy only, do not refer to it directly): ${stripBloat(explanation_html) || 'Not provided'}
       
-      Your output MUST be structured into exactly two sections using standard markdown headers:
+      Your output MUST be structured into exactly three sections using standard markdown headers, with plenty of breathing room (blank lines between paragraphs/steps):
       
       ### 1. The Standard Approach
-      Provide the rigorous, textbook mathematical or logical method. Make it extremely clear. Use markdown tables if helpful and perfectly rendered LaTeX for math.
+      Provide a rigorous, step-by-step mathematical or logical method. Break it down into clear, numbered steps. Use markdown tables if helpful and perfectly rendered LaTeX for math. Explain the "why" behind each step.
       
-      ### 2. The "CAT Trick" (Speed Strategy)
+      ### 2. Formulas & Concepts Used
+      List any formulas, theorems, or core concepts utilized in this problem. If none, briefly state the core logical principle.
+      
+      ### 3. The "CAT Trick" (Speed Strategy)
       Provide the fastest way a 99-percentiler would solve this in under 30 seconds. This could be option elimination, approximation, substituting values, or a reading shortcut. If there is no trick, explain how to quickly verify the standard approach.
       `;
     }

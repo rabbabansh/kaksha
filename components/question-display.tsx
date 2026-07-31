@@ -5,6 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
+import { BrainCircuit, Loader2 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import rehypeRaw from 'rehype-raw';
+import 'katex/dist/katex.min.css';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Question = any;
@@ -30,6 +36,10 @@ export function QuestionDisplay({
 }: QuestionDisplayProps) {
   const [userAnswers, setUserAnswers] = useState<Record<string, string>>({});
   const [showSolutions, setShowSolutions] = useState<Record<string, boolean>>({});
+  const [explanation, setExplanation] = useState<Record<string, string>>({});
+  const [isExplaining, setIsExplaining] = useState<Record<string, boolean>>({});
+  const [chatHistory, setChatHistory] = useState<Record<string, {role: string, text: string}[]>>({});
+  const [followUpQuery, setFollowUpQuery] = useState<Record<string, string>>({});
 
   // In test mode, use testAnswers instead of local state
   // In normal mode, use local state
@@ -75,6 +85,72 @@ export function QuestionDisplay({
       onAnswerChange(q_id, answer);
     } else {
       setUserAnswers(prev => ({ ...prev, [q_id]: answer }));
+    }
+  };
+
+  const askTutor = async (q: Question, query?: string) => {
+    if (isExplaining[q.question_id]) return;
+    setIsExplaining(prev => ({ ...prev, [q.question_id]: true }));
+    
+    const isFollowUp = !!query;
+    if (isFollowUp) {
+      setChatHistory(prev => ({
+        ...prev,
+        [q.question_id]: [...(prev[q.question_id] || []), { role: 'user', text: query }]
+      }));
+    }
+
+    try {
+      // In practice bank / mocks review we use explain API
+      const res = await fetch('/api/practice/explain', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question_id: q.question_id,
+          subtopic: q.subtopic,
+          question_html: q.question_html,
+          option_a_html: q.option_a_html,
+          option_b_html: q.option_b_html,
+          option_c_html: q.option_c_html,
+          option_d_html: q.option_d_html,
+          answer: q.answer,
+          explanation_html: q.explanation_html,
+          userQuery: query,
+          chatHistory: chatHistory[q.question_id] || []
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        if (isFollowUp) {
+           setChatHistory(prev => ({
+             ...prev,
+             [q.question_id]: [...(prev[q.question_id] || []), { role: 'tutor', text: data.data }]
+           }));
+           setFollowUpQuery(prev => ({ ...prev, [q.question_id]: '' }));
+        } else {
+           setExplanation(prev => ({ ...prev, [q.question_id]: data.data }));
+        }
+      } else {
+        if (isFollowUp) {
+           setChatHistory(prev => ({
+             ...prev,
+             [q.question_id]: [...(prev[q.question_id] || []), { role: 'error', text: 'Failed to get answer.' }]
+           }));
+        } else {
+           setExplanation(prev => ({ ...prev, [q.question_id]: 'Failed to get AI Tutor explanation.' }));
+        }
+      }
+    } catch (err) {
+      if (isFollowUp) {
+         setChatHistory(prev => ({
+           ...prev,
+           [q.question_id]: [...(prev[q.question_id] || []), { role: 'error', text: 'Error fetching response.' }]
+         }));
+      } else {
+         setExplanation(prev => ({ ...prev, [q.question_id]: 'An error occurred while fetching the AI Tutor explanation.' }));
+      }
+    } finally {
+      setIsExplaining(prev => ({ ...prev, [q.question_id]: false }));
     }
   };
 
@@ -186,7 +262,7 @@ export function QuestionDisplay({
 
         {/* Solution Display - Show in normal mode when checked, or in test mode after finishing */}
         {showSolution && (
-          <div className="mt-6 p-5 border rounded-xl bg-muted/30 space-y-3">
+          <div className="mt-6 p-5 border rounded-xl bg-muted/30 space-y-4">
             <h3 className={`font-bold text-lg flex items-center gap-2 ${isCorrect ? 'text-green-600' : 'text-red-600'}`}>
               {isCorrect ? '✓ Correct!' : '✗ Incorrect.'} The correct answer is: <span className="font-extrabold underline">{q.answer}</span>
             </h3>
@@ -194,7 +270,90 @@ export function QuestionDisplay({
               <p className="text-sm text-muted-foreground">You did not answer this question.</p>
             )}
             <Separator className="my-2" />
-            <div className="prose dark:prose-invert max-w-none leading-relaxed text-sm notranslate" translate="no" dangerouslySetInnerHTML={{ __html: q.explanation_html || 'No explanation available.' }} />
+            
+            {q.explanation_html && q.explanation_html !== 'N/A' && q.explanation_html.trim() !== '' ? (
+              <div className="prose dark:prose-invert max-w-none leading-relaxed text-sm notranslate" translate="no" dangerouslySetInnerHTML={{ __html: q.explanation_html }} />
+            ) : (
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground italic">No preloaded explanation available for this question.</p>
+                {!explanation[q.question_id] && (
+                  <Button 
+                    variant="outline" 
+                    onClick={() => askTutor(q)} 
+                    disabled={isExplaining[q.question_id]}
+                    className="border-primary/20 hover:bg-primary/5 font-semibold"
+                  >
+                    {isExplaining[q.question_id] && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                    <BrainCircuit className="h-4 w-4 mr-2" /> Ask AI Tutor
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {explanation[q.question_id] && (
+              <div className="mt-4 p-5 rounded-xl bg-indigo-500/5 border border-indigo-500/20 space-y-4">
+                <h4 className="text-sm font-bold text-indigo-600 flex items-center gap-2">
+                  <BrainCircuit className="h-4 w-4" /> AI Tutor Breakdown
+                </h4>
+                <div className="prose dark:prose-invert max-w-none text-sm notranslate" translate="no">
+                  <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex, rehypeRaw]}>
+                    {explanation[q.question_id]}
+                  </ReactMarkdown>
+                </div>
+                
+                {/* Tier 3: Interactive Chat */}
+                <div className="mt-6 border border-indigo-200 dark:border-indigo-900 rounded-xl bg-white dark:bg-zinc-950 overflow-hidden">
+                   <div className="bg-indigo-100/50 dark:bg-indigo-900/50 px-4 py-2 flex items-center gap-2">
+                      <BrainCircuit className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                      <span className="text-xs font-bold text-indigo-800 dark:text-indigo-300 uppercase tracking-wider">AI Tutor Follow-up</span>
+                   </div>
+                   
+                   <div className="p-4 space-y-4">
+                      {(chatHistory[q.question_id] || []).length > 0 && (
+                         <div className="space-y-4 mb-4 max-h-[300px] overflow-y-auto pr-2">
+                            {chatHistory[q.question_id].map((msg, i) => (
+                               <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                  <div className={`p-3 rounded-xl max-w-[85%] text-sm ${
+                                     msg.role === 'user' 
+                                        ? 'bg-indigo-600 text-white rounded-br-none' 
+                                        : msg.role === 'error'
+                                        ? 'bg-destructive/10 text-destructive'
+                                        : 'bg-muted border shadow-sm rounded-bl-none'
+                                  }`}>
+                                     <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex, rehypeRaw]}>
+                                        {msg.text}
+                                     </ReactMarkdown>
+                                  </div>
+                               </div>
+                            ))}
+                         </div>
+                      )}
+                      
+                      <div className="flex gap-2">
+                         <input 
+                            className="flex h-11 w-full rounded-lg border border-input bg-background px-4 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 shadow-sm"
+                            placeholder="Still confused? Ask the AI a specific question..."
+                            value={followUpQuery[q.question_id] || ''}
+                            onChange={(e) => setFollowUpQuery(prev => ({ ...prev, [q.question_id]: e.target.value }))}
+                            onKeyDown={(e) => { 
+                              if (e.key === 'Enter' && followUpQuery[q.question_id]?.trim()) {
+                                askTutor(q, followUpQuery[q.question_id]);
+                              } 
+                            }}
+                            disabled={isExplaining[q.question_id]}
+                         />
+                         <Button 
+                            className="h-11 px-6 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
+                            disabled={isExplaining[q.question_id] || !(followUpQuery[q.question_id]?.trim())} 
+                            onClick={() => askTutor(q, followUpQuery[q.question_id])}
+                         >
+                            {isExplaining[q.question_id] ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Ask'}
+                         </Button>
+                      </div>
+                   </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -206,9 +365,6 @@ export function QuestionDisplay({
       <CardHeader className="pb-4">
         <CardTitle className="text-xl flex items-center justify-between">
           <div className="flex items-center gap-2">
-            {isTestMode && !testFinished && (
-              <span className="text-xs font-semibold px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 uppercase tracking-wider">[Test]</span>
-            )}
             {question.topic}
           </div>
           <span className="text-sm font-normal text-muted-foreground">{question.source}</span>

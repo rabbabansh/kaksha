@@ -84,6 +84,8 @@ export default async function TestPage({
   // Otherwise, show test mode
   // Fetch existing progress
   let progress = null;
+  let actualTimeRemaining = 40 * 60; // 40 mins
+
   if (userId) {
     progress = await prisma.testProgress.findUnique({
       where: {
@@ -94,6 +96,11 @@ export default async function TestPage({
         },
       },
     });
+
+    if (progress && progress.timeRemaining !== null && !progress.completed) {
+      const timeElapsedSecs = Math.floor((Date.now() - progress.updatedAt.getTime()) / 1000);
+      actualTimeRemaining = Math.max(0, progress.timeRemaining - timeElapsedSecs);
+    }
   }
 
   return (
@@ -106,7 +113,7 @@ export default async function TestPage({
       initialProgress={progress ? {
         answers: JSON.parse(progress.answers),
         flagged: JSON.parse(progress.flagged),
-        timeRemaining: progress.timeRemaining,
+        timeRemaining: actualTimeRemaining,
         currentSection: progress.currentSection,
         completed: progress.completed,
         score: progress.score,

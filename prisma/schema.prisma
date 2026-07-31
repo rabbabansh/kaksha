@@ -71,6 +71,7 @@ model TestProgress {
   currentSection  String?  // current active section
   completed       Boolean  @default(false)
   score           Int?
+  aiInsights      String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -86,6 +87,7 @@ model QuestionAttempt {
   question    questions @relation(fields: [questionId], references: [question_id], onDelete: Cascade)
   userAnswer  String
   isCorrect   Boolean
+  timeTaken   Int?
   source      String   // 'diagnostic', 'practice', 'mock', 'training', 'bank'
   attemptedAt DateTime @default(now())
 

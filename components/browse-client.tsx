@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { QuestionDisplay } from './question-display';
-import { Search, Filter, Loader2 } from 'lucide-react';
+import { Search, Filter, Loader2, CheckCircle, XCircle, MinusCircle } from 'lucide-react';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Question = any;
@@ -16,13 +16,17 @@ interface BrowseClientProps {
   topics: string[];
   subtopics: string[];
   sections: string[];
+  attemptMap?: Record<string, { isCorrect: boolean; timeTaken: number | null }>;
+  testAnswers?: Record<string, string>;
+  showSolutionsDefault?: boolean;
 }
 
-export function BrowseClient({ questions, topics, subtopics, sections }: BrowseClientProps) {
+export function BrowseClient({ questions, topics, subtopics, sections, attemptMap = {}, testAnswers, showSolutionsDefault }: BrowseClientProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTopic, setSelectedTopic] = useState<string>('all');
   const [selectedSubtopic, setSelectedSubtopic] = useState<string>('all');
   const [selectedSection, setSelectedSection] = useState<string>('all');
+  const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
   const [fullQuestionData, setFullQuestionData] = useState<Question | null>(null);
   const [setQuestions, setSetQuestions] = useState<Question[]>([]);
@@ -108,9 +112,18 @@ export function BrowseClient({ questions, topics, subtopics, sections }: BrowseC
       // Section filter
       if (selectedSection !== 'all' && q.section !== selectedSection) return false;
 
+      // Status filter
+      if (selectedStatus !== 'all') {
+        const attempt = attemptMap[q.question_id];
+        if (selectedStatus === 'unattempted' && attempt) return false;
+        if (selectedStatus === 'attempted' && !attempt) return false;
+        if (selectedStatus === 'correct' && (!attempt || !attempt.isCorrect)) return false;
+        if (selectedStatus === 'incorrect' && (!attempt || attempt.isCorrect)) return false;
+      }
+
       return true;
     });
-  }, [questions, searchQuery, selectedTopic, selectedSubtopic, selectedSection]);
+  }, [questions, searchQuery, selectedTopic, selectedSubtopic, selectedSection, selectedStatus, attemptMap]);
 
   // Get filtered subtopics based on selected topic
   const availableSubtopics = useMemo(() => {
@@ -196,6 +209,22 @@ export function BrowseClient({ questions, topics, subtopics, sections }: BrowseC
               </Select>
             </div>
 
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Attempt Status</label>
+              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Questions" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Questions</SelectItem>
+                  <SelectItem value="unattempted">Unattempted</SelectItem>
+                  <SelectItem value="attempted">Attempted</SelectItem>
+                  <SelectItem value="correct">Correctly Answered</SelectItem>
+                  <SelectItem value="incorrect">Incorrectly Answered</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <Button
               variant="outline"
               className="w-full"
@@ -204,6 +233,7 @@ export function BrowseClient({ questions, topics, subtopics, sections }: BrowseC
                 setSelectedTopic('all');
                 setSelectedSubtopic('all');
                 setSelectedSection('all');
+                setSelectedStatus('all');
               }}
             >
               Clear Filters
@@ -233,10 +263,10 @@ export function BrowseClient({ questions, topics, subtopics, sections }: BrowseC
                     <Button
                       key={q.question_id}
                       variant={selectedQuestion?.question_id === q.question_id ? 'default' : 'outline'}
-                      className="w-full justify-start text-left h-auto py-3"
+                      className="w-full justify-between text-left h-auto py-3"
                       onClick={() => setSelectedQuestion(q)}
                     >
-                      <div className="flex-1">
+                      <div className="flex-1 mr-4">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="font-semibold">Q{idx + 1}</span>
                           {q.year && q.slot && (
@@ -259,6 +289,30 @@ export function BrowseClient({ questions, topics, subtopics, sections }: BrowseC
                           </div>
                         )}
                       </div>
+                      
+                      <div className="flex flex-col items-end gap-1">
+                        {attemptMap[q.question_id] ? (
+                          attemptMap[q.question_id].isCorrect ? (
+                             <div className="flex items-center gap-1 text-xs font-bold text-green-600 bg-green-50 dark:bg-green-900/30 px-2 py-1 rounded-full">
+                               <CheckCircle className="h-3 w-3" /> Correct
+                             </div>
+                          ) : (
+                             <div className="flex items-center gap-1 text-xs font-bold text-red-600 bg-red-50 dark:bg-red-900/30 px-2 py-1 rounded-full">
+                               <XCircle className="h-3 w-3" /> Incorrect
+                             </div>
+                          )
+                        ) : (
+                           <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground bg-muted/50 px-2 py-1 rounded-full">
+                             <MinusCircle className="h-3 w-3" /> Unattempted
+                           </div>
+                        )}
+                        
+                        {attemptMap[q.question_id]?.timeTaken && (
+                           <div className="text-[10px] text-muted-foreground font-semibold">
+                             {attemptMap[q.question_id].timeTaken}s
+                           </div>
+                        )}
+                      </div>
                     </Button>
                   ))}
                 </div>
@@ -277,6 +331,9 @@ export function BrowseClient({ questions, topics, subtopics, sections }: BrowseC
                       <QuestionDisplay
                         question={fullQuestionData}
                         allQuestionsInContext={setQuestions}
+                        isTestMode={!!testAnswers || showSolutionsDefault}
+                        testFinished={showSolutionsDefault}
+                        testAnswers={testAnswers}
                       />
                     ) : (
                       <Card className="flex items-center justify-center min-h-[400px]">

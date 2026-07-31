@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' });
     const prompt = `
     You are an expert CAT tutor coaching a student on "${subtopic || 'a topic'}". 
-    The student just answered a question incorrectly.
+    The student just answered a question incorrectly. Assume they haven't seen any other explanation.
 
     Question:
     ${question_html}
@@ -56,11 +56,20 @@ export async function POST(request: NextRequest) {
     Student's Answer: ${userAnswer}
 
     Your task:
-    Provide "Formative Feedback" (max 3 paragraphs). 
-    1. Acknowledge their mistake gracefully.
-    2. Explain the logical flaw or trap they fell into by choosing ${userAnswer}.
-    3. Coach them on the correct methodology to arrive at ${answer}.
-    Do NOT ask them another question. Just provide clear, encouraging feedback formatted in Markdown.
+    Provide a clear, self-sufficient "Formative Feedback" breakdown formatted in Markdown with plenty of breathing room (blank lines between paragraphs).
+    
+    Structure your response into these sections:
+    
+    ### 1. Where You Went Wrong
+    Acknowledge their mistake gracefully. Explain the specific logical flaw, miscalculation, or trap they fell into by choosing ${userAnswer}.
+    
+    ### 2. The Correct Methodology
+    Coach them step-by-step on how to arrive at ${answer}. Break it down simply.
+    
+    ### 3. Key Takeaway & Formulas
+    List the core formula or concept they should remember from this mistake.
+
+    Do NOT ask them another question. Provide clear, encouraging feedback.
     `;
 
     const result = await model.generateContent(prompt);

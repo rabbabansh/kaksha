@@ -121,10 +121,7 @@ export async function getUserProgressStats(
       subtopic: record.subtopic,
       totalQuestions: record.totalQuestions,
       correctCount: record.correctCount,
-      percentage: calculateSubtopicPercentage(
-        record.correctCount,
-        record.totalQuestions
-      ),
+      percentage: Math.round(record.masteryLevel * 100),
     };
 
     topicsMap.get(record.topic)!.push(subtopic);
@@ -207,16 +204,11 @@ export async function getUserProgressStats(
     let hasAttempt = false;
 
     if (record && record.totalQuestions > 0) {
-      percentage = calculateSubtopicPercentage(record.correctCount, record.totalQuestions);
+      percentage = Math.round(record.masteryLevel * 100);
       hasAttempt = true;
     } else {
-      // Fallback to self-attested topic
-      const onboardingTopic = getOnboardingTopic(s.section || '', s.topic || '', s.subtopic || '');
-      if (selfStrengths.includes(onboardingTopic)) {
-        percentage = 75; // high score for self-attested strength
-      } else if (selfWeaknesses.includes(onboardingTopic)) {
-        percentage = 25; // low score for self-attested weakness
-      }
+      // Unattempted subtopics are kept at 50%
+      percentage = 50;
     }
 
     return { key, percentage, hasAttempt };

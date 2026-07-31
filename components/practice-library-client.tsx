@@ -26,33 +26,22 @@ interface PracticeLibraryClientProps {
 
 const SECTIONS_DATA = [
   {
-    name: "Quantitative Ability",
-    abbr: "QA",
+    name: "Verbal Ability & Reading Comprehension",
+    abbr: "VARC",
     topics: [
       {
-        name: "Algebra",
-        funName: "Algebraic Apocalypse",
-        subtopics: ["Simple Equations", "Quadratic Equations", "Surds & Indices", "Logarithms", "Progressions", "Inequalities & Modulus", "Functions & Graphs"]
+        name: "Reading Comprehension",
+        funName: "Comprehension Champion",
+        subtopics: ["Reading Comprehension"]
       },
       {
-        name: "Arithmetic",
-        funName: "Arithmetic Ascent",
-        subtopics: ["Percentage", "Profit & Loss", "Simple & Compound Interest", "Ratio, Proportion & Variation", "Average", "Mixture, Alligation, Removal & Replacement", "Time & Work", "Time, Speed & Distance"]
-      },
-      {
-        name: "Geometry",
-        funName: "Geometric Gladiator",
-        subtopics: ["Basics", "Triangles", "Quadrilaterals & Polygons", "Circles", "Mensuration", "Coordinate Geometry", "Trigonometry"]
-      },
-      {
-        name: "Modern Math",
-        funName: "Modern Math Multiverse",
-        subtopics: ["Permutation & Combination", "Probability", "Sets"]
-      },
-      {
-        name: "Number System",
-        funName: "Number Ninja",
-        subtopics: ["Number System", "Number Theory"]
+        name: "Verbal Ability",
+        funName: "Verbal Virtuoso",
+        subtopics: [
+          "Para Jumbles", "Para Completion", "Para Summary", "Odd one out", 
+          "Sentence Correction", "Grammar, Usage & Correction", "Fill in the blanks", 
+          "Analogy", "Arguments", "Fact, Inference & Judgement", "Usage", "Vocabulary"
+        ]
       }
     ]
   },
@@ -80,22 +69,33 @@ const SECTIONS_DATA = [
     ]
   },
   {
-    name: "Verbal Ability & Reading Comprehension",
-    abbr: "VARC",
+    name: "Quantitative Ability",
+    abbr: "QA",
     topics: [
       {
-        name: "Reading Comprehension",
-        funName: "Comprehension Champion",
-        subtopics: ["Reading Comprehension"]
+        name: "Algebra",
+        funName: "Algebraic Apocalypse",
+        subtopics: ["Simple Equations", "Quadratic Equations", "Surds & Indices", "Logarithms", "Progressions", "Inequalities & Modulus", "Functions & Graphs"]
       },
       {
-        name: "Verbal Ability",
-        funName: "Verbal Virtuoso",
-        subtopics: [
-          "Para Jumbles", "Para Completion", "Para Summary", "Odd one out", 
-          "Sentence Correction", "Grammar, Usage & Correction", "Fill in the blanks", 
-          "Analogy", "Arguments", "Fact, Inference & Judgement", "Usage", "Vocabulary"
-        ]
+        name: "Arithmetic",
+        funName: "Arithmetic Ascent",
+        subtopics: ["Percentage", "Profit & Loss", "Simple & Compound Interest", "Ratio, Proportion & Variation", "Average", "Mixture, Alligation, Removal & Replacement", "Time & Work", "Time, Speed & Distance"]
+      },
+      {
+        name: "Geometry",
+        funName: "Geometric Gladiator",
+        subtopics: ["Basics", "Triangles", "Quadrilaterals & Polygons", "Circles", "Mensuration", "Coordinate Geometry", "Trigonometry"]
+      },
+      {
+        name: "Modern Math",
+        funName: "Modern Math Multiverse",
+        subtopics: ["Permutation & Combination", "Probability", "Sets"]
+      },
+      {
+        name: "Number System",
+        funName: "Number Ninja",
+        subtopics: ["Number System", "Number Theory"]
       }
     ]
   }

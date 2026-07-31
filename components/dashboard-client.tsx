@@ -5,22 +5,39 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { DashboardCharts } from './dashboard-charts';
 import { DashboardTimeline } from './dashboard-timeline';
-import { Loader2, TrendingUp, TrendingDown, Award, Star, Medal, Zap, PlayCircle, History, BookOpen } from 'lucide-react';
+import { Loader2, TrendingUp, TrendingDown, Award, Star, Medal, Zap, PlayCircle, History, BookOpen, Trophy } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
 export function DashboardClient() {
   const [data, setData] = useState<any>(null);
+  const [historyData, setHistoryData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
+  async function loadData() {
+    try {
+      const [res, histRes] = await Promise.all([
+        fetch('/api/progress/dashboard'),
+        fetch('/api/progress/history')
+      ]);
+      const json = await res.json();
+      if (json.success) {
+        setData(json.data);
+      }
+      
+      const histJson = await histRes.json();
+      if (histJson.success) {
+         setHistoryData(histJson.data);
+      }
+    } catch (error) {
+      console.error('Failed to load dashboard:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   useEffect(() => {
-    fetch('/api/progress/dashboard')
-      .then(res => res.json())
-      .then(d => {
-        if (d.success) setData(d.data);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+    loadData();
   }, []);
 
   if (loading) {
@@ -33,19 +50,39 @@ export function DashboardClient() {
 
   if (!data) return null;
 
+  const getEstimatedPercentile = (score: number) => {
+    if (score >= 90) return '99.5+';
+    if (score >= 80) return (95 + (score - 80) * 0.45).toFixed(1); // 80=95, 90=99.5
+    if (score >= 70) return (90 + (score - 70) * 0.5).toFixed(1);  // 70=90, 80=95
+    if (score >= 60) return (80 + (score - 60) * 1.0).toFixed(1);  // 60=80, 70=90
+    if (score >= 50) return (70 + (score - 50) * 1.0).toFixed(1);  // 50=70, 60=80
+    if (score >= 30) return (40 + (score - 30) * 1.5).toFixed(1);  // 30=40, 50=70
+    return Math.max(0, score).toFixed(1);
+  };
+
   return (
     <div className="space-y-6 mb-12">
       {/* Overview Metric & Gamification */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card className="col-span-1 md:col-span-2 border-primary/20 bg-primary/5 shadow-sm">
           <CardHeader className="pb-2">
-            <CardDescription className="text-primary font-medium flex items-center gap-2 tracking-wider uppercase text-xs">
-              <Award className="h-4 w-4" /> Overall Mastery Profile
-            </CardDescription>
-            <CardTitle className="text-6xl font-black flex items-baseline gap-2 tracking-tighter">
-              {data.overallScore}
-              <span className="text-2xl text-muted-foreground font-semibold">/ 100</span>
-            </CardTitle>
+            <div className="flex items-start justify-between">
+              <div>
+                <CardDescription className="text-primary font-medium flex items-center gap-2 tracking-wider uppercase text-xs">
+                  <Award className="h-4 w-4" /> Overall Mastery Profile
+                </CardDescription>
+                <CardTitle className="text-6xl font-black flex items-baseline gap-2 tracking-tighter mt-1">
+                  {data.overallScore}
+                  <span className="text-2xl text-muted-foreground font-semibold">/ 100</span>
+                </CardTitle>
+              </div>
+              <div className="text-right flex flex-col items-end">
+                <Badge className="bg-indigo-600 text-white border-0 font-black text-sm px-3 py-1 shadow-md">
+                  {getEstimatedPercentile(data.overallScore)} %ile
+                </Badge>
+                <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold mt-1">Est. CAT Percentile</span>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground mb-4">
@@ -112,28 +149,64 @@ export function DashboardClient() {
             <CardDescription className="text-indigo-900/70 dark:text-indigo-300/70 font-medium">Actionable practice modules dynamically generated to target your weakest subtopics today.</CardDescription>
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {data.weaknesses.length > 0 ? data.weaknesses.slice(0, 3).map((w: string, i: number) => {
-               const subtopic = w.split(' > ').pop();
-               const tasks = ["Solve 5 Rapid Questions", "Complete 1 Section Set", "Review Core Concepts"];
-               const task = tasks[i % tasks.length];
-               
-               return (
-                 <a key={w} href={`/practice/mixed?topic=${encodeURIComponent(subtopic || '')}`} className="block group">
-                   <div className="p-5 rounded-xl border-2 border-indigo-100 dark:border-indigo-800/50 bg-background hover:border-indigo-400 hover:shadow-md transition-all duration-200">
-                     <div className="flex justify-between items-start mb-3">
-                       <Badge variant="secondary" className="bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300 font-bold">
-                         {subtopic}
-                       </Badge>
-                       <span className="text-xs font-black text-yellow-500 bg-yellow-50 dark:bg-yellow-900/20 px-2 py-1 rounded-full">+50 XP</span>
+            {data.weaknesses.length > 0 ? (() => {
+              const targets = data.weaknesses.slice(0, 3);
+              const taskStatuses = targets.map((w: string, i: number) => {
+                 const subtopic = w.split(' > ').pop();
+                 const tasks = ["Solve 10 Rapid Questions", "Complete 1 Practice Sprint", "Review Core Concepts"];
+                 const taskName = tasks[i % tasks.length];
+                 const attemptedToday = historyData?.attempts?.some((a: any) => {
+                   if (a.question?.subtopic !== subtopic) return false;
+                   const attemptDate = new Date(a.attemptedAt);
+                   const today = new Date();
+                   return attemptDate.getDate() === today.getDate() && 
+                          attemptDate.getMonth() === today.getMonth() && 
+                          attemptDate.getFullYear() === today.getFullYear();
+                 });
+                 return { subtopic, taskName, attemptedToday, w };
+              });
+
+              const allCompleted = taskStatuses.every((t: any) => t.attemptedToday);
+
+              if (allCompleted) {
+                return (
+                  <div className="col-span-1 md:col-span-3 rounded-xl border-2 border-dashed border-green-500/50 bg-green-500/10 p-8 text-center flex flex-col items-center">
+                    <Trophy className="h-12 w-12 text-green-500 mb-4" />
+                    <h3 className="font-bold text-2xl mb-2 text-green-700 dark:text-green-400">All Daily Targets Completed!</h3>
+                    <p className="text-muted-foreground max-w-md mx-auto mb-6 text-sm">You've successfully finished your personalized Kaksha tasks for today. Keep up the streak!</p>
+                    <Button className="bg-green-600 hover:bg-green-700 font-bold shadow-md" onClick={() => window.location.href='/practice/modules'}>
+                      Unlock Bonus Sprint
+                    </Button>
+                  </div>
+                );
+              }
+
+              return taskStatuses.map((t: any) => (
+                  <div key={t.w} className={`p-4 rounded-xl border flex flex-col justify-between transition-colors ${t.attemptedToday ? 'bg-green-500/10 border-green-500/30' : 'bg-background hover:border-indigo-500 hover:shadow-md'}`}>
+                     <div>
+                        <div className="flex items-center gap-2 mb-2">
+                           {t.attemptedToday ? (
+                             <Badge className="bg-green-500 text-white border-0 font-bold">COMPLETED</Badge>
+                           ) : (
+                             <Badge variant="outline" className="bg-indigo-500/10 text-indigo-700 border-indigo-200 font-bold uppercase tracking-wider text-[10px]">Priority Task</Badge>
+                           )}
+                        </div>
+                        <h4 className={`font-bold text-base leading-tight mb-1 ${t.attemptedToday ? 'line-through text-muted-foreground' : ''}`}>{t.taskName}</h4>
+                        <p className={`text-sm ${t.attemptedToday ? 'text-muted-foreground line-through' : 'text-muted-foreground'}`}>Focus: {t.subtopic}</p>
                      </div>
-                     <h4 className="font-extrabold text-lg mb-2 group-hover:text-indigo-600 transition-colors">{task}</h4>
-                     <p className="text-xs text-muted-foreground flex items-center gap-1 font-semibold uppercase tracking-wider">
-                       <PlayCircle className="h-4 w-4" /> Start Module
-                     </p>
-                   </div>
-                 </a>
-               );
-            }) : (
+                     {!t.attemptedToday && (
+                       <Button variant="default" size="sm" className="mt-4 w-full bg-indigo-600 hover:bg-indigo-700 shadow-sm font-bold" onClick={() => window.location.href=`/practice/modules/${encodeURIComponent(t.subtopic || '')}`}>
+                          <PlayCircle className="h-4 w-4 mr-2" /> Start Now
+                       </Button>
+                     )}
+                     {t.attemptedToday && (
+                       <Button variant="outline" size="sm" className="mt-4 w-full border-green-500/30 text-green-700 bg-transparent cursor-default font-bold hover:bg-transparent">
+                          Task Finished
+                       </Button>
+                     )}
+                  </div>
+              ));
+            })() : (
                <div className="col-span-3 text-center py-6 text-muted-foreground font-medium">
                   Complete your Diagnostic test to unlock daily targets.
                </div>
@@ -150,16 +223,64 @@ export function DashboardClient() {
             <CardDescription>Revisit your recent modules and learn from your mistakes using the AI Tutor.</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="rounded-xl border-2 border-dashed border-border p-8 text-center bg-muted/20">
-              <BookOpen className="h-10 w-10 mx-auto text-muted-foreground mb-3 opacity-50" />
-              <h3 className="font-bold text-lg mb-1">Your review hub is ready</h3>
-              <p className="text-sm text-muted-foreground max-w-md mx-auto mb-6">
-                As you complete Diagnostic tests and Daily Kaksha modules, they will automatically appear here. Jump back in to review incorrectly answered questions.
-              </p>
-              <Button onClick={() => window.location.href='/practice/modules'} className="font-bold shadow-sm">
-                 Browse All Modules
-              </Button>
-            </div>
+            {historyData && (historyData.mockProgress.length > 0 || historyData.attempts.length > 0) ? (
+              <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                {/* Render Mocks first */}
+                {historyData.mockProgress.map((mock: any, idx: number) => (
+                  <div key={`mock-${idx}`} className="p-4 border rounded-xl flex items-center justify-between hover:bg-muted/30 transition-colors">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge variant="outline" className="bg-primary/5">Mock Test</Badge>
+                        <span className="text-xs text-muted-foreground">{new Date(mock.updatedAt).toLocaleDateString()}</span>
+                      </div>
+                      <h4 className="font-bold">CAT {mock.year} - Slot {mock.slot}</h4>
+                      <p className="text-sm text-muted-foreground">Score: {mock.score || 'In Progress'}</p>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => window.location.href=`/mocks/${mock.year}/${mock.slot}/report`}>
+                      Review
+                    </Button>
+                  </div>
+                ))}
+                
+                {/* Render Practice Module attempts by grouping recent subtopics */}
+                {Object.entries(
+                  historyData.attempts.reduce((acc: any, curr: any) => {
+                    const key = curr.question?.subtopic;
+                    if (!key) return acc;
+                    if (!acc[key]) {
+                      acc[key] = { subtopic: key, count: 0, date: curr.attemptedAt, topic: curr.question.topic, source: curr.source };
+                    }
+                    acc[key].count++;
+                    return acc;
+                  }, {})
+                ).map(([key, group]: any, idx: number) => (
+                  <div key={`prac-${idx}`} className="p-4 border rounded-xl flex items-center justify-between hover:bg-muted/30 transition-colors">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge variant="outline" className="bg-secondary/10">Practice</Badge>
+                        <span className="text-xs text-muted-foreground">{new Date(group.date).toLocaleDateString()}</span>
+                      </div>
+                      <h4 className="font-bold">{group.subtopic}</h4>
+                      <p className="text-sm text-muted-foreground">{group.count} questions attempted in {group.topic}</p>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => window.location.href=`/practice/review/${encodeURIComponent(group.subtopic)}`}>
+                      Review Sprint
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-xl border-2 border-dashed border-border p-8 text-center bg-muted/20">
+                <BookOpen className="h-10 w-10 mx-auto text-muted-foreground mb-3 opacity-50" />
+                <h3 className="font-bold text-lg mb-1">Your review hub is empty</h3>
+                <p className="text-sm text-muted-foreground max-w-md mx-auto mb-6">
+                  As you complete Diagnostic tests and Daily Kaksha modules, they will automatically appear here. Jump back in to review incorrectly answered questions.
+                </p>
+                <Button onClick={() => window.location.href='/practice/modules'} className="font-bold shadow-sm">
+                   Browse All Modules
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

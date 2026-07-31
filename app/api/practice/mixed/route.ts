@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
       // First try unattempted questions
       const unattemptedMatching = await prisma.questions.findMany({
         where: {
-          topic: topicParam,
+          subtopic: topicParam,
           question_id: { notIn: Array.from(attemptedIdSet) }
         },
         select: {
@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
         const selectedIds = new Set(selectedQuestions.map(q => q.question_id));
         const attemptedMatching = await prisma.questions.findMany({
           where: {
-            topic: topicParam,
+            subtopic: topicParam,
             question_id: { 
               in: Array.from(attemptedIdSet),
               notIn: Array.from(selectedIds)

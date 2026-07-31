@@ -28,10 +28,16 @@ export function DashboardCharts({ hierarchy, totalRawAttempts, totalRawCorrect, 
     wrong: totalRawWrong
   };
 
+  const calculateNetScore = (correct: number, wrong: number, attempts: number) => {
+    if (attempts === 0) return 0;
+    return Math.round(((correct - wrong) / attempts) * 100);
+  };
+
   if (level === 'section') {
     chartData = Object.values(hierarchy).map((s: any) => ({
       name: s.name,
       score: s.score,
+      netScore: calculateNetScore(s.rawCorrect || 0, s.rawWrong || 0, s.rawAttempts || 0),
       rawAttempts: s.rawAttempts || 0,
       rawCorrect: s.rawCorrect || 0,
       rawWrong: s.rawWrong || 0
@@ -49,6 +55,7 @@ export function DashboardCharts({ hierarchy, totalRawAttempts, totalRawCorrect, 
         chartData = Object.values(sec.topics).map((t: any) => ({
           name: t.name,
           score: t.score,
+          netScore: calculateNetScore(t.rawCorrect || 0, t.rawWrong || 0, t.rawAttempts || 0),
           rawAttempts: t.rawAttempts || 0,
           rawCorrect: t.rawCorrect || 0,
           rawWrong: t.rawWrong || 0
@@ -68,6 +75,7 @@ export function DashboardCharts({ hierarchy, totalRawAttempts, totalRawCorrect, 
         chartData = Object.values(top.subtopics).map((st: any) => ({
           name: st.name,
           score: st.score,
+          netScore: calculateNetScore(st.rawCorrect || 0, st.rawWrong || 0, st.rawAttempts || 0),
           rawAttempts: st.rawAttempts || 0,
           rawCorrect: st.rawCorrect || 0,
           rawWrong: st.rawWrong || 0
@@ -76,8 +84,8 @@ export function DashboardCharts({ hierarchy, totalRawAttempts, totalRawCorrect, 
     }
   }
 
-  // Sort descending by score for better visualization
-  chartData.sort((a, b) => b.score - a.score);
+  // Sort descending by netScore for better visualization
+  chartData.sort((a, b) => b.netScore - a.netScore);
 
   const handleBarClick = (data: any) => {
     if (level === 'section') {
@@ -99,10 +107,10 @@ export function DashboardCharts({ hierarchy, totalRawAttempts, totalRawCorrect, 
     }
   };
 
-  // Custom coloring based on score
-  const getColor = (score: number) => {
-    if (score >= 80) return '#22c55e'; // Green
-    if (score >= 50) return '#f59e0b'; // Amber
+  // Custom coloring based on netScore
+  const getColor = (netScore: number) => {
+    if (netScore >= 20) return '#22c55e'; // Green
+    if (netScore >= -10) return '#f59e0b'; // Amber
     return '#ef4444'; // Red
   };
 
@@ -161,7 +169,7 @@ export function DashboardCharts({ hierarchy, totalRawAttempts, totalRawCorrect, 
               }
             }}
           >
-            <XAxis type="number" domain={[0, 100]} />
+            <XAxis type="number" domain={[-100, 100]} />
             <YAxis 
               type="category" 
               dataKey="name" 
@@ -178,7 +186,8 @@ export function DashboardCharts({ hierarchy, totalRawAttempts, totalRawCorrect, 
                   return (
                     <div className="bg-background border rounded-lg shadow-lg p-3">
                       <p className="font-semibold">{data.name}</p>
-                      <p className="text-sm">Mastery: {data.score}%</p>
+                      <p className="text-sm">Net Score: <span className={data.netScore < 0 ? 'text-red-500 font-bold' : 'text-green-500 font-bold'}>{data.netScore > 0 ? '+' : ''}{data.netScore}</span></p>
+                      <p className="text-xs text-muted-foreground">Mastery: {data.score}%</p>
                       <div className="flex gap-3 text-xs text-muted-foreground mt-2 border-t pt-2">
                         <span>Att: {data.rawAttempts || 0}</span>
                         <span className="text-green-600 dark:text-green-400">✔ {data.rawCorrect || 0}</span>
@@ -194,14 +203,14 @@ export function DashboardCharts({ hierarchy, totalRawAttempts, totalRawCorrect, 
               }}
             />
             <Bar 
-              dataKey="score" 
-              radius={[0, 4, 4, 0]}
+              dataKey="netScore" 
+              radius={[4, 4, 4, 4]}
               barSize={32}
               className="cursor-pointer transition-opacity hover:opacity-80"
               onClick={(data) => handleBarClick(data)}
             >
               {chartData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={getColor(entry.score)} />
+                <Cell key={`cell-${index}`} fill={getColor(entry.netScore)} />
               ))}
             </Bar>
           </BarChart>

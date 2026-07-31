@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    const { questionId, userAnswer, source = 'chat' } = body;
+    const { questionId, userAnswer, source = 'chat', timeTaken } = body;
 
     if (!questionId || !userAnswer) {
       return NextResponse.json(
@@ -79,6 +79,7 @@ export async function POST(request: NextRequest) {
         userAnswer,
         isCorrect,
         source,
+        timeTaken: typeof timeTaken === 'number' ? timeTaken : null,
       },
     });
 

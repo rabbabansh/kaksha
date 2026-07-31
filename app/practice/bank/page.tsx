@@ -29,10 +29,40 @@ export default async function BrowsePage() {
       },
     });
 
+    let userId = (session.user as { id?: string })?.id;
+    if (!userId && session.user?.email) {
+      const dbUser = await prisma.user.findUnique({ where: { email: session.user.email }, select: { id: true } });
+      if (dbUser) userId = dbUser.id;
+    }
+
+    const attempts = userId ? await prisma.questionAttempt.findMany({
+      where: { userId },
+      select: { questionId: true, isCorrect: true, timeTaken: true },
+      orderBy: { attemptedAt: 'desc' }
+    }) : [];
+
+    // Map the most recent attempt for each question
+    const attemptMap = attempts.reduce((acc: any, curr) => {
+      if (!acc[curr.questionId]) {
+        acc[curr.questionId] = curr;
+      }
+      return acc;
+    }, {});
+
     // Get unique topics and subtopics
     const topics = [...new Set(questions.map(q => q.topic).filter((t): t is string => Boolean(t)))].sort();
     const subtopics = [...new Set(questions.map(q => q.subtopic).filter((s): s is string => Boolean(s)))].sort();
-    const sections = [...new Set(questions.map(q => q.section).filter((s): s is string => Boolean(s)))].sort();
+    
+    const order = ['VARC', 'DILR', 'QA'];
+    const sections = [...new Set(questions.map(q => q.section).filter((s): s is string => Boolean(s)))]
+      .sort((a, b) => {
+        const indexA = order.indexOf(a);
+        const indexB = order.indexOf(b);
+        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+        if (indexA !== -1) return -1;
+        if (indexB !== -1) return 1;
+        return a.localeCompare(b);
+      });
 
     return (
       <div className="container mx-auto px-4 py-8 max-w-7xl">
@@ -47,6 +77,7 @@ export default async function BrowsePage() {
           topics={topics}
           subtopics={subtopics}
           sections={sections}
+          attemptMap={attemptMap}
         />
       </div>
     );
