@@ -31,6 +31,7 @@ model questions {
   
   // 1-to-1 link to its vector
   vector                 QuestionVector?
+  questionAttempts       QuestionAttempt[]
 }
 
 // Vector storage model for embeddings
@@ -82,9 +83,10 @@ model QuestionAttempt {
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   questionId  String
+  question    questions @relation(fields: [questionId], references: [question_id], onDelete: Cascade)
   userAnswer  String
   isCorrect   Boolean
-  source      String   // 'chat' or 'test'
+  source      String   // 'diagnostic', 'practice', 'mock', 'training', 'bank'
   attemptedAt DateTime @default(now())
 
   @@index([userId])
@@ -101,6 +103,7 @@ model UserProgress {
   subtopic        String
   totalQuestions  Int      @default(0)
   correctCount    Int      @default(0)
+  masteryLevel    Float    @default(0.0) // Moving BKT estimate (0.0 to 1.0)
   lastAttemptedAt DateTime?
   updatedAt       DateTime @updatedAt
 
@@ -117,5 +120,16 @@ model UserProfile {
   totalCorrect  Int      @default(0)
   strengths     String   @default("[]") // JSON array of top 3 subtopics
   weaknesses    String   @default("[]") // JSON array of bottom 3 subtopics
+  xp            Int      @default(0)
+  badges        String   @default("[]") // JSON array of badge names
+  aiActionPlan  String?  // Markdown/JSON of the generated AI plan
+  
+  // Onboarding
+  onboardingCompleted Boolean @default(false)
+  targetExamYear      String?
+  age                 Int?
+  selfStrengths       String  @default("[]") // JSON array of user-selected topics
+  selfWeaknesses      String  @default("[]") // JSON array of user-selected topics
+  
   updatedAt     DateTime @updatedAt
 }
