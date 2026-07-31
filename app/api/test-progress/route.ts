@@ -240,6 +240,31 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    if (progress.completed) {
+        // Fetch test to trigger BKT update
+        fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/progress/process-test`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Cookie': request.headers.get('cookie') || ''
+            },
+            body: JSON.stringify({ testProgressId: progress.id })
+        }).catch(e => console.error('Failed to trigger BKT processing:', e));
+
+        // If this was the Diagnostic test, complete onboarding and generate AI plan
+        if (year === 'Diagnostic') {
+            await prisma.userProfile.update({
+                where: { userId },
+                data: { onboardingCompleted: true }
+            });
+
+            // Generate AI Action plan in the background
+            fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/progress/ai-analysis?force=true`, {
+                headers: { 'Cookie': request.headers.get('cookie') || '' }
+            }).catch(e => console.error('Failed to trigger initial AI Analysis:', e));
+        }
+    }
+
     logger.info(`${operation} completed successfully`, {
       operation,
       correlationId,

@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    await updateUserProgress(userId, questionId, isCorrect);
+    await updateUserProgress(userId, questionId, isCorrect, source);
 
     logger.info(`${operation} completed successfully`, {
       operation,

@@ -4,7 +4,7 @@ import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { MessageSquare, BookOpen, Search, LogOut, TrendingUp, Sparkles } from 'lucide-react';
+import { BookOpen, Search, LogOut, TrendingUp, Sparkles, FileText, Settings } from 'lucide-react';
 import Image from 'next/image';
 import {
   DropdownMenu,
@@ -20,19 +20,26 @@ export function Navbar() {
   const pathname = usePathname();
 
   const navItems = [
-    { href: '/', label: 'Tests', icon: BookOpen },
-    { href: '/chat', label: 'Chat', icon: MessageSquare },
-    { href: '/browse', label: 'Browse', icon: Search },
-    { href: '/progress', label: 'Progress', icon: TrendingUp },
-    { href: '/insights', label: 'AI Coach', icon: Sparkles },
+    { href: '/dashboard', label: 'Dashboard', icon: TrendingUp },
+    { href: '/practice/bank', label: 'Practice Bank', icon: Search },
+    { href: '/practice/modules', label: 'Practice Modules', icon: FileText },
+    { href: '/mocks', label: 'PYQ Mocks', icon: BookOpen },
+    { href: '/tutor', label: 'Tutor', icon: Sparkles },
   ];
 
   const isActive = (href: string) => {
-    if (href === '/') {
-      return pathname === '/';
+    if (href === '/mocks') {
+      return pathname === '/mocks';
     }
     return pathname?.startsWith(href);
   };
+
+  const isTestPage = pathname === '/diagnostic' || 
+                     (pathname?.startsWith('/mocks/') && pathname.split('/').filter(Boolean).length > 1);
+
+  if (pathname === '/' || isTestPage) {
+    return null;
+  }
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -91,10 +98,16 @@ export function Navbar() {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <Link href="/progress">
+              <Link href="/dashboard">
                 <DropdownMenuItem>
                   <TrendingUp className="mr-2 h-4 w-4" />
-                  <span>Progress</span>
+                  <span>Dashboard</span>
+                </DropdownMenuItem>
+              </Link>
+              <Link href="/settings">
+                <DropdownMenuItem>
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Settings</span>
                 </DropdownMenuItem>
               </Link>
               <DropdownMenuSeparator />

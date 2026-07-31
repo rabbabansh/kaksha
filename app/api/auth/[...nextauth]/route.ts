@@ -1,6 +1,5 @@
 import NextAuth, { type NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
-import CredentialsProvider from "next-auth/providers/credentials";
 import prisma from "@/lib/prisma";
 
 export const authOptions: NextAuthOptions = {
@@ -8,49 +7,6 @@ export const authOptions: NextAuthOptions = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID || "",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
-    }),
-    CredentialsProvider({
-      name: "credentials",
-      credentials: {
-        email: { label: "Email", type: "text" },
-        password: { label: "Password", type: "password" },
-      },
-      async authorize(credentials) {
-        console.log('NextAuth authorize called with:', { email: credentials?.email, password: credentials?.password });
-        
-        // Check if credentials exist
-        if (!credentials?.email || !credentials?.password) {
-          console.log('NextAuth: Missing credentials');
-          return null;
-        }
-        
-        // Check credentials
-        if (credentials.email === "ansh@kaksha.ai" && credentials.password === "password") {
-          console.log('NextAuth: Valid credentials, returning user');
-          // Find or create user in database
-          let user = await prisma.user.findUnique({
-            where: { email: credentials.email },
-          });
-          
-          if (!user) {
-            user = await prisma.user.create({
-              data: {
-                email: credentials.email,
-                name: "Ansh",
-              },
-            });
-          }
-          
-          return { 
-            id: user.id, 
-            name: user.name, 
-            email: user.email 
-          };
-        }
-        
-        console.log('NextAuth: Invalid credentials, returning null');
-        return null;
-      },
     }),
   ],
   pages: {

@@ -1,11 +1,14 @@
+/* eslint-disable */
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Clock, Calculator, Flag, X } from 'lucide-react';
+import { Clock, Calculator, HelpCircle, User, Award } from 'lucide-react';
 import { QuestionDisplay } from './question-display';
+import { DiagnosticReport } from './diagnostic-report';
+import { useSession } from 'next-auth/react';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Question = any;
@@ -24,6 +27,7 @@ interface TestPageClientProps {
     completed: boolean;
     score: number | null;
   } | null;
+  isUntimed?: boolean;
 }
 
 const SECTION_TIME = 40 * 60; // 40 minutes in seconds
@@ -35,7 +39,10 @@ export function TestPageClient({
   questionsBySection,
   sections,
   initialProgress,
+  isUntimed = false,
 }: TestPageClientProps) {
+  const { data: session } = useSession();
+
   // Initialize section index from saved progress
   const getInitialSectionIndex = () => {
     if (initialProgress?.currentSection) {
@@ -55,14 +62,17 @@ export function TestPageClient({
   const [calculatorOpen, setCalculatorOpen] = useState(false);
   const [calculatorValue, setCalculatorValue] = useState('0');
   const [completed, setCompleted] = useState(initialProgress?.completed || false);
+  const [showReport, setShowReport] = useState(initialProgress?.completed || false);
   const [completedSections, setCompletedSections] = useState<Set<number>>(new Set());
   const [showEndSectionDialog, setShowEndSectionDialog] = useState(false);
   const [showEndExamDialog, setShowEndExamDialog] = useState(false);
+  const [visitedQuestions, setVisitedQuestions] = useState<Set<string>>(new Set());
   const calculatorInputRef = useRef<HTMLDivElement>(null);
 
   const currentSection = sections[currentSectionIndex] || sections[0];
   const currentQuestions = useMemo(() => questionsBySection[currentSection] || [], [questionsBySection, currentSection]);
-  // Show one square per question, not grouped by set
+  
+  // Order questions by ID
   const allQuestionsInSection = useMemo(() => {
     return currentQuestions.sort((a, b) => {
       const aId = parseInt(a.question_id) || 0;
@@ -70,7 +80,19 @@ export function TestPageClient({
       return aId - bId;
     });
   }, [currentQuestions]);
+  
   const currentQuestion = allQuestionsInSection[currentQuestionIndex] || null;
+
+  // Track visited questions
+  useEffect(() => {
+    if (currentQuestion) {
+      setVisitedQuestions((prev) => {
+        const next = new Set(prev);
+        next.add(currentQuestion.question_id);
+        return next;
+      });
+    }
+  }, [currentQuestion]);
 
   // Auto-save progress
   const saveProgress = useCallback(async () => {
@@ -101,11 +123,12 @@ export function TestPageClient({
       if (userAnswer === q.answer) {
         score += 3; // Correct answer
       } else if (userAnswer && userAnswer !== q.answer) {
-        score -= 1; // Wrong answer (negative marking)
+        score -= 1; // Wrong answer
       }
     });
 
     setCompleted(true);
+    setShowReport(true);
     await fetch('/api/test-progress', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -132,6 +155,7 @@ export function TestPageClient({
     } else {
       // All sections complete
       setCompleted(true);
+      setShowReport(true);
       calculateScore();
     }
     setShowEndSectionDialog(false);
@@ -141,13 +165,14 @@ export function TestPageClient({
   // Handle exam end
   const handleEndExam = useCallback(() => {
     setCompleted(true);
+    setShowReport(true);
     calculateScore();
     setShowEndExamDialog(false);
   }, [calculateScore]);
 
   // Timer effect
   useEffect(() => {
-    if (completed || timeRemaining <= 0 || completedSections.has(currentSectionIndex)) return;
+    if (isUntimed || completed || timeRemaining <= 0 || completedSections.has(currentSectionIndex)) return;
 
     const interval = setInterval(() => {
       setTimeRemaining((prev) => {
@@ -159,7 +184,7 @@ export function TestPageClient({
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [completed, timeRemaining, currentSectionIndex, completedSections]);
+  }, [isUntimed, completed, timeRemaining, currentSectionIndex, completedSections]);
 
   // Calculator functions
   const handleCalculatorInput = useCallback((value: string) => {
@@ -191,45 +216,18 @@ export function TestPageClient({
     return () => clearInterval(interval);
   }, [saveProgress]);
 
-  // Keyboard support for calculator
-  useEffect(() => {
-    if (!calculatorOpen) return;
-
-    const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-        return; // Don't interfere with text inputs
-      }
-
-      const key = e.key;
-      if (key >= '0' && key <= '9') {
-        handleCalculatorInput(key);
-      } else if (key === '.') {
-        handleCalculatorInput('.');
-      } else if (key === '+' || key === '-') {
-        handleCalculatorInput(key);
-      } else if (key === '*') {
-        handleCalculatorInput('×');
-      } else if (key === '/') {
-        e.preventDefault();
-        handleCalculatorInput('÷');
-      } else if (key === 'Enter' || key === '=') {
-        e.preventDefault();
-        handleCalculatorInput('=');
-      } else if (key === 'Escape' || key === 'c' || key === 'C') {
-        if (e.ctrlKey || e.metaKey) {
-          handleCalculatorInput('C');
-        }
-      } else if (key === 'Backspace') {
-        setCalculatorValue((prev) => prev.slice(0, -1) || '0');
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyPress);
-    return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [calculatorOpen, handleCalculatorInput]);
-
   const handleAnswerChange = (questionId: string, answer: string) => {
     setAnswers((prev) => ({ ...prev, [questionId]: answer }));
+  };
+
+  const clearResponse = () => {
+    if (currentQuestion) {
+      setAnswers((prev) => {
+        const next = { ...prev };
+        delete next[currentQuestion.question_id];
+        return next;
+      });
+    }
   };
 
   const toggleFlag = (questionId: string) => {
@@ -240,77 +238,156 @@ export function TestPageClient({
     );
   };
 
+  const markForReviewAndNext = () => {
+    if (currentQuestion) {
+      // Toggle flag to active if not flagged
+      if (!flagged.includes(currentQuestion.question_id)) {
+        setFlagged((prev) => [...prev, currentQuestion.question_id]);
+      }
+      // Go to next
+      if (currentQuestionIndex < allQuestionsInSection.length - 1) {
+        setCurrentQuestionIndex(currentQuestionIndex + 1);
+      }
+    }
+  };
+
+  const saveAndNext = () => {
+    if (currentQuestionIndex < allQuestionsInSection.length - 1) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
+    }
+  };
+
   const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
   const getQuestionStatus = (questionId: string) => {
-    if (answers[questionId]) return 'answered';
-    if (flagged.includes(questionId)) return 'flagged';
-    if (timeRemaining <= 0 || completedSections.has(currentSectionIndex)) return 'timeout';
-    return 'unanswered';
+    const isAnswered = !!answers[questionId];
+    const isFlagged = flagged.includes(questionId);
+    const isVisited = visitedQuestions.has(questionId);
+
+    if (isAnswered && isFlagged) return 'answered-marked';
+    if (isAnswered) return 'answered';
+    if (isFlagged) return 'marked';
+    if (isVisited) return 'not-answered';
+    return 'not-visited';
   };
 
-  const getQuestionButtonColor = (questionId: string) => {
+  const getQuestionButtonStyles = (questionId: string) => {
     const status = getQuestionStatus(questionId);
-    if (status === 'answered') return 'bg-green-500 hover:bg-green-600 text-white';
-    if (status === 'flagged') return 'bg-yellow-500 hover:bg-yellow-600 text-white';
-    if (status === 'timeout') return 'bg-red-500 hover:bg-red-600 text-white';
-    return 'bg-white hover:bg-gray-100 border border-gray-300 text-gray-900';
+    
+    // CBT shapes and colors:
+    // Answered: Green (rounded with a cut or just standard pill)
+    if (status === 'answered') {
+      return 'bg-green-600 text-white border-green-700 hover:bg-green-700 rounded-tr-3xl';
+    }
+    // Answered & Marked: Purple circular with a check/tick (represented as tick badge)
+    if (status === 'answered-marked') {
+      return 'bg-indigo-600 text-white border-indigo-700 hover:bg-indigo-700 rounded-full ring-2 ring-green-400';
+    }
+    // Marked for Review (not answered): Blue/Purple circular
+    if (status === 'marked') {
+      return 'bg-indigo-500 text-white border-indigo-600 hover:bg-indigo-600 rounded-full';
+    }
+    // Not Answered: Red trapezoid/cut shape
+    if (status === 'not-answered') {
+      return 'bg-red-500 text-white border-red-600 hover:bg-red-600 rounded-bl-3xl';
+    }
+    // Not Visited: Gray rectangle
+    return 'bg-gray-100 dark:bg-zinc-800 border-gray-300 text-gray-800 dark:text-zinc-300 hover:bg-gray-200';
   };
-
 
   const canSwitchSection = completedSections.has(currentSectionIndex) || completed;
   const isCurrentSectionCompleted = completedSections.has(currentSectionIndex);
 
+  // If completed and showReport is true, display report dashboard
+  if (completed && showReport) {
+    return (
+      <DiagnosticReport
+        year={year}
+        slot={slot}
+        questions={questions}
+        answers={answers}
+        sections={sections}
+        questionsBySection={questionsBySection}
+        onReviewQuestion={(secIdx, qIdx) => {
+          setCurrentSectionIndex(secIdx);
+          setCurrentQuestionIndex(qIdx);
+          setShowReport(false);
+        }}
+      />
+    );
+  }
+
   return (
-    <div className="container mx-auto px-4 py-6 max-w-7xl">
-      {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-3xl font-bold">
-              CAT {year}
-              {slot !== 'NA' && slot !== 'Unknown' && ` - Slot ${slot}`}
-            </h1>
-            <p className="text-muted-foreground">Section: {currentSection}</p>
+    <div className="h-screen max-h-screen overflow-hidden bg-background text-foreground flex flex-col font-sans">
+      
+      {/* Review Mode Banner */}
+      {completed && (
+        <div className="bg-primary/10 border-b border-primary/20 p-3 flex justify-between items-center px-6 text-sm font-medium">
+          <span>👀 You are currently reviewing your completed test. Correct answers and explanations are shown.</span>
+          <Button onClick={() => setShowReport(true)} size="sm">Back to Report Card</Button>
+        </div>
+      )}
+
+      {/* Top Header - CAT CBT Style */}
+      <header className="bg-zinc-900 text-white px-6 py-2 flex items-center justify-between border-b-4 border-primary">
+        <div className="flex items-center gap-4">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-black">
+            K
           </div>
-          <div className="flex items-center gap-4">
-            {!isCurrentSectionCompleted && (
-              <div className={`flex items-center gap-2 px-4 py-2 rounded-lg ${timeRemaining <= 60 ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
-                  timeRemaining <= 300 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
-                    'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                }`}>
-                <Clock className="h-5 w-5" />
-                <span className="text-xl font-mono font-bold">{formatTime(timeRemaining)}</span>
-              </div>
-            )}
-            {isCurrentSectionCompleted && (
-              <div className="px-4 py-2 rounded-lg bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                Section Completed
-              </div>
-            )}
-            <Button
-              variant="outline"
-              onClick={() => setCalculatorOpen(!calculatorOpen)}
-            >
-              <Calculator className="h-4 w-4 mr-2" />
-              Calculator
-            </Button>
-            {!completed && (
-              <Button
-                variant="destructive"
-                onClick={() => setShowEndExamDialog(true)}
-              >
-                End Exam
-              </Button>
-            )}
+          <div>
+            <h1 className="text-sm font-bold tracking-tight uppercase text-zinc-300">
+              CAT {year} Online Examination
+            </h1>
+            <p className="text-xs text-zinc-400">Diagnostic Baseline Test</p>
           </div>
         </div>
 
-        {/* Section Progress */}
+        <div className="flex items-center gap-6">
+          {/* Clock */}
+          {!isCurrentSectionCompleted && (
+            <div className="flex items-center gap-2 px-3 py-1 bg-zinc-800 rounded border border-zinc-700 text-primary-foreground">
+              <Clock className="h-4 w-4 text-primary" />
+              <span className="text-sm font-mono font-bold tracking-wider">
+                {isUntimed ? 'UNTIMED MODE' : `Time Left: ${formatTime(timeRemaining)}`}
+              </span>
+            </div>
+          )}
+
+          {/* Calculator Trigger */}
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setCalculatorOpen(!calculatorOpen)}
+            className="text-zinc-300 hover:text-white hover:bg-zinc-800"
+          >
+            <Calculator className="h-4 w-4 mr-1.5" />
+            Calculator
+          </Button>
+
+          {/* Profile details */}
+          <div className="flex items-center gap-3 border-l border-zinc-700 pl-6">
+            <div className="h-8 w-8 rounded-full bg-zinc-700 flex items-center justify-center overflow-hidden">
+              {session?.user?.image ? (
+                <img src={session.user.image} alt={session.user.name || 'User'} className="h-full w-full object-cover" />
+              ) : (
+                <User className="h-4 w-4 text-zinc-300" />
+              )}
+            </div>
+            <div className="hidden md:block text-right">
+              <p className="text-xs font-semibold text-zinc-100">{session?.user?.name || 'Aspirant'}</p>
+              <p className="text-[10px] text-zinc-400">ID: K-{session?.user?.email?.split('@')[0] || '1000'}</p>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Thin Section Tabs - CAT CBT Style */}
+      <div className="bg-muted/30 border-b border-border/80 px-6 py-2 flex items-center justify-between">
         <div className="flex gap-2">
           {sections.map((section, idx) => {
             const isCompleted = completedSections.has(idx);
@@ -320,6 +397,7 @@ export function TestPageClient({
                 key={section}
                 variant={isCurrent ? 'default' : isCompleted ? 'secondary' : 'outline'}
                 size="sm"
+                className={`px-6 font-semibold uppercase ${isCurrent ? 'bg-primary text-primary-foreground shadow-sm' : ''}`}
                 onClick={() => {
                   if (canSwitchSection && !completed) {
                     setCurrentSectionIndex(idx);
@@ -333,17 +411,47 @@ export function TestPageClient({
             );
           })}
         </div>
+        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          Section: <span className="text-foreground">{currentSection}</span>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Question Navigation Sidebar */}
-        <div className="lg:col-span-1">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Questions</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-5 gap-2 max-h-[400px] overflow-y-auto">
+      {/* Main Workspace - CBT Split Screen & Sidebar */}
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+        
+        {/* Left Side: Question Display */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          <QuestionDisplay
+            question={currentQuestion}
+            allQuestionsInContext={allQuestionsInSection}
+            isTestMode={true}
+            testFinished={completed || isCurrentSectionCompleted}
+            testAnswers={answers}
+            onAnswerChange={handleAnswerChange}
+          />
+        </div>
+
+        {/* Right Side: Sidebar with Palette & Details */}
+        <aside className="w-full md:w-80 border-t md:border-t-0 md:border-l border-border/80 bg-muted/10 p-6 flex flex-col justify-between shrink-0 overflow-y-auto">
+          <div className="space-y-6">
+            
+            {/* Candidate Box */}
+            <Card className="border bg-card">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0">
+                  <Award className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-foreground">Section Questions</h4>
+                  <p className="text-xs text-muted-foreground">Select a question to view it</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Question Palette Grid */}
+            <div className="space-y-3">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Question Palette</h3>
+              <div className="grid grid-cols-5 gap-2">
                 {allQuestionsInSection.map((question, idx) => {
                   const isActive = idx === currentQuestionIndex;
                   return (
@@ -351,7 +459,9 @@ export function TestPageClient({
                       key={question.question_id}
                       variant="ghost"
                       size="icon"
-                      className={`h-10 w-10 ${getQuestionButtonColor(question.question_id)} ${isActive ? 'ring-2 ring-primary ring-offset-2' : ''}`}
+                      className={`h-9 w-9 text-xs font-bold border transition-all duration-200 ${getQuestionButtonStyles(question.question_id)} ${
+                        isActive ? 'ring-2 ring-primary ring-offset-2' : ''
+                      }`}
                       onClick={() => setCurrentQuestionIndex(idx)}
                     >
                       {idx + 1}
@@ -359,207 +469,165 @@ export function TestPageClient({
                   );
                 })}
               </div>
-              <div className="mt-4 space-y-2 text-xs">
+            </div>
+
+            {/* Legend info matching real CBT */}
+            <div className="space-y-2 border-t pt-4">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Legend</h3>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[10px] font-medium">
                 <div className="flex items-center gap-2">
-                  <div className="h-4 w-4 bg-green-500 rounded"></div>
+                  <div className="h-4 w-4 bg-green-600 rounded-tr-lg border border-green-700"></div>
                   <span>Answered</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="h-4 w-4 bg-yellow-500 rounded"></div>
-                  <span>Flagged</span>
+                  <div className="h-4 w-4 bg-red-500 rounded-bl-lg border border-red-600"></div>
+                  <span>Not Answered</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="h-4 w-4 bg-white border border-gray-300 rounded"></div>
-                  <span>Not Attempted</span>
+                  <div className="h-4 w-4 bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 rounded"></div>
+                  <span>Not Visited</span>
                 </div>
-                {(timeRemaining <= 0 || isCurrentSectionCompleted) && (
-                  <div className="flex items-center gap-2">
-                    <div className="h-4 w-4 bg-red-500 rounded"></div>
-                    <span>Time Up</span>
-                  </div>
-                )}
+                <div className="flex items-center gap-2">
+                  <div className="h-4 w-4 bg-indigo-500 rounded-full"></div>
+                  <span>Marked for Review</span>
+                </div>
+                <div className="flex items-center gap-2 col-span-2">
+                  <div className="h-4 w-4 bg-indigo-600 rounded-full ring-2 ring-green-400"></div>
+                  <span>Answered & Marked for Review</span>
+                </div>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </div>
 
-        {/* Main Question Area */}
-        <div className="lg:col-span-2">
-          <Card>
-            <CardContent className="p-6">
-              <QuestionDisplay
-                question={currentQuestion}
-                allQuestionsInContext={allQuestionsInSection}
-                isTestMode={true}
-                testFinished={completed || isCurrentSectionCompleted}
-                testAnswers={answers}
-                onAnswerChange={handleAnswerChange}
-              />
-
-              {currentQuestion && (
-                <div className="mt-6 flex items-center justify-between">
-                  <Button
-                    variant="outline"
-                    onClick={() => toggleFlag(currentQuestion.question_id)}
-                    className={flagged.includes(currentQuestion.question_id) ? 'bg-yellow-100' : ''}
-                  >
-                    <Flag className={`h-4 w-4 mr-2 ${flagged.includes(currentQuestion.question_id) ? 'fill-yellow-500' : ''}`} />
-                    {flagged.includes(currentQuestion.question_id) ? 'Unflag' : 'Flag'}
-                  </Button>
-
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => setCurrentQuestionIndex(Math.max(0, currentQuestionIndex - 1))}
-                      disabled={currentQuestionIndex === 0}
-                    >
-                      Previous
-                    </Button>
-                    {!isCurrentSectionCompleted && (
-                      <Button
-                        onClick={() => {
-                          if (currentQuestionIndex < allQuestionsInSection.length - 1) {
-                            setCurrentQuestionIndex(currentQuestionIndex + 1);
-                          }
-                        }}
-                        disabled={currentQuestionIndex === allQuestionsInSection.length - 1}
-                      >
-                        Next
-                      </Button>
-                    )}
-                    {!isCurrentSectionCompleted && currentQuestionIndex === allQuestionsInSection.length - 1 && (
-                      <Button
-                        variant="destructive"
-                        onClick={() => setShowEndSectionDialog(true)}
-                      >
-                        End Section
-                      </Button>
-                    )}
-                    {isCurrentSectionCompleted && currentSectionIndex < sections.length - 1 && (
-                      <Button
-                        onClick={() => {
-                          setCurrentSectionIndex(currentSectionIndex + 1);
-                          setCurrentQuestionIndex(0);
-                        }}
-                      >
-                        Next Section
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Calculator Sidebar */}
-        {calculatorOpen && (
-          <div className="lg:col-span-1">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center justify-between">
-                  Calculator
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setCalculatorOpen(false)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </CardTitle>
+          {/* Calculator Floating sidebar box */}
+          {calculatorOpen && (
+            <Card className="mt-6 border-zinc-200 dark:border-zinc-800">
+              <CardHeader className="py-3 bg-zinc-50 dark:bg-zinc-900 border-b flex flex-row items-center justify-between">
+                <CardTitle className="text-xs font-bold uppercase">Scientific Calculator</CardTitle>
+                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setCalculatorOpen(false)}>×</Button>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div
-                    ref={calculatorInputRef}
-                    className="p-4 bg-muted rounded text-right text-2xl font-mono min-h-[60px] flex items-center justify-end"
-                    tabIndex={0}
-                  >
-                    {calculatorValue}
-                  </div>
-                  <div className="grid grid-cols-4 gap-2">
-                    {['C', '÷', '×', '⌫'].map((op) => (
-                      <Button
-                        key={op}
-                        variant="outline"
-                        onClick={() => {
-                          if (op === '⌫') {
-                            setCalculatorValue((prev) => prev.slice(0, -1) || '0');
-                          } else {
-                            handleCalculatorInput(op);
-                          }
-                        }}
-                      >
-                        {op}
-                      </Button>
-                    ))}
-                    {['7', '8', '9', '-'].map((val) => (
-                      <Button
-                        key={val}
-                        variant="outline"
-                        onClick={() => handleCalculatorInput(val)}
-                      >
-                        {val}
-                      </Button>
-                    ))}
-                    {['4', '5', '6', '+'].map((val) => (
-                      <Button
-                        key={val}
-                        variant="outline"
-                        onClick={() => handleCalculatorInput(val)}
-                      >
-                        {val}
-                      </Button>
-                    ))}
-                    {['1', '2', '3', '='].map((val) => (
-                      <Button
-                        key={val}
-                        variant={val === '=' ? 'default' : 'outline'}
-                        onClick={() => handleCalculatorInput(val)}
-                      >
-                        {val}
-                      </Button>
-                    ))}
+              <CardContent className="p-3 space-y-2">
+                <div ref={calculatorInputRef} className="p-3 bg-muted rounded text-right text-lg font-mono min-h-[40px] flex items-center justify-end">{calculatorValue}</div>
+                <div className="grid grid-cols-4 gap-1.5 text-xs">
+                  {['C', '÷', '×', '⌫', '7', '8', '9', '-', '4', '5', '6', '+', '1', '2', '3', '=', '0', '.'].map((op) => (
                     <Button
+                      key={op}
                       variant="outline"
-                      onClick={() => handleCalculatorInput('0')}
-                      className="col-span-2"
+                      size="sm"
+                      className={`h-8 font-mono ${op === '=' ? 'bg-primary text-primary-foreground col-span-1' : op === '0' ? 'col-span-2' : ''}`}
+                      onClick={() => {
+                        if (op === '⌫') setCalculatorValue((prev) => prev.slice(0, -1) || '0');
+                        else handleCalculatorInput(op);
+                      }}
                     >
-                      0
+                      {op}
                     </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => handleCalculatorInput('.')}
-                    >
-                      .
-                    </Button>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Keyboard shortcuts: 0-9, +, -, *, /, Enter (=), Backspace, Esc (clear)
-                  </p>
+                  ))}
                 </div>
               </CardContent>
             </Card>
-          </div>
-        )}
+          )}
+        </aside>
       </div>
+
+      {/* Bottom Control Bar - CBT Style */}
+      <footer className="bg-zinc-100 dark:bg-zinc-900 border-t border-border/80 px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 shrink-0">
+        
+        {/* Left Side Controls */}
+        <div className="flex gap-2 w-full sm:w-auto">
+          {!isCurrentSectionCompleted && !completed && (
+            <>
+              <Button
+                variant="outline"
+                onClick={markForReviewAndNext}
+                className="bg-indigo-50 dark:bg-indigo-950/20 text-indigo-700 dark:text-indigo-300 border-indigo-200 hover:bg-indigo-100 rounded-xl px-5 text-xs font-bold"
+              >
+                Mark for Review & Next
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={clearResponse}
+                className="text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200/50 dark:hover:bg-zinc-800 rounded-xl px-5 text-xs font-bold"
+              >
+                Clear Response
+              </Button>
+            </>
+          )}
+        </div>
+
+        {/* Right Side Controls */}
+        <div className="flex gap-2 w-full sm:w-auto justify-end">
+          <Button
+            variant="outline"
+            onClick={() => setCurrentQuestionIndex(Math.max(0, currentQuestionIndex - 1))}
+            disabled={currentQuestionIndex === 0}
+            className="rounded-xl px-5 text-xs font-bold"
+          >
+            Previous
+          </Button>
+
+          {!isCurrentSectionCompleted && !completed && (
+            <Button
+              onClick={saveAndNext}
+              disabled={currentQuestionIndex === allQuestionsInSection.length - 1}
+              className="bg-green-600 hover:bg-green-700 text-white rounded-xl px-6 text-xs font-bold shadow-md"
+            >
+              Save & Next
+            </Button>
+          )}
+
+          {!completed && !isCurrentSectionCompleted && (
+            <Button
+              variant="outline"
+              onClick={() => setShowEndSectionDialog(true)}
+              className="border-red-200 hover:bg-red-50 text-red-600 dark:border-red-900/40 dark:hover:bg-red-950/20 rounded-xl px-5 text-xs font-bold"
+            >
+              {currentSectionIndex < sections.length - 1 ? 'End Section' : 'Submit Exam'}
+            </Button>
+          )}
+
+          {isCurrentSectionCompleted && currentSectionIndex < sections.length - 1 && (
+            <Button
+              onClick={() => {
+                setCurrentSectionIndex(currentSectionIndex + 1);
+                setCurrentQuestionIndex(0);
+              }}
+              className="rounded-xl px-6 text-xs font-bold"
+            >
+              Next Section
+            </Button>
+          )}
+
+          {!completed && (
+            <Button
+              variant="destructive"
+              onClick={() => setShowEndExamDialog(true)}
+              className="rounded-xl px-5 text-xs font-bold shadow-md"
+            >
+              End Exam
+            </Button>
+          )}
+        </div>
+      </footer>
 
       {/* End Section Dialog */}
       <Dialog open={showEndSectionDialog} onOpenChange={setShowEndSectionDialog}>
-        <DialogContent>
+        <DialogContent className="rounded-2xl">
           <DialogHeader>
             <DialogTitle>End Section?</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to end the {currentSection} section? You will not be able to return to this section.
-              {currentSectionIndex < sections.length - 1 && ' You will move to the next section.'}
+            <DialogDescription className="text-sm">
+              Are you sure you want to end the <strong>{currentSection}</strong> section? You will not be able to return to this section.
+              {currentSectionIndex < sections.length - 1 
+                ? ' You will automatically move to the next section.'
+                : ' Since this is the final section, ending it will submit and complete your entire exam.'}
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEndSectionDialog(false)}>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" className="rounded-xl" onClick={() => setShowEndSectionDialog(false)}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleEndSection}>
-              End Section
+            <Button variant="destructive" className="rounded-xl" onClick={handleEndSection}>
+              {currentSectionIndex < sections.length - 1 ? 'End Section' : 'Submit & End Exam'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -567,20 +635,20 @@ export function TestPageClient({
 
       {/* End Exam Dialog */}
       <Dialog open={showEndExamDialog} onOpenChange={setShowEndExamDialog}>
-        <DialogContent>
+        <DialogContent className="rounded-2xl">
           <DialogHeader>
-            <DialogTitle>End Exam?</DialogTitle>
-            <DialogDescription>
+            <DialogTitle>Submit & End Exam?</DialogTitle>
+            <DialogDescription className="text-sm">
               Are you sure you want to end the exam? This will submit all your answers and calculate your score.
               You will not be able to return to the exam after ending it.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEndExamDialog(false)}>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" className="rounded-xl" onClick={() => setShowEndExamDialog(false)}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleEndExam}>
-              End Exam
+            <Button variant="destructive" className="rounded-xl" onClick={handleEndExam}>
+              Submit Exam
             </Button>
           </DialogFooter>
         </DialogContent>

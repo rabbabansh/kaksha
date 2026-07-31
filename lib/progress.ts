@@ -1,4 +1,5 @@
 import prisma from './prisma';
+import { calculateNewMastery, shouldUpdateMastery } from './mastery';
 
 export interface SubtopicProgress {
   section: string;
@@ -152,26 +153,101 @@ export async function getUserProgressStats(
   // Calculate Kaksha score
   const kakshaScore = calculateKakshaScore(sections);
 
-  // Identify strengths and weaknesses
-  const allSubtopics = progressRecords
-    .map((r) => ({
-      key: `${r.section} > ${r.topic} > ${r.subtopic}`,
-      percentage: calculateSubtopicPercentage(
-        r.correctCount,
-        r.totalQuestions
-      ),
-    }))
-    .sort((a, b) => b.percentage - a.percentage);
+  // Get self-attested strengths/weaknesses from profile
+  const profile = await prisma.userProfile.findUnique({
+    where: { userId },
+    select: { selfStrengths: true, selfWeaknesses: true },
+  });
+  const selfStrengths = JSON.parse(profile?.selfStrengths || '[]');
+  const selfWeaknesses = JSON.parse(profile?.selfWeaknesses || '[]');
 
-  const strengths = allSubtopics
+  // Get all possible subtopics from DB to seed unattempted slots
+  const allPossibleSubtopics = await prisma.questions.findMany({
+    select: {
+      section: true,
+      topic: true,
+      subtopic: true,
+    },
+    distinct: ['section', 'topic', 'subtopic'],
+  });
+
+  const progressMap = new Map(progressRecords.map(r => [`${r.section} > ${r.topic} > ${r.subtopic}`, r]));
+
+  // Helper to map subtopics to onboarding self-selections
+  const getOnboardingTopic = (section: string, topic: string, subtopic: string): string => {
+    if (section === 'Quantitative Ability') {
+      if (topic === 'Algebra') {
+        if (subtopic === 'Number System' || subtopic === 'Number Theory') {
+          return 'Number System';
+        }
+        return 'Algebra';
+      }
+      if (topic === 'Arithmetic') return 'Arithmetic';
+      if (topic === 'Geometry') return 'Geometry';
+      if (topic === 'Modern Math') return 'Modern Math';
+      return topic;
+    }
+    if (section === 'Data Interpretation & Logical Reasoning') {
+      if (topic === 'DI') return 'Data Interpretation';
+      if (topic === 'LR') return 'Logical Reasoning';
+      return topic === 'Venn Diagram' ? 'Data Interpretation' : topic;
+    }
+    if (section === 'Verbal Ability & Reading Comprehension') {
+      if (topic === 'Reading Comprehension') return 'Reading Comprehension';
+      return 'Verbal Ability';
+    }
+    return topic;
+  };
+
+  const rankedSubtopics = allPossibleSubtopics.map((s) => {
+    const key = `${s.section} > ${s.topic} > ${s.subtopic}`;
+    const record = progressMap.get(key);
+    
+    let percentage = 50; // default neutral
+    let hasAttempt = false;
+
+    if (record && record.totalQuestions > 0) {
+      percentage = calculateSubtopicPercentage(record.correctCount, record.totalQuestions);
+      hasAttempt = true;
+    } else {
+      // Fallback to self-attested topic
+      const onboardingTopic = getOnboardingTopic(s.section || '', s.topic || '', s.subtopic || '');
+      if (selfStrengths.includes(onboardingTopic)) {
+        percentage = 75; // high score for self-attested strength
+      } else if (selfWeaknesses.includes(onboardingTopic)) {
+        percentage = 25; // low score for self-attested weakness
+      }
+    }
+
+    return { key, percentage, hasAttempt };
+  });
+
+  // Sort: highest percentage first
+  const sortedSubtopics = [...rankedSubtopics].sort((a, b) => {
+    if (b.percentage !== a.percentage) {
+      return b.percentage - a.percentage;
+    }
+    return (b.hasAttempt ? 1 : 0) - (a.hasAttempt ? 1 : 0);
+  });
+
+  const strengths = sortedSubtopics
     .slice(0, 3)
-    .filter((s) => s.percentage > 0)
     .map((s) => s.key);
 
-  const weaknesses = allSubtopics
-    .slice(-3)
-    .reverse()
-    .filter((w) => w.percentage < 100)
+  const strengthSet = new Set(strengths);
+
+  // Sort for weaknesses: lowest percentage first
+  const sortedForWeaknesses = [...rankedSubtopics]
+    .filter(s => !strengthSet.has(s.key))
+    .sort((a, b) => {
+      if (a.percentage !== b.percentage) {
+        return a.percentage - b.percentage;
+      }
+      return (b.hasAttempt ? 1 : 0) - (a.hasAttempt ? 1 : 0);
+    });
+
+  const weaknesses = sortedForWeaknesses
+    .slice(0, 3)
     .map((w) => w.key);
 
   return {
@@ -190,8 +266,8 @@ export async function getUserProgressStats(
 export async function updateUserProgress(
   userId: string,
   questionId: string,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _isCorrect: boolean
+  isCorrect: boolean,
+  source: string = 'chat'
 ): Promise<void> {
   // Get question details
   const question = await prisma.questions.findUnique({
@@ -252,6 +328,12 @@ export async function updateUserProgress(
       ),
     ];
 
+    // Calculate Mastery
+    let newMasteryLevel = existing ? existing.masteryLevel : 0.0;
+    if (shouldUpdateMastery(source)) {
+      newMasteryLevel = calculateNewMastery(newMasteryLevel, isCorrect);
+    }
+
     if (existing) {
       // Update with recalculated counts
       await prisma.userProgress.update({
@@ -259,6 +341,7 @@ export async function updateUserProgress(
         data: {
           totalQuestions: uniqueQuestionIds.length,
           correctCount: questionsWithCorrectIds.length,
+          masteryLevel: newMasteryLevel,
           lastAttemptedAt: new Date(),
         },
       });
@@ -272,6 +355,7 @@ export async function updateUserProgress(
           subtopic: question.subtopic,
           totalQuestions: uniqueQuestionIds.length,
           correctCount: questionsWithCorrectIds.length,
+          masteryLevel: newMasteryLevel,
           lastAttemptedAt: new Date(),
         },
       });
@@ -287,6 +371,16 @@ export async function updateUserProgress(
 async function updateUserProfile(userId: string): Promise<void> {
   const stats = await getUserProgressStats(userId);
 
+  const xp = (stats.totalCorrect * 10) + ((stats.totalAttempts - stats.totalCorrect) * 2);
+  
+  const badges = [];
+  if (stats.totalAttempts >= 10) badges.push('Novice');
+  if (stats.totalAttempts >= 50) badges.push('Scholar');
+  if (stats.totalAttempts >= 100) badges.push('Veteran');
+  if (stats.kakshaScore >= 50) badges.push('Rising Star');
+  if (stats.kakshaScore >= 80) badges.push('Kaksha Master');
+  if (stats.kakshaScore >= 95) badges.push('CAT Conqueror');
+
   await prisma.userProfile.upsert({
     where: { userId },
     update: {
@@ -295,6 +389,8 @@ async function updateUserProfile(userId: string): Promise<void> {
       totalCorrect: stats.totalCorrect,
       strengths: JSON.stringify(stats.strengths),
       weaknesses: JSON.stringify(stats.weaknesses),
+      xp,
+      badges: JSON.stringify(badges),
     },
     create: {
       userId,
@@ -303,6 +399,8 @@ async function updateUserProfile(userId: string): Promise<void> {
       totalCorrect: stats.totalCorrect,
       strengths: JSON.stringify(stats.strengths),
       weaknesses: JSON.stringify(stats.weaknesses),
+      xp,
+      badges: JSON.stringify(badges),
     },
   });
 }

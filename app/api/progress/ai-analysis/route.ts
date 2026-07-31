@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { GoogleGenerativeAI } from '@google/generative-ai';
@@ -7,34 +7,41 @@ import prisma from '@/lib/prisma';
 import { logger, createTimer } from '@/lib/logger';
 import { ErrorCode, generateCorrelationId } from '@/lib/action-response';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
     const correlationId = generateCorrelationId();
     const timer = createTimer();
     const operation = 'get_ai_progress_analysis';
 
     try {
         const session = await getServerSession(authOptions);
-        if (!session?.user) {
+        if (!session?.user?.email) {
             return NextResponse.json(
                 { success: false, error: 'Unauthorized', code: ErrorCode.UNAUTHORIZED, correlationId },
                 { status: 401 }
             );
         }
 
-        let userId = (session.user as { id?: string })?.id;
-        if (!userId && session.user?.email) {
-            const dbUser = await prisma.user.findUnique({
-                where: { email: session.user.email },
-                select: { id: true },
-            });
-            if (dbUser) userId = dbUser.id;
+        const user = await prisma.user.findUnique({
+            where: { email: session.user.email },
+            include: { profile: true }
+        });
+
+        if (!user) {
+            return NextResponse.json(
+                { success: false, error: 'User not found', code: ErrorCode.NOT_FOUND, correlationId },
+                { status: 404 }
+            );
         }
 
-        if (!userId) {
-            return NextResponse.json(
-                { success: false, error: 'User ID not found', code: ErrorCode.NOT_FOUND, correlationId },
-                { status: 400 }
-            );
+        const userId = user.id;
+        const forceRefresh = request.nextUrl.searchParams.get('force') === 'true';
+
+        if (!forceRefresh && user.profile?.aiActionPlan) {
+            return NextResponse.json({
+                success: true,
+                data: { analysis: user.profile.aiActionPlan },
+                correlationId,
+            });
         }
 
         const apiKey = process.env.GEMINI_API_KEY;
@@ -57,9 +64,6 @@ export async function GET() {
                 where: { userId },
                 orderBy: { attemptedAt: 'desc' },
                 take: 200,
-                include: {
-                    // Fetch subtopic info via questions relation
-                },
             }),
         ]);
 
@@ -71,7 +75,6 @@ export async function GET() {
         });
 
         const qDetailsMap = new Map(questionDetails.map((q) => [q.question_id, q]));
-        // Build topic accuracy map: { "section > topic > subtopic": {correct, total} }
         const topicAccuracy = new Map<string, { correct: number; total: number }>();
         for (const attempt of recentAttempts) {
             const q = qDetailsMap.get(attempt.questionId);
@@ -130,32 +133,36 @@ ${topicSummaryLines || 'No detailed attempt data yet.'}
 
 ---
 
-Please provide a comprehensive analysis in the following structure using markdown:
+Please provide a comprehensive analysis in strict JSON format. Do not use Markdown blocks or any text outside of the JSON object.
+Use the following JSON structure:
+{
+  "summary": "A 2-3 sentence executive summary of their current CAT preparation status.",
+  "strengths": [
+    { "topic": "Name of topic/subtopic", "reason": "Why this is an advantage for CAT" }
+  ],
+  "focusAreas": [
+    { "topic": "Name of topic/subtopic", "tips": ["Concrete tip 1", "Concrete tip 2"] }
+  ],
+  "actionItems": [
+    { "task": "Specific thing to do this week", "type": "Mock | Practice | Review" }
+  ]
+}
 
-## 💡 Performance Summary
-A 2-3 sentence executive summary of their current CAT preparation status.
-
-## ✅ Key Strengths
-List 3-5 specific topics/subtopics where the student performs well. Explain WHY this is an advantage for CAT.
-
-## ⚠️ Areas Needing Improvement
-List 3-5 specific topics/subtopics with the weakest accuracy. For each, provide 1-2 concrete tips to improve.
-
-## 📅 Preparation Roadmap
-Given ${DAYS_REMAINING} days remaining until CAT:
-- Break down a weekly study plan (high-level) with clear priorities
-- Specify which sections to focus on first based on current weaknesses
-- Suggest a test-taking frequency (mock tests per week)
-
-## 🎯 Immediate Action Items
-List 3-5 specific things the student should do THIS WEEK to improve their score.
-
+Ensure there are 3-5 strengths, 3-5 focus areas, and 3-5 action items.
 Be specific, data-driven, and encouraging. Use the exact topic and subtopic names from the data.`;
 
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+        const model = genAI.getGenerativeModel({ 
+            model: 'gemini-2.5-flash',
+            generationConfig: { responseMimeType: "application/json" }
+        });
         const result = await model.generateContent(systemPrompt);
-        const analysisText = result.response.text();
+        const analysis = result.response.text();
+
+        await prisma.userProfile.update({
+            where: { userId: user.id },
+            data: { aiActionPlan: analysis }
+        });
 
         logger.info(`${operation} completed`, {
             operation,
@@ -166,7 +173,7 @@ Be specific, data-driven, and encouraging. Use the exact topic and subtopic name
 
         return NextResponse.json({
             success: true,
-            data: { analysis: analysisText },
+            data: { analysis },
             correlationId,
         });
     } catch (error) {

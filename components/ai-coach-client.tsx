@@ -1,150 +1,208 @@
+/* eslint-disable */
 'use client';
 
-import { useState, useCallback } from 'react';
-import { Sparkles, RefreshCw, AlertCircle } from 'lucide-react';
+import { useState, useCallback, useEffect } from 'react';
+import { Sparkles, RefreshCw, AlertCircle, TrendingUp, Target, ListTodo, BookOpen, PenTool, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import type { Components } from 'react-markdown';
+import { Badge } from '@/components/ui/badge';
 
-// ─── Markdown renderer ────────────────────────────────────────────────────────
-// Matches the site's black/white/gray palette; no custom colours.
-const mdComponents: Components = {
-    h2: ({ children }) => (
-        <h2 className="mt-8 first:mt-0 mb-3 text-base font-bold tracking-tight text-foreground border-b border-border pb-1.5 flex items-center gap-2">
-            {children}
-        </h2>
-    ),
-    h3: ({ children }) => (
-        <h3 className="mt-5 mb-2 text-sm font-semibold text-foreground">{children}</h3>
-    ),
-    p: ({ children }) => (
-        <p className="mb-3 text-sm leading-relaxed text-foreground/80">{children}</p>
-    ),
-    ul: ({ children }) => (
-        <ul className="mb-4 space-y-2 pl-1">{children}</ul>
-    ),
-    ol: ({ children }) => (
-        <ol className="mb-4 space-y-2 pl-1 list-decimal list-inside">{children}</ol>
-    ),
-    li: ({ children }) => (
-        <li className="flex gap-2.5 items-start text-sm leading-relaxed text-foreground/80">
-            <span className="mt-2 shrink-0 h-1.5 w-1.5 rounded-full bg-foreground/40" />
-            <span>{children}</span>
-        </li>
-    ),
-    strong: ({ children }) => (
-        <strong className="font-semibold text-foreground">{children}</strong>
-    ),
-    em: ({ children }) => (
-        <em className="italic text-foreground/70">{children}</em>
-    ),
-    blockquote: ({ children }) => (
-        <blockquote className="border-l-2 border-border pl-4 my-3 text-sm text-foreground/60 italic">
-            {children}
-        </blockquote>
-    ),
-    hr: () => <hr className="my-5 border-border" />,
-    code: ({ children }) => (
-        <code className="rounded bg-muted px-1 py-0.5 text-xs font-mono">{children}</code>
-    ),
-};
+interface AiPlanData {
+    summary: string;
+    strengths: { topic: string; reason: string }[];
+    focusAreas: { topic: string; tips: string[] }[];
+    actionItems: { task: string; type: string }[];
+}
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function AiCoachClient() {
-    const [analysis, setAnalysis] = useState<string | null>(null);
-    const [loading, setLoading] = useState(false);
+    const [planData, setPlanData] = useState<AiPlanData | null>(null);
+    const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const generate = useCallback(async () => {
+    const fetchPlan = useCallback((forceRefresh = false) => {
         setLoading(true);
         setError(null);
-        try {
-            const res = await fetch('/api/progress/ai-analysis');
-            if (!res.ok) throw new Error('Failed to fetch analysis');
-            const payload = await res.json();
-            if (payload.success && payload.data?.analysis) {
-                setAnalysis(payload.data.analysis);
-            } else {
-                throw new Error(payload.error || 'Unknown error');
-            }
-        } catch (e) {
-            setError(e instanceof Error ? e.message : 'Something went wrong');
-        } finally {
-            setLoading(false);
-        }
+        fetch(`/api/progress/ai-analysis${forceRefresh ? '?force=true' : ''}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && data.data?.analysis) {
+                    try {
+                        const parsed = JSON.parse(data.data.analysis);
+                        setPlanData(parsed);
+                    } catch (e) {
+                        // If parsing fails, it might be legacy markdown. Force refresh once.
+                        if (!forceRefresh) {
+                            fetchPlan(true);
+                        } else {
+                            setError('Failed to parse AI plan format.');
+                        }
+                    }
+                } else {
+                    setError('Failed to generate plan. Please try again.');
+                }
+                setLoading(false);
+            })
+            .catch(() => {
+                setError('Error connecting to AI Coach.');
+                setLoading(false);
+            });
     }, []);
 
-    // ── Empty state ────────────────────────────────────────────────────────────
-    if (!analysis && !loading) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-[55vh] text-center gap-5 px-4">
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-foreground text-background shadow-lg">
-                    <Sparkles className="h-7 w-7" />
-                </div>
-                <div>
-                    <h2 className="text-xl font-bold mb-1.5">Your Personal AI Coach</h2>
-                    <p className="text-muted-foreground text-sm max-w-sm leading-relaxed">
-                        Analyses your test scores, correct and incorrect questions, and topic accuracy to build a personalised strength report and preparation roadmap.
-                    </p>
-                </div>
-                {error && (
-                    <div className="flex items-center gap-2 text-sm text-destructive border border-destructive/30 bg-destructive/5 rounded-lg px-4 py-2.5">
-                        <AlertCircle className="h-4 w-4 shrink-0" />
-                        <span>{error}. Please try again.</span>
-                    </div>
-                )}
-                <Button size="default" onClick={generate} className="gap-2 px-6">
-                    <Sparkles className="h-4 w-4" />
-                    Generate My Analysis
-                </Button>
-            </div>
-        );
-    }
+    useEffect(() => {
+        fetchPlan(false);
+    }, []);
 
     // ── Loading skeleton ───────────────────────────────────────────────────────
-    if (loading) {
+    if (loading && !planData) {
         return (
-            <div className="space-y-4 animate-pulse">
-                <div className="h-5 rounded-md bg-muted w-1/3" />
-                <div className="h-3.5 rounded-md bg-muted w-full" />
-                <div className="h-3.5 rounded-md bg-muted w-5/6" />
-                <div className="h-3.5 rounded-md bg-muted w-2/3" />
-                <div className="mt-6 h-5 rounded-md bg-muted w-1/4" />
-                <div className="h-3.5 rounded-md bg-muted w-full" />
-                <div className="h-3.5 rounded-md bg-muted w-11/12" />
-                <div className="h-3.5 rounded-md bg-muted w-4/5" />
-                <div className="mt-6 h-5 rounded-md bg-muted w-1/4" />
-                <div className="h-3.5 rounded-md bg-muted w-full" />
-                <div className="h-3.5 rounded-md bg-muted w-3/4" />
-                <p className="text-xs text-muted-foreground text-center pt-4">Analysing your performance…</p>
+            <div className="space-y-6 animate-pulse">
+                <div className="h-24 rounded-xl bg-muted/60 w-full" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="h-40 rounded-xl bg-muted/60" />
+                    <div className="h-40 rounded-xl bg-muted/60" />
+                </div>
             </div>
         );
     }
 
-    // ── Analysis view ─────────────────────────────────────────────────────────
-    return (
-        <div>
-            {/* Refresh button */}
-            <div className="flex justify-end mb-4">
-                <Button variant="outline" size="sm" onClick={generate} className="gap-1.5 text-xs">
-                    <RefreshCw className="h-3.5 w-3.5" />
-                    Refresh Analysis
+    if (error && !planData) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[30vh] text-center gap-4">
+                <AlertCircle className="h-8 w-8 text-destructive" />
+                <p className="text-destructive font-medium">{error}</p>
+                <Button variant="outline" onClick={() => fetchPlan(true)}>
+                    <RefreshCw className="h-4 w-4 mr-2" /> Try Again
                 </Button>
             </div>
+        );
+    }
 
-            {/* Rendered markdown */}
-            <div className="prose-sm max-w-none">
-                <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>
-                    {analysis!}
-                </ReactMarkdown>
+    if (!planData) return null;
+
+    const getActionIcon = (type: string) => {
+        if (type.toLowerCase().includes('mock')) return <Target className="h-4 w-4 text-blue-500" />;
+        if (type.toLowerCase().includes('practice')) return <PenTool className="h-4 w-4 text-orange-500" />;
+        return <BookOpen className="h-4 w-4 text-green-500" />;
+    };
+
+    return (
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 relative">
+            
+            {/* Header & Summary */}
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-background to-background border p-8 shadow-sm group">
+                <div className="absolute -right-20 -top-20 h-64 w-64 bg-primary/10 blur-3xl rounded-full transition-transform duration-1000 group-hover:scale-110" />
+                <div className="relative z-10 flex flex-col md:flex-row md:items-start justify-between gap-6">
+                    <div className="flex-1 space-y-4">
+                        <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
+                            <Sparkles className="h-4 w-4" /> AI Coach Strategy
+                        </div>
+                        <h3 className="text-2xl font-semibold tracking-tight text-foreground">
+                            Your Personalised Roadmap
+                        </h3>
+                        <p className="text-base text-muted-foreground leading-relaxed max-w-3xl">
+                            {planData.summary}
+                        </p>
+                    </div>
+                    <Button 
+                        variant="default" 
+                        onClick={() => fetchPlan(true)} 
+                        disabled={loading} 
+                        className="shrink-0 shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all rounded-full px-6"
+                    >
+                        <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                        Refresh Strategy
+                    </Button>
+                </div>
             </div>
 
-            {/* Footer note */}
-            <p className="mt-8 text-xs text-muted-foreground border-t border-border pt-4">
-                Analysis is based on your completed tests and chat practice. The more you attempt, the more precise the coaching.
-            </p>
+            {/* Strengths & Focus Areas */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                {/* Strengths Card */}
+                <div className="group relative overflow-hidden rounded-2xl border bg-card p-6 shadow-sm transition-all hover:shadow-md hover:-translate-y-1 duration-300">
+                    <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-400 to-green-500 opacity-80" />
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-500/10 text-green-600 dark:text-green-400">
+                            <TrendingUp className="h-5 w-5" />
+                        </div>
+                        <h4 className="text-lg font-semibold tracking-tight">Key Strengths</h4>
+                    </div>
+                    <div className="space-y-5">
+                        {planData.strengths?.map((s, i) => (
+                            <div key={i} className="flex gap-4">
+                                <div className="mt-1 h-2 w-2 shrink-0 rounded-full bg-green-500" />
+                                <div>
+                                    <p className="font-semibold text-sm text-foreground mb-1">{s.topic}</p>
+                                    <p className="text-sm text-muted-foreground leading-relaxed">{s.reason}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Focus Areas Card */}
+                <div className="group relative overflow-hidden rounded-2xl border bg-card p-6 shadow-sm transition-all hover:shadow-md hover:-translate-y-1 duration-300">
+                    <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-orange-400 to-red-500 opacity-80" />
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-500/10 text-orange-600 dark:text-orange-400">
+                            <AlertCircle className="h-5 w-5" />
+                        </div>
+                        <h4 className="text-lg font-semibold tracking-tight">Critical Focus Areas</h4>
+                    </div>
+                    <div className="space-y-5">
+                        {planData.focusAreas?.map((f, i) => (
+                            <div key={i} className="space-y-2 border-b border-border/50 pb-4 last:border-0 last:pb-0">
+                                <p className="font-semibold text-sm text-foreground flex items-center gap-2">
+                                    <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500" />
+                                    {f.topic}
+                                </p>
+                                <ul className="space-y-1.5 pl-4">
+                                    {f.tips?.map((tip, j) => (
+                                        <li key={j} className="text-sm text-muted-foreground flex items-start gap-2">
+                                            <ArrowRight className="h-3.5 w-3.5 mt-0.5 shrink-0 text-muted-foreground/50" />
+                                            <span>{tip}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* Action Items */}
+            <div className="relative overflow-hidden rounded-2xl border bg-card p-6 sm:p-8 shadow-sm">
+                <div className="flex items-center gap-3 mb-8">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <ListTodo className="h-5 w-5" />
+                    </div>
+                    <div>
+                        <h4 className="text-lg font-semibold tracking-tight">Your Action Plan for This Week</h4>
+                        <p className="text-sm text-muted-foreground">Complete these items to maximize your score growth.</p>
+                    </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {planData.actionItems?.map((item, i) => (
+                        <div 
+                            key={i} 
+                            className="group flex items-start gap-4 rounded-xl border border-muted bg-muted/20 p-4 transition-all hover:bg-muted/40 hover:border-primary/30"
+                        >
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-background shadow-sm border group-hover:scale-110 transition-transform">
+                                {getActionIcon(item.type)}
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-sm font-medium text-foreground leading-relaxed mb-2">{item.task}</p>
+                                <Badge variant="secondary" className="text-[10px] uppercase tracking-wider bg-background/80 shadow-sm">
+                                    {item.type}
+                                </Badge>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
         </div>
     );
 }

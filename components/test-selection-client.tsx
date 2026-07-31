@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { BookOpen, Clock, FileText, Eye } from 'lucide-react';
+import { Play, Search, Clock, FileText, Eye } from 'lucide-react';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Question = any;
@@ -117,13 +117,14 @@ export function TestSelectionClient({ byYearSlot, progressMap }: TestSelectionCl
               )}
 
               <div className="flex gap-2">
-                <Link href={`/test/${selectedYear}/${selectedSlot}`} className="flex-1">
-                  <Button className="w-full" variant={progress?.completed ? 'outline' : 'default'}>
-                    <BookOpen className="mr-2 h-4 w-4" />
-                    {progress?.completed ? 'Review Test' : 'Start Test'}
+                <Link href={`/mocks/${selectedYear}/${selectedSlot}`} className="flex-1">
+                  <Button className="w-full" size="lg">
+                    <Play className="mr-2 h-5 w-5" />
+                    Start Mock Test
                   </Button>
                 </Link>
-                <Link href={`/test/${selectedYear}/${selectedSlot}?mode=explore`} className="flex-1">
+                
+                <Link href={`/mocks/${selectedYear}/${selectedSlot}?mode=explore`} className="flex-1">
                   <Button className="w-full" variant="outline">
                     <Eye className="mr-2 h-4 w-4" />
                     Explore Questions
@@ -155,8 +156,8 @@ export function TestSelectionClient({ byYearSlot, progressMap }: TestSelectionCl
                       const slotQuestions = byYearSlot[year][slot];
                       const showSlotLabel = slot !== 'NA' && slot !== 'Unknown';
                       return (
-                        <div key={slot} className="flex items-center justify-between p-2 rounded border">
-                          <div>
+                        <div key={slot} className="flex flex-col gap-2 p-2 rounded border">
+                          <div className="flex items-center justify-between">
                             {showSlotLabel ? (
                               <span className="font-medium">Slot {slot}</span>
                             ) : (
@@ -167,14 +168,14 @@ export function TestSelectionClient({ byYearSlot, progressMap }: TestSelectionCl
                             </span>
                           </div>
                           <div className="flex gap-1">
-                            <Link href={`/test/${year}/${slot}?mode=explore`}>
-                              <Button variant="ghost" size="sm">
-                                <Eye className="h-3 w-3" />
+                            <Link href={`/mocks/${year}/${slot}?mode=explore`}>
+                              <Button variant="outline" size="sm" className="w-full">
+                                <Search className="mr-2 h-4 w-4" /> Explore
                               </Button>
                             </Link>
-                            <Link href={`/test/${year}/${slot}`}>
-                              <Button variant="ghost" size="sm">
-                                <BookOpen className="h-3 w-3" />
+                            <Link href={`/mocks/${year}/${slot}`}>
+                              <Button size="sm" className="w-full">
+                                <Play className="mr-2 h-4 w-4" /> Start
                               </Button>
                             </Link>
                           </div>

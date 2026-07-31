@@ -58,13 +58,11 @@ export function QuestionDisplay({
   const setId = question.set_id;
   const isSet = setId && setId !== 'N/A';
 
-  // Find all questions belonging to this set from the provided context list
-  const questionsToDisplay = isSet 
-    ? allQuestionsInContext.filter(q => q.set_id === setId).sort((a, b) => a.question_id.localeCompare(b.question_id))
-    : [question];
+  // FIX: In CBT, we show exactly ONE question of the set at a time.
+  const questionsToDisplay = [question];
   
-  // Get the single set/passage HTML from the first question
-  const setHtml = isSet ? questionsToDisplay[0].set_html : null;
+  // Get the single set/passage HTML from the question
+  const setHtml = isSet ? question.set_html : null;
 
   const handleCheckAnswer = (q_id: string) => {
     if (!isTestMode) {
@@ -91,110 +89,151 @@ export function QuestionDisplay({
     return currentShowSolutions[q_id] || false;
   };
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>
-          {isTestMode && !testFinished && (
-            <span className="text-sm font-normal text-primary mr-2">[Test Mode]</span>
-          )}
-          {question.topic} - {question.subtopic}
-        </CardTitle>
-        <CardDescription>{question.source}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        {/* Display the Set HTML (Passage/Caselet) once if it's a set */}
-        {isSet && setHtml && (
-          <div 
-            className="prose dark:prose-invert max-w-none mb-6 p-4 border rounded-lg bg-muted/50" 
-            key={`${setId}-passage`}
-            dangerouslySetInnerHTML={{ __html: setHtml }} 
-          />
-        )}
+  const renderQuestionBlock = (q: Question, index: number) => {
+    const userAnswer = currentAnswers[q.question_id] || '';
+    const showSolution = shouldShowSolution(q.question_id);
+    const isCorrect = showSolution && q.answer 
+      ? userAnswer.trim().toUpperCase() === q.answer.trim().toUpperCase() 
+      : null;
+
+    return (
+      <div key={q.question_id} className="space-y-4">
+        {/* Question Text */}
+        <div className="flex gap-4">
+          <div className="prose dark:prose-invert max-w-none leading-relaxed text-base notranslate" translate="no" dangerouslySetInnerHTML={{ __html: q.question_html || '' }} />
+        </div>
         
-        {/* Map over all questions in the set (or the single question) */}
-        {questionsToDisplay.map((q, index) => {
-          const userAnswer = currentAnswers[q.question_id] || '';
-          const showSolution = shouldShowSolution(q.question_id);
-          const isCorrect = showSolution && q.answer 
-            ? userAnswer.trim().toUpperCase() === q.answer.trim().toUpperCase() 
-            : null;
+        {/* Answer Inputs */}
+        <div className="mt-4 space-y-3">
+          {q.question_type === 'MCQ' ? (
+            ['A', 'B', 'C', 'D', 'E'].map(opt => {
+              const optionKey = `option_${opt.toLowerCase()}_html`;
+              if (q[optionKey] && q[optionKey] !== 'N/A') {
+                const isSelected = userAnswer === opt;
+                
+                // Colors based on state (normal vs review)
+                let borderClass = 'border-border';
+                let bgClass = 'bg-card hover:bg-muted/40';
+                let textClass = '';
 
-          return (
-            <div key={q.question_id}>
-              {index > 0 && <Separator className="my-8" />}
-              
-              {/* Question Text */}
-              <div className="flex gap-4 mt-4">
-                <span className="text-xl font-bold">{index + 1}.</span>
-                <div className="prose dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: q.question_html || '' }} />
-              </div>
-              
-              {/* Answer Inputs */}
-              <div className="ml-8 mt-4 space-y-2">
-                {q.question_type === 'MCQ' ? (
-                  ['A', 'B', 'C', 'D', 'E'].map(opt => {
-                    const optionKey = `option_${opt.toLowerCase()}_html`;
-                    if (q[optionKey] && q[optionKey] !== 'N/A') {
-                      const isSelected = userAnswer === opt;
-                      return (
-                        <Button
-                          key={opt}
-                          variant={isSelected ? 'secondary' : 'outline'}
-                          className={`w-full justify-start h-auto text-left whitespace-normal p-4 ${
-                            isTestMode && testFinished && isSelected 
-                              ? (isCorrect ? 'border-green-500 border-2' : 'border-red-500 border-2')
-                              : ''
-                          }`}
-                          onClick={() => !showSolution && handleAnswerChange(q.question_id, opt)}
-                          disabled={showSolution || (isTestMode && testFinished)}
-                        >
-                          <div className="flex items-start gap-4">
-                            <span className="font-bold">({opt})</span>
-                            <div className="prose dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: q[optionKey] }} />
-                          </div>
-                        </Button>
-                      );
+                if (isSelected) {
+                  borderClass = 'border-primary ring-2 ring-primary/20 border-2';
+                  bgClass = 'bg-primary/5';
+                  textClass = 'text-primary font-bold';
+                }
+
+                if (showSolution) {
+                  if (isSelected) {
+                    if (isCorrect) {
+                      borderClass = 'border-green-500 ring-2 ring-green-500/20 border-2';
+                      bgClass = 'bg-green-500/10';
+                      textClass = 'text-green-700 dark:text-green-300 font-bold';
+                    } else {
+                      borderClass = 'border-red-500 ring-2 ring-red-500/20 border-2';
+                      bgClass = 'bg-red-500/10';
+                      textClass = 'text-red-700 dark:text-red-300 font-bold';
                     }
-                    return null;
-                  })
-                ) : (
-                  <Input 
-                    placeholder="Type your answer..."
-                    value={userAnswer}
-                    onChange={(e) => !showSolution && handleAnswerChange(q.question_id, e.target.value)}
+                  } else if (q.answer === opt) {
+                    // Highlight correct answer in green even if not selected
+                    borderClass = 'border-green-500 border-2 border-dashed';
+                    bgClass = 'bg-green-500/5';
+                    textClass = 'text-green-700 dark:text-green-300 font-bold';
+                  }
+                }
+
+                return (
+                  <Button
+                    key={opt}
+                    variant="outline"
+                    className={`w-full justify-start h-auto text-left whitespace-normal p-4 transition-all duration-200 rounded-xl notranslate ${borderClass} ${bgClass} ${textClass}`}
+                    translate="no"
+                    onClick={() => !showSolution && handleAnswerChange(q.question_id, opt)}
                     disabled={showSolution || (isTestMode && testFinished)}
-                    className={isTestMode && testFinished && userAnswer
-                      ? (isCorrect ? 'border-green-500 border-2' : 'border-red-500 border-2')
-                      : ''
-                    }
-                  />
-                )}
-              </div>
-
-              {/* Check Answer Button - Only show in non-test mode or after test is finished */}
-              {!isTestMode && (
-                <Button onClick={() => handleCheckAnswer(q.question_id)} className="ml-8 mt-4" disabled={showSolution}>
-                  Check Answer
-                </Button>
-              )}
-
-              {/* Solution Display - Show in normal mode when checked, or in test mode after finishing */}
-              {showSolution && (
-                <div className="ml-8 mt-4 p-4 border rounded-md bg-muted/50">
-                  <h3 className={`font-bold text-lg ${isCorrect ? 'text-green-600' : 'text-red-600'}`}>
-                    {isCorrect ? 'Correct!' : 'Incorrect.'} The correct answer is: {q.answer}
-                  </h3>
-                  {isTestMode && !userAnswer && (
-                    <p className="text-sm text-muted-foreground mt-2">You did not answer this question.</p>
-                  )}
-                  <Separator className="my-2" />
-                  <div className="prose dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: q.explanation_html || 'No explanation available.' }} />
-                </div>
-              )}
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className="font-bold shrink-0">({opt})</span>
+                      <div className="prose dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: q[optionKey] }} />
+                    </div>
+                  </Button>
+                );
+              }
+              return null;
+            })
+          ) : (
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-muted-foreground uppercase">Type in the answer (TITA)</label>
+              <Input 
+                placeholder="Type your numeric answer here..."
+                value={userAnswer}
+                onChange={(e) => !showSolution && handleAnswerChange(q.question_id, e.target.value)}
+                disabled={showSolution || (isTestMode && testFinished)}
+                className={`h-12 rounded-xl text-base font-semibold ${
+                  showSolution && userAnswer
+                    ? (isCorrect ? 'border-green-500 bg-green-500/10' : 'border-red-500 bg-red-500/10')
+                    : userAnswer ? 'border-primary ring-2 ring-primary/20' : ''
+                }`}
+              />
             </div>
-          );
-        })}
+          )}
+        </div>
+
+        {/* Check Answer Button - Only show in non-test mode or after test is finished */}
+        {!isTestMode && (
+          <Button onClick={() => handleCheckAnswer(q.question_id)} className="mt-4" disabled={showSolution}>
+            Check Answer
+          </Button>
+        )}
+
+        {/* Solution Display - Show in normal mode when checked, or in test mode after finishing */}
+        {showSolution && (
+          <div className="mt-6 p-5 border rounded-xl bg-muted/30 space-y-3">
+            <h3 className={`font-bold text-lg flex items-center gap-2 ${isCorrect ? 'text-green-600' : 'text-red-600'}`}>
+              {isCorrect ? '✓ Correct!' : '✗ Incorrect.'} The correct answer is: <span className="font-extrabold underline">{q.answer}</span>
+            </h3>
+            {isTestMode && !userAnswer && (
+              <p className="text-sm text-muted-foreground">You did not answer this question.</p>
+            )}
+            <Separator className="my-2" />
+            <div className="prose dark:prose-invert max-w-none leading-relaxed text-sm notranslate" translate="no" dangerouslySetInnerHTML={{ __html: q.explanation_html || 'No explanation available.' }} />
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <Card className="border border-border/80 shadow-md">
+      <CardHeader className="pb-4">
+        <CardTitle className="text-xl flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {isTestMode && !testFinished && (
+              <span className="text-xs font-semibold px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 uppercase tracking-wider">[Test]</span>
+            )}
+            {question.topic}
+          </div>
+          <span className="text-sm font-normal text-muted-foreground">{question.source}</span>
+        </CardTitle>
+        <CardDescription>{question.subtopic}</CardDescription>
+      </CardHeader>
+      <CardContent className="p-6">
+        {/* Split Screen Layout for Sets (passages/caselets) */}
+        {isSet && setHtml ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-[450px]">
+            {/* Passage Panel (Scrollable) */}
+            <div className="lg:max-h-[500px] lg:overflow-y-auto pr-4 border-r border-border/60 prose dark:prose-invert max-w-none p-4 rounded-xl bg-muted/20">
+              <div dangerouslySetInnerHTML={{ __html: setHtml }} />
+            </div>
+            {/* Question Panel */}
+            <div className="flex flex-col justify-between">
+              {questionsToDisplay.map((q, index) => renderQuestionBlock(q, index))}
+            </div>
+          </div>
+        ) : (
+          /* Normal Standalone Layout */
+          <div className="space-y-6">
+             {questionsToDisplay.map((q, index) => renderQuestionBlock(q, index))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
