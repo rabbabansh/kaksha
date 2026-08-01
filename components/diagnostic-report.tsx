@@ -3,8 +3,14 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { CheckCircle2, XCircle, AlertCircle, ArrowRight, BookOpen, BarChart3, HelpCircle } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertCircle, ArrowRight, BookOpen, BarChart3, HelpCircle, BrainCircuit, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import rehypeRaw from 'rehype-raw';
+import 'katex/dist/katex.min.css';
 
 interface DiagnosticReportProps {
   year: string;
@@ -26,6 +32,24 @@ export function DiagnosticReport({
   onReviewQuestion,
 }: DiagnosticReportProps) {
   const router = useRouter();
+  const [aiInsights, setAiInsights] = useState<string | null>(null);
+  const [isGeneratingInsights, setIsGeneratingInsights] = useState(false);
+
+  useEffect(() => {
+    // Try to fetch existing insights for this test
+    const fetchExistingInsights = async () => {
+      try {
+        const res = await fetch(`/api/test-progress?year=${encodeURIComponent(year)}&slot=${encodeURIComponent(slot)}`);
+        const data = await res.json();
+        if (data.success && data.data?.aiInsights) {
+          setAiInsights(data.data.aiInsights);
+        }
+      } catch (err) {
+        console.error('Failed to fetch existing insights', err);
+      }
+    };
+    fetchExistingInsights();
+  }, [year, slot]);
 
   // Calculate statistics
   let totalAttempted = 0;
@@ -71,7 +95,39 @@ export function DiagnosticReport({
 
   const handleFinish = async () => {
     // Redirect to dashboard
-    router.push('/dashboard');
+    window.location.href = '/dashboard';
+  };
+
+  const generateInsights = async () => {
+    if (isGeneratingInsights || aiInsights) return;
+    setIsGeneratingInsights(true);
+    
+    try {
+      const res = await fetch('/api/progress/insights', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          year,
+          slot,
+          isPractice: false,
+          contextData: {
+            overallScore: totalScore,
+            totalCorrect,
+            totalIncorrect,
+            unattempted: questions.length - totalAttempted,
+            sectionStats,
+          }
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAiInsights(data.data);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsGeneratingInsights(false);
+    }
   };
 
   return (
@@ -129,6 +185,36 @@ export function DiagnosticReport({
           </Button>
         </Card>
       </div>
+
+      {/* AI Insights Section */}
+      <Card className="border-indigo-200 dark:border-indigo-900 bg-indigo-50/50 dark:bg-indigo-950/20">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center justify-between">
+            <div className="flex items-center gap-2 text-indigo-700 dark:text-indigo-400">
+              <BrainCircuit className="h-5 w-5" /> AI Performance Insights
+            </div>
+            {!aiInsights && (
+              <Button size="sm" onClick={generateInsights} disabled={isGeneratingInsights} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+                {isGeneratingInsights && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Generate Insights
+              </Button>
+            )}
+          </CardTitle>
+        </CardHeader>
+        {aiInsights ? (
+          <CardContent>
+            <div className="prose dark:prose-invert max-w-none text-sm leading-relaxed" translate="no">
+              <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex, rehypeRaw]}>
+                {aiInsights}
+              </ReactMarkdown>
+            </div>
+          </CardContent>
+        ) : (
+          <CardContent>
+             <p className="text-muted-foreground text-sm italic">Get a personalized AI breakdown of your performance, highlighting strengths, weaknesses, and a recommended action plan.</p>
+          </CardContent>
+        )}
+      </Card>
 
       {/* Section-wise performance table */}
       <Card>

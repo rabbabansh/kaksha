@@ -10,6 +10,9 @@ import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import rehypeRaw from 'rehype-raw';
 import 'katex/dist/katex.min.css';
+import { ReportDialog } from '@/components/report-dialog';
+import { PracticeReport } from './practice-report';
+import { QuestionDisplay } from './question-display';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Question = any;
@@ -18,6 +21,7 @@ type SessionState = 'loading' | 'question' | 'completed' | 'error';
 
 export function MixedSessionClient({ topic }: { topic?: string }) {
   const [state, setState] = useState<SessionState>('loading');
+  const [reviewIndex, setReviewIndex] = useState<number | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
@@ -33,6 +37,9 @@ export function MixedSessionClient({ topic }: { topic?: string }) {
   const [chatHistory, setChatHistory] = useState<{role: string, text: string}[]>([]);
   const [followUpQuery, setFollowUpQuery] = useState('');
   const [isChatting, setIsChatting] = useState(false);
+  
+  const [startTime, setStartTime] = useState<number>(Date.now());
+  const [sessionAttempts, setSessionAttempts] = useState<any[]>([]); // To store for Report Card
   
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -52,6 +59,7 @@ export function MixedSessionClient({ topic }: { topic?: string }) {
         }
         setQuestions(qData.data);
         setState('question');
+        setStartTime(Date.now());
       } catch (err) {
         console.error(err);
         setErrorMsg('Failed to initialize session. Please check your connection.');
@@ -68,10 +76,18 @@ export function MixedSessionClient({ topic }: { topic?: string }) {
 
     const question = questions[currentIndex];
     const correct = answer === question.answer;
+    const timeTaken = Math.floor((Date.now() - startTime) / 1000);
     
     setIsCorrect(correct);
     setCorrectAnswer(question.answer);
     if (correct) setScore(s => s + 1);
+
+    setSessionAttempts(prev => [...prev, {
+      question,
+      userAnswer: answer,
+      isCorrect: correct,
+      timeTaken
+    }]);
 
     fetch('/api/progress/attempt', {
       method: 'POST',
@@ -79,7 +95,8 @@ export function MixedSessionClient({ topic }: { topic?: string }) {
       body: JSON.stringify({
         questionId: question.question_id,
         userAnswer: answer,
-        source: 'practice'
+        source: 'practice',
+        timeTaken // Added timeTaken
       }),
     }).catch(console.error);
 
@@ -107,6 +124,7 @@ export function MixedSessionClient({ topic }: { topic?: string }) {
       setState('completed');
     } else {
       setCurrentIndex(curr => curr + 1);
+      setStartTime(Date.now()); // Reset start time for next question
     }
   };
   
@@ -180,13 +198,39 @@ export function MixedSessionClient({ topic }: { topic?: string }) {
   }
 
   if (state === 'completed') {
+    if (reviewIndex !== null) {
+      const q = questions[reviewIndex];
+      const attempt = sessionAttempts.find(a => a.question.question_id === q.question_id);
+      return (
+        <div className="h-screen bg-background flex flex-col font-sans">
+          <header className="bg-zinc-900 text-white px-6 py-3 flex items-center justify-between border-b-4 border-primary shrink-0">
+            <h1 className="font-bold">Reviewing Question {reviewIndex + 1}</h1>
+            <Button size="sm" variant="outline" className="text-black" onClick={() => setReviewIndex(null)}>
+              Back to Report
+            </Button>
+          </header>
+          <div className="flex-1 overflow-y-auto p-6">
+             <div className="max-w-4xl mx-auto">
+               <QuestionDisplay 
+                 question={q} 
+                 allQuestionsInContext={[q]} 
+                 isTestMode={true} 
+                 testFinished={true}
+                 testAnswers={attempt ? { [q.question_id]: attempt.userAnswer } : {}}
+               />
+             </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 text-center">
-        <Trophy className="h-16 w-16 text-yellow-500 mb-4" />
-        <h2 className="text-3xl font-bold mb-2">Kaksha Complete!</h2>
-        <p className="text-muted-foreground mb-8">You scored {score} out of {questions.length}. XP updated!</p>
-        <Button onClick={() => window.location.href='/dashboard'}>Return to Dashboard</Button>
-      </div>
+      <PracticeReport 
+        topic={topic}
+        questions={questions}
+        sessionAttempts={sessionAttempts}
+        onReviewQuestion={setReviewIndex}
+      />
     );
   }
 
@@ -203,9 +247,12 @@ export function MixedSessionClient({ topic }: { topic?: string }) {
             K
           </div>
           <div>
-            <h1 className="text-sm font-bold tracking-tight uppercase text-zinc-300">
-              Kaksha Practice Mode
-            </h1>
+            <div className="flex items-center gap-2">
+               <span className="text-sm font-bold tracking-tight uppercase text-zinc-300">
+                  Kaksha Practice Mode
+               </span>
+               <ReportDialog questionId={currentQ.question_id} />
+            </div>
             <p className="text-xs text-zinc-400">{topic || currentQ.topic}</p>
           </div>
         </div>
@@ -233,7 +280,7 @@ export function MixedSessionClient({ topic }: { topic?: string }) {
                  {/* Options */}
                  {currentQ.question_type === 'MCQ' ? (
                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                     {['A', 'B', 'C', 'D'].map((opt) => {
+                     {['A', 'B', 'C', 'D', 'E'].map((opt) => {
                        const optHtml = currentQ[`option_${opt.toLowerCase()}_html`];
                        if (!optHtml) return null;
                        
@@ -313,10 +360,10 @@ export function MixedSessionClient({ topic }: { topic?: string }) {
                         )}
                      </div>
                      <div className="flex gap-3">
-                        {!currentQ.explanation_html && !explanation && (
+                        {!explanation && (
                            <Button size="sm" onClick={() => askTutor()} disabled={isExplaining} className="font-bold bg-indigo-600 hover:bg-indigo-700 text-white">
                               {isExplaining ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <BrainCircuit className="h-4 w-4 mr-2" />}
-                              Generate Solution
+                              Ask AI Tutor
                            </Button>
                         )}
                      </div>

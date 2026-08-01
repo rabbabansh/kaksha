@@ -64,7 +64,7 @@ export default function SettingsPage() {
   const handleDangerAction = async () => {
     setActionLoading(true);
     try {
-      const action = confirmDialog === 'reset' ? 'reset_progress' : 'retake_diagnostic';
+      const action = confirmDialog === 'reset' ? 'reset_progress' : confirmDialog === 'reset_ai' ? 'reset_ai' : 'retake_diagnostic';
       const res = await fetch('/api/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

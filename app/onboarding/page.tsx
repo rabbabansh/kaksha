@@ -65,7 +65,7 @@ export default function OnboardingPage() {
         })
       });
       if (res.ok) {
-        router.push('/diagnostic');
+        window.location.href = '/diagnostic';
       } else {
         console.error('Failed to submit onboarding data');
         setIsSubmitting(false);

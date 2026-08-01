@@ -217,9 +217,7 @@ export function ReviewSessionClient({ subtopic }: ReviewSessionClientProps) {
                          >
                            <span className="font-bold mr-3">({opt})</span>
                            <span className="flex-1 whitespace-normal">
-                             <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex, rehypeRaw]}>
-                               {optHtml}
-                             </ReactMarkdown>
+                             <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex, rehypeRaw]}>{optHtml}</ReactMarkdown>
                            </span>
                            {opt === currentAttempt.userAnswer && (
                               <span className="ml-2 text-xs font-bold uppercase tracking-wider opacity-70">Your Answer</span>
@@ -286,9 +284,7 @@ export function ReviewSessionClient({ subtopic }: ReviewSessionClientProps) {
                       </div>
                       <div className="prose dark:prose-invert max-w-none text-sm notranslate bg-background/60 p-6 rounded-lg border border-black/5 dark:border-white/5" translate="no">
                          {explanation[qId] && !currentQ.explanation_html ? (
-                            <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex, rehypeRaw]}>
-                               {explanation[qId]}
-                            </ReactMarkdown>
+                            <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex, rehypeRaw]}>{explanation[qId]}</ReactMarkdown>
                          ) : (
                             <div dangerouslySetInnerHTML={{ __html: currentQ.explanation_html }} />
                          )}
@@ -313,9 +309,7 @@ export function ReviewSessionClient({ subtopic }: ReviewSessionClientProps) {
                                               ? 'bg-destructive/10 text-destructive'
                                               : 'bg-background border shadow-sm rounded-bl-none'
                                         }`}>
-                                           <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex, rehypeRaw]}>
-                                              {msg.text}
-                                কাছের</ReactMarkdown>
+                                           <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex, rehypeRaw]}>{msg.text}</ReactMarkdown>
                                         </div>
                                      </div>
                                   ))}

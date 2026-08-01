@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { logger, createTimer } from '@/lib/logger';
 import { ErrorCode, generateCorrelationId } from '@/lib/action-response';
@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    const { year, slot, answers, flagged, timeRemaining, currentSection, completed, score } = body;
+    const { year, slot, answers, flagged, timeRemaining, currentSection, completed, score, timeTakenMap } = body;
 
     if (!year || !slot) {
       return NextResponse.json(
@@ -211,11 +211,13 @@ export async function POST(request: NextRequest) {
             const userAnswer = String(answers[qId]).trim();
             const correctAnswer = (correctAnswerMap.get(qId) || '').trim().toUpperCase();
             const isCorrect = userAnswer.toUpperCase() === correctAnswer;
+            const timeTaken = timeTakenMap && timeTakenMap[qId] ? timeTakenMap[qId] : null;
             return {
               userId,
               questionId: qId,
               userAnswer,
               isCorrect,
+              timeTaken,
               source: 'test',
             };
           });

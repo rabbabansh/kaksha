@@ -1,10 +1,12 @@
 /* eslint-disable */
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { ErrorCode, generateCorrelationId } from '@/lib/action-response';
 import { getUserProgressStats } from '@/lib/progress';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   const correlationId = generateCorrelationId();
@@ -140,6 +142,84 @@ export async function GET(request: NextRequest) {
       create: { userId, kakshaScore: overallScore }
     });
 
+    // Fetch Top 5 Leaderboard Users
+    const topUsersProfiles = await prisma.userProfile.findMany({
+      orderBy: { kakshaScore: 'desc' },
+      take: 10,
+      include: {
+        user: { select: { name: true, email: true } }
+      }
+    });
+
+    const leaderboard = await Promise.all(topUsersProfiles.map(async (p, index) => {
+      // Find top strength from UserProgress
+      const userProg = await prisma.userProgress.findMany({
+        where: { userId: p.userId, totalQuestions: { gt: 0 } },
+        orderBy: { masteryLevel: 'desc' },
+        take: 1
+      });
+      
+      const topStrength = userProg.length > 0 ? userProg[0].subtopic : 'N/A';
+      const acc = p.totalAttempts > 0 ? Math.round((p.totalCorrect / p.totalAttempts) * 100) + '%' : '0%';
+
+      return {
+        userId: p.userId,
+        rank: index + 1,
+        name: p.user?.name || p.user?.email?.split('@')[0] || 'Anonymous',
+        score: p.kakshaScore || 0,
+        avatar: (p.user?.name || p.user?.email || 'A').substring(0, 2).toUpperCase(),
+        isUser: p.userId === userId,
+        acc,
+        strength: topStrength
+      };
+    }));
+
+    // Fetch all user scores for the distribution plot and to calculate exact rank
+    const allProfiles = await prisma.userProfile.findMany({
+      select: { kakshaScore: true, userId: true, user: { select: { name: true, email: true } }, totalAttempts: true, totalCorrect: true }
+    });
+
+    // Sort by score descending to find rank
+    allProfiles.sort((a, b) => (b.kakshaScore || 0) - (a.kakshaScore || 0));
+    
+    let userRank = -1;
+    let userProfileData: any = null;
+
+    const allUsersDistribution = allProfiles.map((p, index) => {
+      if (p.userId === userId) {
+        userRank = index + 1;
+        userProfileData = p;
+      }
+      return {
+        userId: p.userId,
+        name: p.user?.name || p.user?.email?.split('@')[0] || 'Anonymous',
+        score: p.kakshaScore || 0,
+        isUser: p.userId === userId
+      };
+    });
+
+    // If the user is not in the top 10, append them to the leaderboard
+    if (!leaderboard.some(l => l.isUser) && userProfileData) {
+      const userProg = await prisma.userProgress.findMany({
+        where: { userId, totalQuestions: { gt: 0 } },
+        orderBy: { masteryLevel: 'desc' },
+        take: 1
+      });
+      const topStrength = userProg.length > 0 ? userProg[0].subtopic : 'N/A';
+      const acc = userProfileData.totalAttempts > 0 ? Math.round((userProfileData.totalCorrect / userProfileData.totalAttempts) * 100) + '%' : '0%';
+
+      leaderboard.push({
+        userId,
+        rank: userRank,
+        name: userProfileData.user?.name || userProfileData.user?.email?.split('@')[0] || 'Anonymous',
+        score: userProfileData.kakshaScore || 0,
+        avatar: (userProfileData.user?.name || userProfileData.user?.email || 'A').substring(0, 2).toUpperCase(),
+        isUser: true,
+        acc,
+        strength: topStrength
+      });
+    }
+
     return NextResponse.json({
       success: true,
       data: {
@@ -152,7 +232,9 @@ export async function GET(request: NextRequest) {
         targetExamYear: profile?.targetExamYear,
         totalRawAttempts: rawAttempts.length,
         totalRawCorrect: rawAttempts.filter(a => a.isCorrect).length,
-        totalRawWrong: rawAttempts.filter(a => !a.isCorrect).length
+        totalRawWrong: rawAttempts.filter(a => !a.isCorrect).length,
+        leaderboard,
+        allUsersDistribution
       },
       correlationId
     });

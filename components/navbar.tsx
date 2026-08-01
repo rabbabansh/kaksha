@@ -4,7 +4,7 @@ import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { BookOpen, Search, LogOut, TrendingUp, Sparkles, FileText, Settings } from 'lucide-react';
+import { BookOpen, Search, LogOut, TrendingUp, Sparkles, FileText, Settings, Gift } from 'lucide-react';
 import Image from 'next/image';
 import {
   DropdownMenu,
@@ -102,6 +102,12 @@ export function Navbar() {
                 <DropdownMenuItem>
                   <TrendingUp className="mr-2 h-4 w-4" />
                   <span>Dashboard</span>
+                </DropdownMenuItem>
+              </Link>
+              <Link href="/whats-new">
+                <DropdownMenuItem>
+                  <Gift className="mr-2 h-4 w-4 text-green-500" />
+                  <span>What's New</span>
                 </DropdownMenuItem>
               </Link>
               <Link href="/settings">

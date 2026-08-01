@@ -2,7 +2,7 @@
 'use client';
 
 import { useState } from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceArea } from 'recharts';
 import { ArrowLeft, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -157,7 +157,11 @@ export function DashboardCharts({ hierarchy, totalRawAttempts, totalRawCorrect, 
         </div>
       </div>
 
-      <div className="h-[400px] w-full">
+      <div className="h-[400px] w-full relative">
+        <div className="absolute inset-0 pointer-events-none flex justify-between px-[15%] pt-4 z-10 opacity-60">
+           <div className="text-red-600 dark:text-red-400 text-2xl" style={{ fontFamily: '"Comic Sans MS", "Caveat", cursive', transform: 'rotate(-4deg)' }}>Danger Zone</div>
+           <div className="text-green-600 dark:text-green-400 text-2xl" style={{ fontFamily: '"Comic Sans MS", "Caveat", cursive', transform: 'rotate(2deg)' }}>Better Zone</div>
+        </div>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={chartData}
@@ -170,6 +174,8 @@ export function DashboardCharts({ hierarchy, totalRawAttempts, totalRawCorrect, 
             }}
           >
             <XAxis type="number" domain={[-100, 100]} />
+            <ReferenceArea x1={-100} x2={0} fill="rgba(239,68,68,0.08)" />
+            <ReferenceArea x1={0} x2={100} fill="rgba(34,197,94,0.08)" />
             <YAxis 
               type="category" 
               dataKey="name" 
@@ -206,7 +212,7 @@ export function DashboardCharts({ hierarchy, totalRawAttempts, totalRawCorrect, 
               dataKey="netScore" 
               radius={[4, 4, 4, 4]}
               barSize={32}
-              className="cursor-pointer transition-opacity hover:opacity-80"
+              className="cursor-pointer transition-opacity hover:opacity-80 z-20"
               onClick={(data) => handleBarClick(data)}
             >
               {chartData.map((entry, index) => (

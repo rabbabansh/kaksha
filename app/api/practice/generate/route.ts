@@ -1,7 +1,7 @@
 /* eslint-disable */
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { logger } from '@/lib/logger';
 import { ErrorCode, generateCorrelationId } from '@/lib/action-response';
@@ -61,6 +61,8 @@ export async function GET(request: NextRequest) {
       },
       select: {
         question_id: true,
+        set_id: true,
+        set_html: true,
         year: true,
         question_html: true,
         option_a_html: true,

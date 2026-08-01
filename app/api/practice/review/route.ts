@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { ErrorCode, generateCorrelationId } from '@/lib/action-response';
 
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '15');
 
     if (!subtopic) {
-      return NextResponse.json({ success: false, error: 'Subtopic is required', code: ErrorCode.BAD_REQUEST }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Question ID required', code: ErrorCode.VALIDATION_ERROR, correlationId }, { status: 400 });
     }
 
     // Fetch the most recent unique questions attempted in this subtopic

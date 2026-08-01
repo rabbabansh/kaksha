@@ -11,6 +11,7 @@ import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import rehypeRaw from 'rehype-raw';
 import 'katex/dist/katex.min.css';
+import { ReportDialog } from '@/components/report-dialog';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Question = any;
@@ -274,19 +275,20 @@ export function QuestionDisplay({
             {q.explanation_html && q.explanation_html !== 'N/A' && q.explanation_html.trim() !== '' ? (
               <div className="prose dark:prose-invert max-w-none leading-relaxed text-sm notranslate" translate="no" dangerouslySetInnerHTML={{ __html: q.explanation_html }} />
             ) : (
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground italic">No preloaded explanation available for this question.</p>
-                {!explanation[q.question_id] && (
-                  <Button 
-                    variant="outline" 
-                    onClick={() => askTutor(q)} 
-                    disabled={isExplaining[q.question_id]}
-                    className="border-primary/20 hover:bg-primary/5 font-semibold"
-                  >
-                    {isExplaining[q.question_id] && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                    <BrainCircuit className="h-4 w-4 mr-2" /> Ask AI Tutor
-                  </Button>
-                )}
+              <p className="text-sm text-muted-foreground italic">No preloaded explanation available for this question.</p>
+            )}
+
+            {!explanation[q.question_id] && (
+              <div className="pt-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => askTutor(q)} 
+                  disabled={isExplaining[q.question_id]}
+                  className="border-primary/20 hover:bg-primary/5 font-semibold text-indigo-600 dark:text-indigo-400"
+                >
+                  {isExplaining[q.question_id] ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <BrainCircuit className="h-4 w-4 mr-2" />}
+                  Ask AI Tutor
+                </Button>
               </div>
             )}
 
@@ -366,6 +368,7 @@ export function QuestionDisplay({
         <CardTitle className="text-xl flex items-center justify-between">
           <div className="flex items-center gap-2">
             {question.topic}
+            <ReportDialog questionId={question.question_id} />
           </div>
           <span className="text-sm font-normal text-muted-foreground">{question.source}</span>
         </CardTitle>

@@ -1,7 +1,7 @@
 /* eslint-disable */
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { getUserProgressStats } from '@/lib/progress';
 import { ErrorCode, generateCorrelationId } from '@/lib/action-response';
@@ -67,6 +67,8 @@ export async function GET(request: NextRequest) {
         },
         select: {
           question_id: true,
+          set_id: true,
+          set_html: true,
           year: true,
           question_html: true,
           option_a_html: true,
@@ -97,6 +99,8 @@ export async function GET(request: NextRequest) {
           },
           select: {
             question_id: true,
+            set_id: true,
+            set_html: true,
             year: true,
             question_html: true,
             option_a_html: true,
@@ -155,6 +159,8 @@ export async function GET(request: NextRequest) {
         where: { subtopic },
         select: {
           question_id: true,
+          set_id: true,
+          set_html: true,
           year: true,
           question_html: true,
           option_a_html: true,
@@ -211,6 +217,8 @@ export async function GET(request: NextRequest) {
           where: { question_id: { in: shuffledExtraIds } },
           select: {
             question_id: true,
+            set_id: true,
+            set_html: true,
             year: true,
             question_html: true,
             option_a_html: true,
@@ -235,18 +243,67 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Final shuffle to mix all subtopics together for the rapid-fire quiz
-    selectedQuestions = shuffle(selectedQuestions);
+    // Identify all unique set_ids that are present in our selected questions
+    const setIdsToFetch = Array.from(new Set(
+      selectedQuestions
+        .filter(q => q.set_id && q.set_id !== 'N/A')
+        .map(q => q.set_id)
+    ));
+
+    // Fetch the rest of the questions for those sets to ensure they are complete
+    if (setIdsToFetch.length > 0) {
+      const existingIds = new Set(selectedQuestions.map(q => q.question_id));
+      const missingSetQuestions = await prisma.questions.findMany({
+        where: {
+          set_id: { in: setIdsToFetch },
+          question_id: { notIn: Array.from(existingIds) }
+        },
+        select: {
+          question_id: true,
+          set_id: true,
+          set_html: true,
+          year: true,
+          question_html: true,
+          option_a_html: true,
+          option_b_html: true,
+          option_c_html: true,
+          option_d_html: true,
+          option_e_html: true,
+          question_type: true,
+          subtopic: true,
+          answer: true,
+          explanation_html: true
+        }
+      });
+      selectedQuestions.push(...missingSetQuestions);
+    }
+
+    // Final shuffle to mix all subtopics together for the rapid-fire quiz,
+    // BUT we must group questions by set_id so that linked questions remain contiguous.
+    const groups: Record<string, any[]> = {};
+    for (const q of selectedQuestions) {
+      const key = (q.set_id && q.set_id !== 'N/A') ? q.set_id : q.question_id;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(q);
+    }
+
+    const groupKeys = Object.keys(groups);
+    const shuffledGroupKeys = shuffle(groupKeys);
+
+    let finalQuestions: any[] = [];
+    for (const key of shuffledGroupKeys) {
+      finalQuestions.push(...groups[key]);
+    }
 
     logger.info(`${operation} generated mixed module`, {
       correlationId,
       weaknesses: targetSubtopics.slice(0, 5),
-      foundCount: selectedQuestions.length
+      foundCount: finalQuestions.length
     });
 
     return NextResponse.json({
       success: true,
-      data: selectedQuestions,
+      data: finalQuestions,
       correlationId
     });
 

@@ -32,6 +32,7 @@ model questions {
   // 1-to-1 link to its vector
   vector                 QuestionVector?
   questionAttempts       QuestionAttempt[]
+  reportedQuestions      ReportedQuestion[]
 }
 
 // Vector storage model for embeddings
@@ -55,6 +56,7 @@ model User {
   testProgress  TestProgress[]
   questionAttempts QuestionAttempt[]
   userProgress  UserProgress[]
+  reportedQuestions ReportedQuestion[]
   profile       UserProfile?
 }
 
@@ -134,4 +136,20 @@ model UserProfile {
   selfWeaknesses      String  @default("[]") // JSON array of user-selected topics
   
   updatedAt     DateTime @updatedAt
+}
+
+model ReportedQuestion {
+  id          String   @id @default(cuid())
+  questionId  String
+  question    questions @relation(fields: [questionId], references: [question_id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reason      String
+  details     String?
+  status      String   @default("PENDING") // PENDING, REVIEWED, RESOLVED
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([questionId])
+  @@index([userId])
 }

@@ -67,6 +67,8 @@ export function TestPageClient({
   const [showEndSectionDialog, setShowEndSectionDialog] = useState(false);
   const [showEndExamDialog, setShowEndExamDialog] = useState(false);
   const [visitedQuestions, setVisitedQuestions] = useState<Set<string>>(new Set());
+  const [timeTakenMap, setTimeTakenMap] = useState<Record<string, number>>({});
+  const [questionStartTime, setQuestionStartTime] = useState<number>(Date.now());
   const calculatorInputRef = useRef<HTMLDivElement>(null);
 
   const currentSection = sections[currentSectionIndex] || sections[0];
@@ -82,8 +84,9 @@ export function TestPageClient({
   }, [currentQuestions]);
   
   const currentQuestion = allQuestionsInSection[currentQuestionIndex] || null;
+  const currentQuestionRef = useRef<string | null>(null);
 
-  // Track visited questions
+  // Track visited questions and time taken
   useEffect(() => {
     if (currentQuestion) {
       setVisitedQuestions((prev) => {
@@ -91,8 +94,20 @@ export function TestPageClient({
         next.add(currentQuestion.question_id);
         return next;
       });
+
+      // If we switched questions, record time for the previous one
+      if (currentQuestionRef.current && currentQuestionRef.current !== currentQuestion.question_id) {
+         const elapsed = Math.floor((Date.now() - questionStartTime) / 1000);
+         setTimeTakenMap(prev => ({
+            ...prev,
+            [currentQuestionRef.current!]: (prev[currentQuestionRef.current!] || 0) + elapsed
+         }));
+      }
+      
+      currentQuestionRef.current = currentQuestion.question_id;
+      setQuestionStartTime(Date.now());
     }
-  }, [currentQuestion]);
+  }, [currentQuestion, questionStartTime]);
 
   // Auto-save progress
   const saveProgress = useCallback(async () => {
@@ -127,6 +142,13 @@ export function TestPageClient({
       }
     });
 
+    // Record the time for the very last question before submitting
+    const finalElapsed = currentQuestionRef.current ? Math.floor((Date.now() - questionStartTime) / 1000) : 0;
+    const finalTimeTakenMap = { ...timeTakenMap };
+    if (currentQuestionRef.current) {
+       finalTimeTakenMap[currentQuestionRef.current] = (finalTimeTakenMap[currentQuestionRef.current] || 0) + finalElapsed;
+    }
+
     setCompleted(true);
     setShowReport(true);
     await fetch('/api/test-progress', {
@@ -141,9 +163,10 @@ export function TestPageClient({
         currentSection,
         completed: true,
         score,
+        timeTakenMap: finalTimeTakenMap
       }),
     });
-  }, [year, slot, answers, flagged, currentSection, questions]);
+  }, [year, slot, answers, flagged, currentSection, questions, timeTakenMap, questionStartTime]);
 
   // Handle section end
   const handleEndSection = useCallback(() => {

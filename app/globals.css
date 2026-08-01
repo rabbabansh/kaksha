@@ -119,4 +119,18 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Prose overrides for CAT questions (tables, images) */
+  .prose table {
+    @apply w-full border-collapse border border-border my-4;
+  }
+  .prose th, .prose td {
+    @apply border border-border p-3 align-top;
+  }
+  .prose th {
+    @apply bg-muted font-bold;
+  }
+  .prose img {
+    @apply max-w-full h-auto mx-auto my-4 rounded-md shadow-sm;
+  }
 }

@@ -5,20 +5,31 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { DashboardCharts } from './dashboard-charts';
 import { DashboardTimeline } from './dashboard-timeline';
+import { UserProfileModal } from './user-profile-modal';
 import { Loader2, TrendingUp, TrendingDown, Award, Star, Medal, Zap, PlayCircle, History, BookOpen, Trophy } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { LineChart, Line, XAxis as RXAxis, YAxis as RYAxis, Tooltip as RTooltip, ResponsiveContainer as RContainer, ReferenceDot, CartesianGrid } from 'recharts';
 
 export function DashboardClient() {
   const [data, setData] = useState<any>(null);
   const [historyData, setHistoryData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [historyFilter, setHistoryFilter] = useState('All');
+  const [historySearch, setHistorySearch] = useState('');
+  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
 
   async function loadData() {
     try {
       const [res, histRes] = await Promise.all([
-        fetch('/api/progress/dashboard'),
-        fetch('/api/progress/history')
+        fetch('/api/progress/dashboard', { cache: 'no-store' }),
+        fetch('/api/progress/history', { cache: 'no-store' })
       ]);
       const json = await res.json();
       if (json.success) {
@@ -37,7 +48,12 @@ export function DashboardClient() {
   }
 
   useEffect(() => {
-    loadData();
+    const hasSeenWhatsNew = localStorage.getItem('kaksha_whats_new_v1.2');
+    if (!hasSeenWhatsNew) {
+      window.location.href = '/whats-new';
+    } else {
+      loadData();
+    }
   }, []);
 
   if (loading) {
@@ -62,6 +78,34 @@ export function DashboardClient() {
 
   return (
     <div className="space-y-6 mb-12">
+      {/* 3.2 Granular Stats row */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="bg-gradient-to-br from-indigo-500/10 to-transparent border-indigo-500/20 shadow-sm">
+          <CardContent className="p-4 flex flex-col justify-center">
+             <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Total Attempted</span>
+             <span className="text-3xl font-black mt-1 text-indigo-700 dark:text-indigo-400">{data.totalRawAttempts}</span>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-green-500/10 to-transparent border-green-500/20 shadow-sm">
+          <CardContent className="p-4 flex flex-col justify-center">
+             <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Accuracy Rate</span>
+             <span className="text-3xl font-black mt-1 text-green-700 dark:text-green-400">{data.totalRawAttempts > 0 ? Math.round((data.totalRawCorrect / data.totalRawAttempts) * 100) : 0}%</span>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-yellow-500/10 to-transparent border-yellow-500/20 shadow-sm">
+          <CardContent className="p-4 flex flex-col justify-center">
+             <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Total Correct</span>
+             <span className="text-3xl font-black mt-1 text-yellow-700 dark:text-yellow-400">{data.totalRawCorrect}</span>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-red-500/10 to-transparent border-red-500/20 shadow-sm">
+          <CardContent className="p-4 flex flex-col justify-center">
+             <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Total Incorrect</span>
+             <span className="text-3xl font-black mt-1 text-red-700 dark:text-red-400">{data.totalRawWrong}</span>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Overview Metric & Gamification */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card className="col-span-1 md:col-span-2 border-primary/20 bg-primary/5 shadow-sm">
@@ -95,11 +139,49 @@ export function DashboardClient() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground uppercase tracking-wider font-bold mb-1">Badges</p>
-                <div className="flex flex-wrap gap-2 mt-1">
-                  {data.badges?.length > 0 ? data.badges.map((b: string) => (
-                    <Badge key={b} variant="secondary" className="text-xs font-bold shadow-sm border-primary/10"><Medal className="h-3 w-3 mr-1 text-primary"/>{b}</Badge>
-                  )) : <span className="text-sm text-muted-foreground font-medium">Complete tasks to unlock!</span>}
-                </div>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <div className="flex flex-wrap gap-2 mt-1 cursor-pointer">
+                      {data.badges?.length > 0 ? data.badges.map((b: string) => (
+                        <TooltipProvider key={b}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge variant="secondary" className="text-xs font-bold shadow-sm border-primary/10 hover:bg-primary/20 transition-colors"><Medal className="h-3 w-3 mr-1 text-primary"/>{b}</Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>Earned for excellence in {b}</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )) : <span className="text-sm text-muted-foreground font-medium hover:underline">Complete tasks to unlock!</span>}
+                    </div>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Kaksha Badges</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid grid-cols-3 gap-6 py-8">
+                       {data.badges?.map((b: string) => (
+                         <div key={b} className="text-center flex flex-col items-center">
+                            <div className="h-16 w-16 rounded-full bg-yellow-500/20 flex items-center justify-center mb-3 border-2 border-yellow-500">
+                               <Medal className="h-8 w-8 text-yellow-600 dark:text-yellow-400"/>
+                            </div>
+                            <span className="text-sm font-bold leading-tight">{b}</span>
+                         </div>
+                       ))}
+                       <div className="text-center flex flex-col items-center opacity-40 grayscale">
+                          <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-3 border-2 border-muted-foreground">
+                             <Medal className="h-8 w-8 text-muted-foreground"/>
+                          </div>
+                          <span className="text-sm font-bold leading-tight">QA Master</span>
+                       </div>
+                       <div className="text-center flex flex-col items-center opacity-40 grayscale">
+                          <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-3 border-2 border-muted-foreground">
+                             <Medal className="h-8 w-8 text-muted-foreground"/>
+                          </div>
+                          <span className="text-sm font-bold leading-tight">Speed Demon</span>
+                       </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
             </div>
           </CardContent>
@@ -117,10 +199,10 @@ export function DashboardClient() {
               </div>
               <div className="flex flex-col gap-2">
                 {data.strengths.length > 0 ? data.strengths.slice(0, 3).map((s: string) => (
-                  <div key={s} className="px-3 py-2 rounded-lg bg-green-50 dark:bg-green-900/10 border border-green-200 text-sm font-semibold flex items-center justify-between">
+                  <Link href={`/practice/modules/${encodeURIComponent(s.split(' > ').pop() || '')}`} key={s} className="px-3 py-2 rounded-lg bg-green-50 dark:bg-green-900/10 border border-green-200 text-sm font-semibold flex items-center justify-between hover:border-green-400 hover:bg-green-100 dark:hover:bg-green-900/20 transition-all cursor-pointer group">
                     <span className="truncate">{s.split(' > ').pop()}</span>
-                    <span className="text-xs text-green-600 opacity-60">Mastered</span>
-                  </div>
+                    <span className="text-xs text-green-600 opacity-60 group-hover:opacity-100 flex items-center">Mastered <PlayCircle className="h-3 w-3 ml-1" /></span>
+                  </Link>
                 )) : <span className="text-sm text-muted-foreground">Keep practicing to find your strengths!</span>}
               </div>
             </div>
@@ -130,10 +212,10 @@ export function DashboardClient() {
               </div>
               <div className="flex flex-col gap-2">
                 {data.weaknesses.length > 0 ? data.weaknesses.slice(0, 3).map((s: string) => (
-                  <div key={s} className="px-3 py-2 rounded-lg bg-red-50 dark:bg-red-900/10 border border-red-200 text-sm font-semibold flex items-center justify-between">
+                  <Link href={`/practice/modules/${encodeURIComponent(s.split(' > ').pop() || '')}`} key={s} className="px-3 py-2 rounded-lg bg-red-50 dark:bg-red-900/10 border border-red-200 text-sm font-semibold flex items-center justify-between hover:border-red-400 hover:bg-red-100 dark:hover:bg-red-900/20 transition-all cursor-pointer group">
                     <span className="truncate">{s.split(' > ').pop()}</span>
-                    <span className="text-xs text-red-600 opacity-60">Needs Work</span>
-                  </div>
+                    <span className="text-xs text-red-600 opacity-60 group-hover:opacity-100 flex items-center">Needs Work <PlayCircle className="h-3 w-3 ml-1" /></span>
+                  </Link>
                 )) : <span className="text-sm text-muted-foreground">No weaknesses detected yet.</span>}
               </div>
             </div>
@@ -217,21 +299,45 @@ export function DashboardClient() {
         {/* History & Review Hub */}
         <Card className="col-span-1 md:col-span-4 mt-2 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-xl flex items-center gap-2">
-              <History className="h-5 w-5 text-primary" /> History & Review Hub
-            </CardTitle>
-            <CardDescription>Revisit your recent modules and learn from your mistakes using the AI Tutor.</CardDescription>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <CardTitle className="text-xl flex items-center gap-2">
+                  <History className="h-5 w-5 text-primary" /> History & Review Hub
+                </CardTitle>
+                <CardDescription>Revisit your recent modules and learn from your mistakes.</CardDescription>
+              </div>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <Input 
+                  placeholder="Search subtopics..." 
+                  className="w-full sm:w-48 h-9" 
+                  value={historySearch}
+                  onChange={e => setHistorySearch(e.target.value)}
+                />
+                <Select value={historyFilter} onValueChange={setHistoryFilter}>
+                  <SelectTrigger className="w-[120px] h-9">
+                    <SelectValue placeholder="Filter" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All">All Types</SelectItem>
+                    <SelectItem value="Mock Test">Mock Tests</SelectItem>
+                    <SelectItem value="Practice">Practice</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             {historyData && (historyData.mockProgress.length > 0 || historyData.attempts.length > 0) ? (
               <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
-                {/* Render Mocks first */}
-                {historyData.mockProgress.map((mock: any, idx: number) => (
+                {/* Render filtered Mocks */}
+                {(historyFilter === 'All' || historyFilter === 'Mock Test') && historyData.mockProgress
+                  .filter((mock: any) => `CAT ${mock.year}`.toLowerCase().includes(historySearch.toLowerCase()))
+                  .map((mock: any, idx: number) => (
                   <div key={`mock-${idx}`} className="p-4 border rounded-xl flex items-center justify-between hover:bg-muted/30 transition-colors">
                     <div>
                       <div className="flex items-center gap-2 mb-1">
-                        <Badge variant="outline" className="bg-primary/5">Mock Test</Badge>
-                        <span className="text-xs text-muted-foreground">{new Date(mock.updatedAt).toLocaleDateString()}</span>
+                        <Badge variant="outline" className="bg-primary/5 border-primary/20 text-primary">Mock Test</Badge>
+                        <span className="text-xs text-muted-foreground font-medium">{new Date(mock.updatedAt).toLocaleDateString()}</span>
                       </div>
                       <h4 className="font-bold">CAT {mock.year} - Slot {mock.slot}</h4>
                       <p className="text-sm text-muted-foreground">Score: {mock.score || 'In Progress'}</p>
@@ -242,23 +348,29 @@ export function DashboardClient() {
                   </div>
                 ))}
                 
-                {/* Render Practice Module attempts by grouping recent subtopics */}
-                {Object.entries(
+                {/* Render filtered Practice Modules */}
+                {(historyFilter === 'All' || historyFilter === 'Practice') && Object.entries(
                   historyData.attempts.reduce((acc: any, curr: any) => {
                     const key = curr.question?.subtopic;
                     if (!key) return acc;
-                    if (!acc[key]) {
-                      acc[key] = { subtopic: key, count: 0, date: curr.attemptedAt, topic: curr.question.topic, source: curr.source };
+                    
+                    // Convert UTC attempt string to local date string to group correctly by day
+                    const localDateStr = new Date(curr.attemptedAt).toLocaleDateString();
+                    const groupKey = `${key}_${localDateStr}`;
+                    
+                    if (!acc[groupKey]) {
+                      acc[groupKey] = { subtopic: key, count: 0, date: localDateStr, topic: curr.question.topic, source: curr.source };
                     }
-                    acc[key].count++;
+                    acc[groupKey].count++;
                     return acc;
                   }, {})
-                ).map(([key, group]: any, idx: number) => (
+                ).filter(([_, group]: any) => group.subtopic.toLowerCase().includes(historySearch.toLowerCase()))
+                 .map(([key, group]: any, idx: number) => (
                   <div key={`prac-${idx}`} className="p-4 border rounded-xl flex items-center justify-between hover:bg-muted/30 transition-colors">
                     <div>
                       <div className="flex items-center gap-2 mb-1">
-                        <Badge variant="outline" className="bg-secondary/10">Practice</Badge>
-                        <span className="text-xs text-muted-foreground">{new Date(group.date).toLocaleDateString()}</span>
+                        <Badge variant="outline" className="bg-secondary/10 border-secondary/20">Practice</Badge>
+                        <span className="text-xs text-muted-foreground font-medium">{group.date}</span>
                       </div>
                       <h4 className="font-bold">{group.subtopic}</h4>
                       <p className="text-sm text-muted-foreground">{group.count} questions attempted in {group.topic}</p>
@@ -293,6 +405,127 @@ export function DashboardClient() {
           weaknesses={data.weaknesses} 
         />
       </div>
+
+      {/* Global Leaderboard & Bell Curve */}
+      <Card className="shadow-sm mt-8 border-indigo-200 dark:border-indigo-900 overflow-hidden">
+        <div className="bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-indigo-500/10 p-6 border-b border-indigo-100 dark:border-indigo-900">
+           <CardTitle className="text-2xl flex items-center gap-2 text-indigo-700 dark:text-indigo-400">
+             <Medal className="h-6 w-6" /> Kaksha Global Leaderboard
+           </CardTitle>
+           <CardDescription className="text-indigo-900/70 dark:text-indigo-300/70 font-medium mt-1">See where you stand against the competition on the bell curve.</CardDescription>
+        </div>
+        <CardContent className="p-0 flex flex-col lg:flex-row">
+           <div className="w-full lg:w-1/2 p-6 border-b lg:border-b-0 lg:border-r border-border">
+              <h4 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-6">Percentile Distribution</h4>
+              <div className="h-[300px] w-full relative">
+                 <RContainer width="100%" height="100%">
+                    <LineChart data={[
+                      { p: 0, v: 2 }, { p: 10, v: 10 }, { p: 20, v: 35 }, { p: 30, v: 80 }, { p: 40, v: 150 }, 
+                      { p: 50, v: 200 }, { p: 60, v: 150 }, { p: 70, v: 80 }, { p: 80, v: 35 }, { p: 90, v: 10 }, { p: 100, v: 2 }
+                    ]} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
+                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.05)" />
+                       <RXAxis dataKey="p" type="number" domain={[0, 100]} tick={{fontSize: 12}} stroke="rgba(0,0,0,0.2)" />
+                       <Line type="monotone" dataKey="v" stroke="#6366f1" strokeWidth={3} dot={false} fill="url(#colorV)" />
+                       {/* Plot all users from DB */}
+                       {data.allUsersDistribution?.map((u: any, idx: number) => {
+                          const p = parseFloat(getEstimatedPercentile(u.score));
+                          // Calculate y on the bell curve (max height is 200 at p=50)
+                          const y = 200 * Math.exp(-Math.pow(p - 50, 2) / 400);
+                          return (
+                            <ReferenceDot 
+                              key={`dot-${idx}`}
+                              x={p} 
+                              y={y} 
+                              r={u.isUser ? 6 : 4} 
+                              fill={u.isUser ? "#10b981" : "#6366f1"} 
+                              stroke={u.isUser ? "#fff" : "none"} 
+                              strokeWidth={u.isUser ? 2 : 0} 
+                            />
+                          );
+                       })}
+                       
+                       <RTooltip content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                             const p = payload[0].payload.p;
+                             // Find users who are close to this percentile
+                             const closeUsers = data.allUsersDistribution?.filter((u: any) => {
+                                const up = parseFloat(getEstimatedPercentile(u.score));
+                                return Math.abs(up - p) <= 5;
+                             }).sort((a: any, b: any) => b.score - a.score);
+                             
+                             return (
+                                <div className="bg-background border shadow-xl rounded-xl p-4 min-w-[200px]">
+                                   <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 border-b pb-2">{p}th Percentile</div>
+                                   {closeUsers && closeUsers.length > 0 ? closeUsers.slice(0, 4).map((u: any, idx: number) => (
+                                      <div key={idx} className={`flex items-center gap-3 py-1 ${!u.isUser ? 'opacity-70' : ''}`}>
+                                         <div className={`h-8 w-8 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-sm ${u.isUser ? 'bg-green-500 ring-2 ring-green-200' : 'bg-indigo-400'}`}>
+                                            {u.isUser ? 'YOU' : u.name.substring(0, 2).toUpperCase()}
+                                         </div>
+                                         <div>
+                                            <p className={`font-bold text-sm leading-tight ${u.isUser ? 'text-green-600' : ''}`}>{u.isUser ? 'You' : u.name}</p>
+                                            <p className="text-xs text-muted-foreground leading-tight">Score: {u.score}</p>
+                                         </div>
+                                      </div>
+                                   )) : (
+                                      <p className="text-sm text-muted-foreground py-2 italic">No users in this bracket yet.</p>
+                                   )}
+                                </div>
+                             )
+                          }
+                          return null;
+                       }} cursor={{ stroke: 'rgba(99, 102, 241, 0.2)', strokeWidth: 2, strokeDasharray: '4 4' }} />
+                    </LineChart>
+                 </RContainer>
+              </div>
+           </div>
+           <div className="w-full lg:w-1/2 p-0">
+              <div className="flex justify-between items-center p-6 pb-2">
+                 <h4 className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Top Performers</h4>
+              </div>
+              <div className="px-6 pb-6">
+                 <div className="space-y-1">
+                     {data.leaderboard?.length > 0 ? data.leaderboard.map((u: any) => {
+                        const rankStyle = u.rank === 1 ? "bg-yellow-500/10 text-yellow-600 border-yellow-200" 
+                                       : u.rank === 2 ? "bg-slate-200 text-slate-600 border-slate-300" 
+                                       : u.rank === 3 ? "bg-orange-500/10 text-orange-600 border-orange-200" 
+                                       : u.isUser ? "bg-green-500 border-green-600 text-white shadow-md"
+                                       : "bg-muted text-muted-foreground border-transparent";
+                        return (
+                        <div 
+                          key={u.rank} 
+                          onClick={() => { setSelectedProfileId(u.userId); setProfileModalOpen(true); }}
+                          className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer hover:shadow-md ${u.isUser ? 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900' : 'bg-transparent border-transparent hover:bg-muted/50'} transition-all`}
+                        >
+                           <div className="flex items-center gap-4">
+                              <div className={`h-8 w-8 rounded-full flex items-center justify-center font-bold text-xs border ${rankStyle}`}>{u.avatar}</div>
+                              <div>
+                                 <p className={`font-bold text-sm flex items-center gap-2 ${u.isUser ? 'text-green-700 dark:text-green-400' : ''}`}>
+                                   {u.name}
+                                   {u.rank <= 3 && <Trophy className={`h-3 w-3 ${u.rank === 1 ? 'text-yellow-500' : u.rank === 2 ? 'text-slate-400' : 'text-orange-500'}`} />}
+                                 </p>
+                                 <p className="text-xs text-muted-foreground truncate max-w-[150px]">Mastery: {u.strength}</p>
+                              </div>
+                           </div>
+                           <div className="text-right">
+                              <p className="font-black text-sm">{u.score}</p>
+                              <p className="text-xs text-muted-foreground">{u.acc} acc</p>
+                           </div>
+                        </div>
+                        );
+                     }) : (
+                        <p className="text-sm text-muted-foreground p-4 text-center">No one is on the leaderboard yet. Start practicing to claim the top spot!</p>
+                     )}
+                  </div>
+               </div>
+            </div>
+        </CardContent>
+      </Card>
+
+      <UserProfileModal 
+         userId={selectedProfileId || ''} 
+         open={profileModalOpen} 
+         onOpenChange={setProfileModalOpen} 
+      />
 
       {/* Interactive Charts with Raw Stats */}
       <Card className="shadow-sm mt-8">
