@@ -29,10 +29,10 @@ export default function WhatsNewPage() {
             <Gift className="w-10 h-10 text-primary" />
           </div>
           <h1 className="text-4xl md:text-6xl font-black tracking-tight animate-in slide-in-from-bottom-4 fade-in duration-700">
-            What's New in Kaksha
+            What&apos;s New in Kaksha
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto animate-in slide-in-from-bottom-6 fade-in duration-700 delay-150">
-            We've been hard at work building the ultimate CAT preparation ecosystem. Discover all the new features and upgrades.
+            We&apos;ve been hard at work building the ultimate CAT preparation ecosystem. Discover all the new features and upgrades.
           </p>
           <div className="pt-4 animate-in fade-in duration-1000 delay-300">
             <Button onClick={handleContinue} size="lg" className="rounded-full px-8 shadow-lg hover:shadow-primary/25 font-bold text-lg">

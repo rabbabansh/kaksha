@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { year, slot, isPractice, contextData } = body;
 
-    let systemPrompt = `You are an expert AI Tutor analyzing a student's test performance. 
+    const systemPrompt = `You are an expert AI Tutor analyzing a student's test performance. 
 Keep your insights SHORT, CONCISE, and ACTIONABLE (around 2-3 paragraphs max). 
 Use markdown. Highlight strengths, pinpoint weaknesses based on time taken and incorrect answers, and suggest a very brief next-step strategy.`;
 
@@ -35,7 +35,7 @@ Use markdown. Highlight strengths, pinpoint weaknesses based on time taken and i
     }
 
     const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' });
-    let userPrompt = `Here is the student's performance data:\n${JSON.stringify(contextData, null, 2)}`;
+    const userPrompt = `Here is the student's performance data:\n${JSON.stringify(contextData, null, 2)}`;
     const prompt = `${systemPrompt}\n\n${userPrompt}`;
     const result = await model.generateContent(prompt);
     const insight = result.response.text();
