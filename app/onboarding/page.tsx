@@ -51,7 +51,7 @@ export default function OnboardingPage() {
   const handleNext = () => setStep(s => s + 1);
   const handleBack = () => setStep(s => s - 1);
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (skip: boolean = false) => {
     setIsSubmitting(true);
     try {
       const res = await fetch('/api/onboarding', {
@@ -65,7 +65,7 @@ export default function OnboardingPage() {
         })
       });
       if (res.ok) {
-        window.location.href = '/diagnostic';
+        window.location.href = skip ? '/dashboard' : '/diagnostic';
       } else {
         console.error('Failed to submit onboarding data');
         setIsSubmitting(false);
@@ -221,17 +221,27 @@ export default function OnboardingPage() {
 
               <div className="flex gap-4">
                 <Button variant="outline" onClick={handleBack} disabled={isSubmitting} className="h-14 px-8 rounded-xl">Back</Button>
-                <Button 
-                  onClick={handleSubmit} 
-                  disabled={isSubmitting} 
-                  className="flex-1 h-14 text-lg rounded-xl shadow-lg hover:shadow-primary/20 bg-primary"
-                >
-                  {isSubmitting ? (
-                    <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Saving Profile...</>
-                  ) : (
-                    <>Start Diagnostic Test <ArrowRight className="ml-2 w-5 h-5" /></>
-                  )}
-                </Button>
+                <div className="flex-1 flex gap-2">
+                  <Button 
+                    variant="secondary"
+                    onClick={() => handleSubmit(true)} 
+                    disabled={isSubmitting} 
+                    className="flex-1 h-14 text-lg rounded-xl shadow-lg"
+                  >
+                    Skip Diagnostic
+                  </Button>
+                  <Button 
+                    onClick={() => handleSubmit(false)} 
+                    disabled={isSubmitting} 
+                    className="flex-1 h-14 text-lg rounded-xl shadow-lg hover:shadow-primary/20 bg-primary"
+                  >
+                    {isSubmitting ? (
+                      <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Saving Profile...</>
+                    ) : (
+                      <>Start Diagnostic Test <ArrowRight className="ml-2 w-5 h-5" /></>
+                    )}
+                  </Button>
+                </div>
               </div>
             </div>
           )}

@@ -4,18 +4,18 @@ import { redirect } from 'next/navigation';
 import { TestSelectionClient } from '@/components/test-selection-client';
 
 export default async function HomePage() {
+  const session = await getAuthSession();
+
+  if (!session) {
+    redirect('/login');
+  }
+
+  const profile = await getUserProfile();
+  if (profile && !profile.onboardingCompleted) {
+      redirect('/onboarding');
+  }
+
   try {
-    const session = await getAuthSession();
-
-    if (!session) {
-      redirect('/login');
-    }
-
-    const profile = await getUserProfile();
-    if (profile && !profile.onboardingCompleted) {
-        redirect('/onboarding');
-    }
-
     // Only fetch minimal fields needed for test selection (year, slot, question_id)
     // This avoids exceeding Prisma Accelerate's 5MB response limit
     const questions = await prisma.questions.findMany({

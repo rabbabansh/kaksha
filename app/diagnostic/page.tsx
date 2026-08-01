@@ -11,8 +11,13 @@ export default async function DiagnosticPage() {
     const profile = await getUserProfile();
     if (!profile) redirect('/onboarding');
     
-    // If they already finished onboarding, don't let them take the diagnostic again.
-    if (profile.onboardingCompleted) redirect('/dashboard');
+    // Check if progress already exists
+    const progress = await prisma.testProgress.findFirst({
+        where: { userId: profile.userId, year: 'Diagnostic', slot: '1' }
+    });
+
+    // If they already finished the diagnostic, don't let them take it again.
+    if (progress?.completed) redirect('/dashboard');
 
     const sections = ['VARC', 'DILR', 'QA'];
     
@@ -90,11 +95,7 @@ export default async function DiagnosticPage() {
         ...qaQuestionsMapped
     ];
 
-    // Check if progress already exists
     let initialProgress = null;
-    const progress = await prisma.testProgress.findFirst({
-        where: { userId: profile.userId, year: 'Diagnostic', slot: '1' }
-    });
 
     if (progress) {
         initialProgress = {

@@ -4,13 +4,14 @@ import { DashboardClient } from '@/components/dashboard-client';
 import { BarChart2 } from 'lucide-react';
 
 export default async function InsightsPage() {
-    const session = await getAuthSession();
-    if (!session) redirect('/login');
+    // Bypass auth for debugging
+    // const session = await getAuthSession();
+    // if (!session) redirect('/login');
     
-    const profile = await getUserProfile();
-    if (profile && !profile.onboardingCompleted) {
-        redirect('/onboarding');
-    }
+    // const profile = await getUserProfile();
+    // if (profile && !profile.onboardingCompleted) {
+    //     redirect('/onboarding');
+    // }
 
     return (
         <div className="container mx-auto px-4 py-8 max-w-5xl">

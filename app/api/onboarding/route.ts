@@ -35,8 +35,7 @@ export async function POST(request: NextRequest) {
                 targetExamYear: targetExamYear.toString(),
                 selfStrengths: JSON.stringify(selfStrengths || []),
                 selfWeaknesses: JSON.stringify(selfWeaknesses || []),
-                // We do NOT set onboardingCompleted to true here.
-                // It is set to true ONLY after completing the diagnostic test.
+                onboardingCompleted: true,
             },
             create: {
                 userId: user.id,
@@ -44,6 +43,7 @@ export async function POST(request: NextRequest) {
                 targetExamYear: targetExamYear.toString(),
                 selfStrengths: JSON.stringify(selfStrengths || []),
                 selfWeaknesses: JSON.stringify(selfWeaknesses || []),
+                onboardingCompleted: true,
             }
         });
 

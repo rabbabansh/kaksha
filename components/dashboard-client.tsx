@@ -32,16 +32,22 @@ export function DashboardClient() {
         fetch('/api/progress/history', { cache: 'no-store' })
       ]);
       const json = await res.json();
+      console.log('Dashboard API Response:', json);
       if (json.success) {
         setData(json.data);
+      } else {
+        console.error('Dashboard API failed:', json.error);
+        alert('Dashboard failed to load: ' + json.error);
       }
       
       const histJson = await histRes.json();
+      console.log('History API Response:', histJson);
       if (histJson.success) {
          setHistoryData(histJson.data);
       }
     } catch (error) {
       console.error('Failed to load dashboard:', error);
+      alert('Dashboard request crashed: ' + error);
     } finally {
       setLoading(false);
     }
@@ -49,14 +55,18 @@ export function DashboardClient() {
 
   useEffect(() => {
     const hasSeenWhatsNew = localStorage.getItem('kaksha_whats_new_v1.2');
+    console.log('DashboardClient useEffect running', { hasSeenWhatsNew });
     if (!hasSeenWhatsNew) {
+      console.log('Redirecting to whats-new');
       window.location.href = '/whats-new';
     } else {
+      console.log('Calling loadData()');
       loadData();
     }
   }, []);
 
   if (loading) {
+    console.log('DashboardClient: rendering loading spinner');
     return (
       <div className="flex justify-center items-center py-12">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -64,7 +74,10 @@ export function DashboardClient() {
     );
   }
 
+  console.log('DashboardClient: loading finished', { data: !!data });
   if (!data) return null;
+
+  console.log('DashboardClient: rendering main content');
 
   const getEstimatedPercentile = (score: number) => {
     if (score >= 90) return '99.5+';
@@ -78,6 +91,20 @@ export function DashboardClient() {
 
   return (
     <div className="space-y-6 mb-12">
+      {!data.diagnosticCompleted && (
+        <Card className="bg-gradient-to-r from-orange-500/10 to-red-500/10 border-orange-500/20 shadow-sm">
+          <CardContent className="p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-bold text-orange-700 dark:text-orange-400">Diagnostic Test Pending</h3>
+              <p className="text-sm text-muted-foreground mt-1">You haven't taken your initial diagnostic test yet. Complete it to unlock personalized targets and accurate analytics.</p>
+            </div>
+            <Button onClick={() => window.location.href='/diagnostic'} className="bg-orange-600 hover:bg-orange-700 font-bold whitespace-nowrap">
+              Start Diagnostic Test
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* 3.2 Granular Stats row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="bg-gradient-to-br from-indigo-500/10 to-transparent border-indigo-500/20 shadow-sm">

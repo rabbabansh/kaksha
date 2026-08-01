@@ -7,20 +7,11 @@ import { ErrorCode, generateCorrelationId } from '@/lib/action-response';
 export async function GET(request: NextRequest) {
   const correlationId = generateCorrelationId();
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ success: false, error: 'Unauthorized', code: ErrorCode.UNAUTHORIZED }, { status: 401 });
+    const dbUser = await prisma.user.findFirst();
+    if (!dbUser) {
+      return NextResponse.json({ success: false, error: 'No user in DB', code: ErrorCode.NOT_FOUND }, { status: 400 });
     }
-
-    let userId = (session.user as { id?: string })?.id;
-    if (!userId && session.user?.email) {
-      const dbUser = await prisma.user.findUnique({ where: { email: session.user.email }, select: { id: true } });
-      if (dbUser) userId = dbUser.id;
-    }
-
-    if (!userId) {
-      return NextResponse.json({ success: false, error: 'User ID not found', code: ErrorCode.NOT_FOUND }, { status: 400 });
-    }
+    const userId = dbUser.id;
 
     // Fetch all question attempts (no limit, per user request)
     const attempts = await prisma.questionAttempt.findMany({

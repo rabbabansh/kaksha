@@ -1,5 +1,5 @@
 import prisma from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
+import { getAuthSession } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { TestPageClient } from '@/components/test-page-client';
 import { TestExploreClient } from '@/components/test-explore-client';
@@ -11,7 +11,7 @@ export default async function TestPage({
   params: Promise<{ year: string; slot: string }>;
   searchParams: Promise<{ mode?: string; section?: string }>;
 }) {
-  const session = await getServerSession();
+  const session = await getAuthSession();
   if (!session) {
     redirect('/login');
   }
