@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
 
     if (!userId) {
       // Fallback for MVP testing if no session
-      const dbUser = await prisma.user.findFirst();
+      const dbUser = await prisma.user.findFirst({ orderBy: { questionAttempts: { _count: 'desc' } } });
       if (dbUser) {
         userId = dbUser.id;
       }

@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!userId) {
-      const dbUser = await prisma.user.findFirst();
+      const dbUser = await prisma.user.findFirst({ orderBy: { questionAttempts: { _count: 'desc' } } });
       if (!dbUser) {
         logger.warn(`${operation} user ID not found and no fallback available`, { operation, correlationId });
         return NextResponse.json(

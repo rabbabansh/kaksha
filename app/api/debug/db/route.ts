@@ -3,7 +3,7 @@ import prisma from '@/lib/prisma';
 
 export async function GET(request: NextRequest) {
   try {
-    const dbUser = await prisma.user.findFirst();
+    const dbUser = await prisma.user.findFirst({ orderBy: { questionAttempts: { _count: 'desc' } } });
     if (!dbUser) return NextResponse.json({ error: 'No user' });
 
     const sessions = await prisma.session.findMany({

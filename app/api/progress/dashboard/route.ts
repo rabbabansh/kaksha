@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
 
     if (!userId) {
       // Fallback for MVP testing if no session
-      const dbUser = await prisma.user.findFirst();
+      const dbUser = await prisma.user.findFirst({ orderBy: { questionAttempts: { _count: 'desc' } } });
       if (!dbUser) {
         return NextResponse.json({ success: false, error: 'No user in DB', code: ErrorCode.NOT_FOUND }, { status: 400 });
       }

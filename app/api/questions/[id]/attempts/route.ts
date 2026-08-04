@@ -21,7 +21,7 @@ export async function GET(
     }
 
     if (!userId) {
-      const dbUser = await prisma.user.findFirst();
+      const dbUser = await prisma.user.findFirst({ orderBy: { questionAttempts: { _count: 'desc' } } });
       if (!dbUser) {
         return NextResponse.json({ success: false, error: 'No user in DB', code: ErrorCode.NOT_FOUND }, { status: 400 });
       }
