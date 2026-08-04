@@ -10,7 +10,6 @@ import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import rehypeRaw from 'rehype-raw';
 import 'katex/dist/katex.min.css';
-import { PracticeReportCard } from './practice-report-card';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Question = any;
@@ -26,9 +25,7 @@ export function PracticeSessionClient({ subtopic }: PracticeSessionClientProps) 
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [primerText, setPrimerText] = useState('');
-  const [primerGrade, setPrimerGrade] = useState('N/A');
-  const [primerMastery, setPrimerMastery] = useState(0);
-  
+
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
@@ -36,15 +33,14 @@ export function PracticeSessionClient({ subtopic }: PracticeSessionClientProps) 
   const [errorMsg, setErrorMsg] = useState('');
   const [score, setScore] = useState(0);
   const [questionStartTime, setQuestionStartTime] = useState<number>(Date.now());
-  const [totalTimeTaken, setTotalTimeTaken] = useState(0);
-  
+
   // AI Tutor States
   const [explanation, setExplanation] = useState<string | null>(null);
   const [isExplaining, setIsExplaining] = useState(false);
-  const [chatHistory, setChatHistory] = useState<{role: string, text: string}[]>([]);
+  const [chatHistory, setChatHistory] = useState<{ role: string, text: string }[]>([]);
   const [followUpQuery, setFollowUpQuery] = useState('');
   const [isChatting, setIsChatting] = useState(false);
-  
+
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -53,7 +49,7 @@ export function PracticeSessionClient({ subtopic }: PracticeSessionClientProps) 
         // Fetch Questions
         const qRes = await fetch(`/api/practice/generate?subtopic=${encodeURIComponent(subtopic)}&limit=10`);
         const qData = await qRes.json();
-        
+
         if (!qData.success || !qData.data || qData.data.length === 0) {
           setErrorMsg('No unattempted questions found for this topic. Try another module or jump into Review mode!');
           setState('error');
@@ -65,13 +61,7 @@ export function PracticeSessionClient({ subtopic }: PracticeSessionClientProps) 
         const pRes = await fetch(`/api/practice/primer?subtopic=${encodeURIComponent(subtopic)}`);
         const pData = await pRes.json();
         if (pData.success && pData.data) {
-          if (typeof pData.data === 'string') {
-            setPrimerText(pData.data);
-          } else {
-            setPrimerText(pData.data.primerText || '');
-            setPrimerGrade(pData.data.grade || 'N/A');
-            setPrimerMastery(pData.data.masteryLevel || 0);
-          }
+          setPrimerText(pData.data);
           setState('primer');
         } else {
           // Fallback if primer fails
@@ -101,8 +91,7 @@ export function PracticeSessionClient({ subtopic }: PracticeSessionClientProps) 
     const question = questions[currentIndex];
     const correct = answer === question.answer;
     const timeTaken = Math.round((Date.now() - questionStartTime) / 1000);
-    setTotalTimeTaken(prev => prev + timeTaken);
-    
+
     setIsCorrect(correct);
     setCorrectAnswer(question.answer);
     if (correct) setScore(s => s + 1);
@@ -125,7 +114,7 @@ export function PracticeSessionClient({ subtopic }: PracticeSessionClientProps) 
     // Scroll up mechanic: gently scroll the left pane down so the solution is perfectly in view
     setTimeout(() => {
       if (scrollRef.current) {
-         scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+        scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
       }
     }, 100);
   };
@@ -139,7 +128,7 @@ export function PracticeSessionClient({ subtopic }: PracticeSessionClientProps) 
     setIsExplaining(false);
     setChatHistory([]);
     setFollowUpQuery('');
-    
+
     if (scrollRef.current) scrollRef.current.scrollTo({ top: 0 });
 
     if (currentIndex + 1 >= questions.length) {
@@ -149,7 +138,7 @@ export function PracticeSessionClient({ subtopic }: PracticeSessionClientProps) 
       setQuestionStartTime(Date.now());
     }
   };
-  
+
   const askTutor = async (query?: string) => {
     if (isExplaining || isChatting) return;
     const isFollowUp = !!query;
@@ -157,7 +146,7 @@ export function PracticeSessionClient({ subtopic }: PracticeSessionClientProps) 
     else setIsExplaining(true);
 
     const question = questions[currentIndex];
-    
+
     if (isFollowUp) {
       setChatHistory(prev => [...prev, { role: 'user', text: query }]);
     }
@@ -169,7 +158,7 @@ export function PracticeSessionClient({ subtopic }: PracticeSessionClientProps) 
         userQuery: isFollowUp ? query : undefined,
         userAnswer: selectedAnswer
       };
-      
+
       // If it's a follow-up we use explain with userQuery. 
       // If it's the first explanation we use feedback because it's a practice session and they want formative feedback
       const endpoint = isFollowUp ? '/api/practice/explain' : '/api/practice/feedback';
@@ -180,13 +169,13 @@ export function PracticeSessionClient({ subtopic }: PracticeSessionClientProps) 
         body: JSON.stringify(payload)
       });
       const data = await res.json();
-      
+
       if (data.success) {
         if (isFollowUp) {
-           setChatHistory(prev => [...prev, { role: 'tutor', text: data.data }]);
-           setFollowUpQuery('');
+          setChatHistory(prev => [...prev, { role: 'tutor', text: data.data }]);
+          setFollowUpQuery('');
         } else {
-           setExplanation(data.data);
+          setExplanation(data.data);
         }
       } else {
         if (isFollowUp) setChatHistory(prev => [...prev, { role: 'error', text: 'Failed to get answer.' }]);
@@ -196,15 +185,15 @@ export function PracticeSessionClient({ subtopic }: PracticeSessionClientProps) 
       if (isFollowUp) setChatHistory(prev => [...prev, { role: 'error', text: 'Error.' }]);
       else setExplanation('An error occurred while fetching the explanation.');
     }
-    
+
     setIsExplaining(false);
     setIsChatting(false);
-    
+
     setTimeout(() => {
       if (scrollRef.current) scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
     }, 100);
   };
-  
+
   if (state === 'loading') {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
@@ -221,20 +210,18 @@ export function PracticeSessionClient({ subtopic }: PracticeSessionClientProps) 
         <XCircle className="h-12 w-12 text-destructive mb-4" />
         <h2 className="text-2xl font-bold mb-2">Oops!</h2>
         <p className="text-muted-foreground">{errorMsg}</p>
-        <Button className="mt-6" onClick={() => window.location.href='/practice/modules'}>Go Back</Button>
+        <Button className="mt-6" onClick={() => window.location.href = '/practice/modules'}>Go Back</Button>
       </div>
     );
   }
 
   if (state === 'completed') {
-    const avgTime = questions.length > 0 ? Math.round(totalTimeTaken / questions.length) : 0;
     return (
-      <div className="py-12 px-4">
-        <PracticeReportCard
-          totalQuestions={questions.length}
-          correctCount={score}
-          avgTimePerQuestion={avgTime}
-        />
+      <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 text-center">
+        <Trophy className="h-16 w-16 text-yellow-500 mb-4" />
+        <h2 className="text-3xl font-bold mb-2">Kaksha Complete!</h2>
+        <p className="text-muted-foreground mb-8">You scored {score} out of {questions.length}. XP updated!</p>
+        <Button onClick={() => window.location.href = '/dashboard'}>Return to Dashboard</Button>
       </div>
     );
   }
@@ -243,39 +230,12 @@ export function PracticeSessionClient({ subtopic }: PracticeSessionClientProps) 
     return (
       <div className="max-w-3xl mx-auto py-10 px-4">
         <Card className="border-2 border-primary/20 shadow-lg">
-          <CardHeader className="bg-primary/5 pb-8 relative">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="absolute top-4 left-4 text-muted-foreground"
-              onClick={() => window.location.href='/practice/modules'}
-            >
-              ← Back to Modules
-            </Button>
-            <div className="mt-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <BrainCircuit className="h-6 w-6 text-primary" />
-                  <CardTitle className="text-2xl">Module Primer: {subtopic}</CardTitle>
-                </div>
-                <CardDescription>Read this carefully before attempting the sprint.</CardDescription>
-              </div>
-              <div className="flex items-center gap-4 bg-white/50 dark:bg-black/20 p-3 rounded-lg border border-primary/10">
-                <div className="flex flex-col items-center">
-                  <span className="text-xs uppercase font-bold text-muted-foreground">Grade</span>
-                  <span className={`text-2xl font-black ${
-                    primerGrade === 'S' || primerGrade === 'A' ? 'text-green-600' :
-                    primerGrade === 'B' || primerGrade === 'C' ? 'text-yellow-600' :
-                    primerGrade === 'N/A' ? 'text-muted-foreground' : 'text-red-600'
-                  }`}>{primerGrade}</span>
-                </div>
-                <div className="w-px h-10 bg-border"></div>
-                <div className="flex flex-col items-center">
-                  <span className="text-xs uppercase font-bold text-muted-foreground">Mastery</span>
-                  <span className="text-lg font-bold">{primerMastery}%</span>
-                </div>
-              </div>
+          <CardHeader className="bg-primary/5 pb-8">
+            <div className="flex items-center gap-3 mb-2">
+              <BrainCircuit className="h-6 w-6 text-primary" />
+              <CardTitle className="text-2xl">Module Primer: {subtopic}</CardTitle>
             </div>
+            <CardDescription>Read this carefully before attempting the sprint.</CardDescription>
           </CardHeader>
           <CardContent className="pt-6 prose dark:prose-invert max-w-none">
             <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
@@ -294,10 +254,10 @@ export function PracticeSessionClient({ subtopic }: PracticeSessionClientProps) 
 
   const currentQ = questions[currentIndex];
   const isSet = currentQ.set_id && currentQ.set_id !== 'N/A';
-  
+
   return (
     <div className="h-screen max-h-screen overflow-hidden bg-background text-foreground flex flex-col font-sans">
-      
+
       {/* Top Header - Unified CBT Style for Practice */}
       <header className="bg-zinc-900 text-white px-6 py-2 flex items-center justify-between border-b-4 border-primary">
         <div className="flex items-center gap-4">
@@ -312,185 +272,184 @@ export function PracticeSessionClient({ subtopic }: PracticeSessionClientProps) 
           </div>
         </div>
         <div className="text-sm font-semibold text-zinc-300">
-           Question {currentIndex + 1} of {questions.length}
+          Question {currentIndex + 1} of {questions.length}
         </div>
       </header>
 
       {/* Main Workspace Split */}
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-        
+
         {/* Left Side: Question Display */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6 relative scroll-smooth pb-32">
-          
-          <Card className="border border-border/80 shadow-sm rounded-none sm:rounded-xl">
-             <CardContent className="p-6">
-               {isSet && currentQ.set_html && (
-                  <div className="mb-6 pb-6 border-b border-border prose dark:prose-invert max-w-none notranslate" translate="no" dangerouslySetInnerHTML={{ __html: currentQ.set_html }} />
-               )}
-               
-               <div className="space-y-6">
-                 {/* Question Text */}
-                 <div className="prose dark:prose-invert max-w-none text-base notranslate" translate="no" dangerouslySetInnerHTML={{ __html: currentQ.question_html }} />
-                 
-                 {/* Options */}
-                 {currentQ.question_type === 'MCQ' ? (
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                     {['A', 'B', 'C', 'D'].map((opt) => {
-                       const optHtml = currentQ[`option_${opt.toLowerCase()}_html`];
-                       if (!optHtml) return null;
-                       
-                       let btnVariant: "outline" | "default" | "destructive" = "outline";
-                       let btnClass = "h-auto p-4 justify-start text-left items-start w-full border-2 transition-all notranslate";
-                       
-                       if (selectedAnswer) {
-                         if (opt === correctAnswer) {
-                           btnClass += " border-green-500 bg-green-50 dark:bg-green-950/30 ring-2 ring-green-500/20";
-                         } else if (opt === selectedAnswer && opt !== correctAnswer) {
-                           btnVariant = "destructive";
-                           btnClass += " ring-2 ring-red-500/20";
-                         } else {
-                           btnClass += " opacity-50";
-                         }
-                       } else {
-                         btnClass += " hover:bg-muted/40 hover:border-primary/50";
-                       }
 
-                       return (
-                         <Button
-                           key={opt}
-                           variant={btnVariant}
-                           className={btnClass}
-                           translate="no"
-                           onClick={() => submitAnswer(opt)}
-                           disabled={isSubmitting || selectedAnswer !== null}
-                         >
-                           <span className="font-bold mr-3">({opt})</span>
-                           <span className="flex-1 whitespace-normal">
-                             <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex, rehypeRaw]}>
-                               {optHtml}
-                             </ReactMarkdown>
-                           </span>
-                         </Button>
-                       );
-                     })}
-                   </div>
-                 ) : (
-                   <div className="max-w-sm">
-                     <p className="text-sm font-medium mb-2 text-muted-foreground uppercase">Type in the answer (TITA):</p>
-                     <div className="flex gap-2">
-                       <input 
-                         type="text" 
-                         className="flex h-12 w-full rounded-md border border-input bg-background px-3 py-2 text-lg font-semibold placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                         placeholder="e.g. 42"
-                         id="tita-input"
-                         disabled={isSubmitting || selectedAnswer !== null}
-                       />
-                       <Button 
-                         className="h-12"
-                         disabled={isSubmitting || selectedAnswer !== null}
-                         onClick={() => {
-                           const val = (document.getElementById('tita-input') as HTMLInputElement).value;
-                           if(val) submitAnswer(val);
-                         }}
-                       >
-                         Submit
-                       </Button>
-                     </div>
-                   </div>
-                 )}
-               </div>
-             </CardContent>
+          <Card className="border border-border/80 shadow-sm rounded-none sm:rounded-xl">
+            <CardContent className="p-6">
+              {isSet && currentQ.set_html && (
+                <div className="mb-6 pb-6 border-b border-border prose dark:prose-invert max-w-none notranslate" translate="no" dangerouslySetInnerHTML={{ __html: currentQ.set_html }} />
+              )}
+
+              <div className="space-y-6">
+                {/* Question Text */}
+                <div className="prose dark:prose-invert max-w-none text-base notranslate" translate="no" dangerouslySetInnerHTML={{ __html: currentQ.question_html }} />
+
+                {/* Options */}
+                {currentQ.question_type === 'MCQ' ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {['A', 'B', 'C', 'D'].map((opt) => {
+                      const optHtml = currentQ[`option_${opt.toLowerCase()}_html`];
+                      if (!optHtml) return null;
+
+                      let btnVariant: "outline" | "default" | "destructive" = "outline";
+                      let btnClass = "h-auto p-4 justify-start text-left items-start w-full border-2 transition-all notranslate";
+
+                      if (selectedAnswer) {
+                        if (opt === correctAnswer) {
+                          btnClass += " border-green-500 bg-green-50 dark:bg-green-950/30 ring-2 ring-green-500/20";
+                        } else if (opt === selectedAnswer && opt !== correctAnswer) {
+                          btnVariant = "destructive";
+                          btnClass += " ring-2 ring-red-500/20";
+                        } else {
+                          btnClass += " opacity-50";
+                        }
+                      } else {
+                        btnClass += " hover:bg-muted/40 hover:border-primary/50";
+                      }
+
+                      return (
+                        <Button
+                          key={opt}
+                          variant={btnVariant}
+                          className={btnClass}
+                          translate="no"
+                          onClick={() => submitAnswer(opt)}
+                          disabled={isSubmitting || selectedAnswer !== null}
+                        >
+                          <span className="font-bold mr-3">({opt})</span>
+                          <span className="flex-1 whitespace-normal">
+                            <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex, rehypeRaw]}>
+                              {optHtml}
+                            </ReactMarkdown>
+                          </span>
+                        </Button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="max-w-sm">
+                    <p className="text-sm font-medium mb-2 text-muted-foreground uppercase">Type in the answer (TITA):</p>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        className="flex h-12 w-full rounded-md border border-input bg-background px-3 py-2 text-lg font-semibold placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                        placeholder="e.g. 42"
+                        id="tita-input"
+                        disabled={isSubmitting || selectedAnswer !== null}
+                      />
+                      <Button
+                        className="h-12"
+                        disabled={isSubmitting || selectedAnswer !== null}
+                        onClick={() => {
+                          const val = (document.getElementById('tita-input') as HTMLInputElement).value;
+                          if (val) submitAnswer(val);
+                        }}
+                      >
+                        Submit
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
           </Card>
 
           {/* AI Solution Pane - Slides in below */}
           {selectedAnswer !== null && (
             <div className="mt-8 animate-in slide-in-from-bottom-8 fade-in duration-500">
-               <div className={`p-6 rounded-xl border-2 ${isCorrect ? 'border-green-200 bg-green-50/50 dark:bg-green-950/20' : 'border-red-200 bg-red-50/50 dark:bg-red-950/20'} shadow-sm`}>
-                  <div className="flex items-center justify-between mb-6 pb-4 border-b border-black/10 dark:border-white/10">
-                     <div className={`flex items-center ${isCorrect ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
-                        {isCorrect ? (
-                           <><CheckCircle className="h-7 w-7 mr-2" /> <span className="font-extrabold text-xl tracking-tight">Spot On!</span></>
-                        ) : (
-                           <><XCircle className="h-7 w-7 mr-2" /> <span className="font-extrabold text-xl tracking-tight">Incorrect. Answer is Option {correctAnswer}.</span></>
-                        )}
-                     </div>
-                     <div className="flex gap-3">
-                        {!currentQ.explanation_html && !explanation && (
-                           <Button size="sm" onClick={() => askTutor()} disabled={isExplaining} className="font-bold bg-indigo-600 hover:bg-indigo-700 text-white">
-                              {isExplaining ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <BrainCircuit className="h-4 w-4 mr-2" />}
-                              Ask AI Tutor
-                           </Button>
-                        )}
-                     </div>
+              <div className={`p-6 rounded-xl border-2 ${isCorrect ? 'border-green-200 bg-green-50/50 dark:bg-green-950/20' : 'border-red-200 bg-red-50/50 dark:bg-red-950/20'} shadow-sm`}>
+                <div className="flex items-center justify-between mb-6 pb-4 border-b border-black/10 dark:border-white/10">
+                  <div className={`flex items-center ${isCorrect ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
+                    {isCorrect ? (
+                      <><CheckCircle className="h-7 w-7 mr-2" /> <span className="font-extrabold text-xl tracking-tight">Spot On!</span></>
+                    ) : (
+                      <><XCircle className="h-7 w-7 mr-2" /> <span className="font-extrabold text-xl tracking-tight">Incorrect. Answer is Option {correctAnswer}.</span></>
+                    )}
                   </div>
+                  <div className="flex gap-3">
+                    {!currentQ.explanation_html && !explanation && (
+                      <Button size="sm" onClick={() => askTutor()} disabled={isExplaining} className="font-bold bg-indigo-600 hover:bg-indigo-700 text-white">
+                        {isExplaining ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <BrainCircuit className="h-4 w-4 mr-2" />}
+                        Ask AI Tutor
+                      </Button>
+                    )}
+                  </div>
+                </div>
 
-                  {/* Tier 1: Static / Tier 2: Generated Explanation */}
-                  {(currentQ.explanation_html || explanation) && (
-                     <div className="space-y-4">
-                        <div className="flex items-center gap-2 text-sm font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-2">
-                           <BookOpen className="h-4 w-4" /> Solution Breakdown
-                        </div>
-                        <div className="prose dark:prose-invert max-w-none text-sm notranslate bg-background/60 p-6 rounded-lg border border-black/5 dark:border-white/5" translate="no">
-                           {/* If we just generated it, show that. Else show static. */}
-                           {explanation && !currentQ.explanation_html ? (
-                              <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex, rehypeRaw]}>
-                                 {explanation}
-                              </ReactMarkdown>
-                           ) : (
-                              <div dangerouslySetInnerHTML={{ __html: currentQ.explanation_html }} />
-                           )}
-                        </div>
+                {/* Tier 1: Static / Tier 2: Generated Explanation */}
+                {(currentQ.explanation_html || explanation) && (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 text-sm font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-2">
+                      <BookOpen className="h-4 w-4" /> Solution Breakdown
+                    </div>
+                    <div className="prose dark:prose-invert max-w-none text-sm notranslate bg-background/60 p-6 rounded-lg border border-black/5 dark:border-white/5" translate="no">
+                      {/* If we just generated it, show that. Else show static. */}
+                      {explanation && !currentQ.explanation_html ? (
+                        <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex, rehypeRaw]}>
+                          {explanation}
+                        </ReactMarkdown>
+                      ) : (
+                        <div dangerouslySetInnerHTML={{ __html: currentQ.explanation_html }} />
+                      )}
+                    </div>
 
-                        {/* Tier 3: Interactive Chat */}
-                        <div className="mt-6 border border-indigo-200 dark:border-indigo-900 rounded-xl bg-indigo-50/30 dark:bg-indigo-950/10 overflow-hidden">
-                           <div className="bg-indigo-100/50 dark:bg-indigo-900/50 px-4 py-2 flex items-center gap-2">
-                              <BrainCircuit className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-                              <span className="text-xs font-bold text-indigo-800 dark:text-indigo-300 uppercase tracking-wider">AI Tutor Follow-up</span>
-                           </div>
-                           
-                           <div className="p-4 space-y-4">
-                              {chatHistory.length > 0 && (
-                                 <div className="space-y-4 mb-4">
-                                    {chatHistory.map((msg, i) => (
-                                       <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                          <div className={`p-3 rounded-xl max-w-[85%] text-sm ${
-                                             msg.role === 'user' 
-                                                ? 'bg-indigo-600 text-white rounded-br-none' 
-                                                : msg.role === 'error'
-                                                ? 'bg-destructive/10 text-destructive'
-                                                : 'bg-background border shadow-sm rounded-bl-none'
-                                          }`}>
-                                             <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex, rehypeRaw]}>
-                                                {msg.text}
-                                             </ReactMarkdown>
-                                          </div>
-                                       </div>
-                                    ))}
-                                 </div>
-                              )}
-                              
-                              <div className="flex gap-2">
-                                 <input 
-                                    className="flex h-11 w-full rounded-lg border border-input bg-background px-4 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 shadow-sm"
-                                    placeholder="Still confused? Ask the AI a specific question..."
-                                    value={followUpQuery}
-                                    onChange={(e) => setFollowUpQuery(e.target.value)}
-                                    onKeyDown={(e) => { if (e.key === 'Enter' && followUpQuery.trim()) askTutor(followUpQuery); }}
-                                    disabled={isChatting}
-                                 />
-                                 <Button 
-                                    className="h-11 px-6 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
-                                    disabled={isChatting || !followUpQuery.trim()} 
-                                    onClick={() => askTutor(followUpQuery)}
-                                 >
-                                    {isChatting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Ask'}
-                                 </Button>
+                    {/* Tier 3: Interactive Chat */}
+                    <div className="mt-6 border border-indigo-200 dark:border-indigo-900 rounded-xl bg-indigo-50/30 dark:bg-indigo-950/10 overflow-hidden">
+                      <div className="bg-indigo-100/50 dark:bg-indigo-900/50 px-4 py-2 flex items-center gap-2">
+                        <BrainCircuit className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                        <span className="text-xs font-bold text-indigo-800 dark:text-indigo-300 uppercase tracking-wider">AI Tutor Follow-up</span>
+                      </div>
+
+                      <div className="p-4 space-y-4">
+                        {chatHistory.length > 0 && (
+                          <div className="space-y-4 mb-4">
+                            {chatHistory.map((msg, i) => (
+                              <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                <div className={`p-3 rounded-xl max-w-[85%] text-sm ${msg.role === 'user'
+                                    ? 'bg-indigo-600 text-white rounded-br-none'
+                                    : msg.role === 'error'
+                                      ? 'bg-destructive/10 text-destructive'
+                                      : 'bg-background border shadow-sm rounded-bl-none'
+                                  }`}>
+                                  <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex, rehypeRaw]}>
+                                    {msg.text}
+                                  </ReactMarkdown>
+                                </div>
                               </div>
-                           </div>
+                            ))}
+                          </div>
+                        )}
+
+                        <div className="flex gap-2">
+                          <input
+                            className="flex h-11 w-full rounded-lg border border-input bg-background px-4 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 shadow-sm"
+                            placeholder="Still confused? Ask the AI a specific question..."
+                            value={followUpQuery}
+                            onChange={(e) => setFollowUpQuery(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter' && followUpQuery.trim()) askTutor(followUpQuery); }}
+                            disabled={isChatting}
+                          />
+                          <Button
+                            className="h-11 px-6 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
+                            disabled={isChatting || !followUpQuery.trim()}
+                            onClick={() => askTutor(followUpQuery)}
+                          >
+                            {isChatting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Ask'}
+                          </Button>
                         </div>
-                     </div>
-                  )}
-               </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -500,33 +459,33 @@ export function PracticeSessionClient({ subtopic }: PracticeSessionClientProps) 
           <div className="space-y-6">
             <Card className="border bg-card shadow-sm">
               <CardContent className="p-4">
-                 <h4 className="text-sm font-bold text-foreground mb-4">Module Progress</h4>
-                 <div className="grid grid-cols-5 gap-2">
-                    {questions.map((q, idx) => {
-                       let stateClass = "bg-muted text-muted-foreground border-transparent"; // Unattempted
-                       if (idx === currentIndex) stateClass = "bg-primary text-primary-foreground border-primary";
-                       else if (idx < currentIndex) stateClass = "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300";
-                       
-                       return (
-                          <div key={idx} className={`h-10 rounded-md border flex items-center justify-center text-xs font-bold ${stateClass}`}>
-                             {idx + 1}
-                          </div>
-                       );
-                    })}
-                 </div>
+                <h4 className="text-sm font-bold text-foreground mb-4">Module Progress</h4>
+                <div className="grid grid-cols-5 gap-2">
+                  {questions.map((q, idx) => {
+                    let stateClass = "bg-muted text-muted-foreground border-transparent"; // Unattempted
+                    if (idx === currentIndex) stateClass = "bg-primary text-primary-foreground border-primary";
+                    else if (idx < currentIndex) stateClass = "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300";
+
+                    return (
+                      <div key={idx} className={`h-10 rounded-md border flex items-center justify-center text-xs font-bold ${stateClass}`}>
+                        {idx + 1}
+                      </div>
+                    );
+                  })}
+                </div>
               </CardContent>
             </Card>
           </div>
-          
+
           <div className="pt-6">
-             <Button 
-               size="lg" 
-               className="w-full font-bold text-base h-14 shadow-md" 
-               onClick={moveToNextQuestion}
-               disabled={selectedAnswer === null}
-             >
-                {currentIndex + 1 >= questions.length ? 'Finish Module' : 'Next Question'} &rarr;
-             </Button>
+            <Button
+              size="lg"
+              className="w-full font-bold text-base h-14 shadow-md"
+              onClick={moveToNextQuestion}
+              disabled={selectedAnswer === null}
+            >
+              {currentIndex + 1 >= questions.length ? 'Finish Module' : 'Next Question'} &rarr;
+            </Button>
           </div>
         </aside>
 

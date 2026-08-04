@@ -134,7 +134,7 @@ export function DashboardCharts({ hierarchy, totalRawAttempts, totalRawCorrect, 
           </Button>
         )}
       </div>
-      
+
       {/* Dynamic Raw Stats Bar */}
       <div className="flex flex-wrap gap-4 mb-6 p-4 bg-muted/30 rounded-lg text-sm border">
         <div className="flex flex-col">
@@ -159,8 +159,8 @@ export function DashboardCharts({ hierarchy, totalRawAttempts, totalRawCorrect, 
 
       <div className="h-[400px] w-full relative">
         <div className="absolute inset-0 pointer-events-none flex justify-between px-[15%] pt-4 z-10 opacity-60">
-           <div className="text-red-600 dark:text-red-400 text-2xl font-bold">Needs Attention</div>
-           <div className="text-green-600 dark:text-green-400 text-2xl font-bold">Proficient</div>
+          <div className="text-red-600 dark:text-red-400 text-2xl font-bold" style={{ transform: 'rotate(-4deg)' }}>Needs Attention</div>
+          <div className="text-indigo-600 dark:text-indigo-400 text-2xl font-bold" style={{ transform: 'rotate(-4deg)' }}>Proficient</div>
         </div>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
@@ -176,9 +176,9 @@ export function DashboardCharts({ hierarchy, totalRawAttempts, totalRawCorrect, 
             <XAxis type="number" domain={[-100, 100]} />
             <ReferenceArea x1={-100} x2={0} fill="rgba(239,68,68,0.08)" />
             <ReferenceArea x1={0} x2={100} fill="rgba(34,197,94,0.08)" />
-            <YAxis 
-              type="category" 
-              dataKey="name" 
+            <YAxis
+              type="category"
+              dataKey="name"
               width={150}
               axisLine={false}
               tickLine={false}
@@ -208,8 +208,8 @@ export function DashboardCharts({ hierarchy, totalRawAttempts, totalRawCorrect, 
                 return null;
               }}
             />
-            <Bar 
-              dataKey="netScore" 
+            <Bar
+              dataKey="netScore"
               radius={[4, 4, 4, 4]}
               barSize={32}
               className="cursor-pointer transition-opacity hover:opacity-80 z-20"

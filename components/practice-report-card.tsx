@@ -6,8 +6,6 @@ import { Trophy } from 'lucide-react';
 interface PracticeReportCardProps {
   totalQuestions: number;
   correctCount: number;
-  skippedCount?: number;
-  avgTimePerQuestion?: number;
   onNextStep?: () => void;
   nextStepLabel?: string;
   title?: string;
@@ -16,13 +14,11 @@ interface PracticeReportCardProps {
 export function PracticeReportCard({
   totalQuestions,
   correctCount,
-  skippedCount = 0,
-  avgTimePerQuestion,
   onNextStep = () => window.location.href = '/dashboard',
   nextStepLabel = "Return to Dashboard",
   title = "Kaksha Complete!"
 }: PracticeReportCardProps) {
-  const incorrectCount = totalQuestions - correctCount - skippedCount;
+  const incorrectCount = totalQuestions - correctCount;
   const accuracy = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
 
   return (
@@ -38,35 +34,23 @@ export function PracticeReportCard({
           You scored {correctCount} out of {totalQuestions}. XP updated!
         </p>
 
-        <div className={`grid ${avgTimePerQuestion !== undefined ? (skippedCount > 0 ? 'grid-cols-6' : 'grid-cols-5') : (skippedCount > 0 ? 'grid-cols-5' : 'grid-cols-4')} gap-4 bg-white rounded-xl shadow-sm border p-4 mb-8`}>
+        <div className="grid grid-cols-4 gap-4 bg-white rounded-xl shadow-sm border p-4 mb-8">
           <div className="text-left">
-            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Total</p>
-            <p className="text-lg font-bold text-foreground">{totalQuestions}</p>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Total Attempts</p>
+            <p className="text-xl font-bold text-foreground">{totalQuestions}</p>
           </div>
-          <div className="text-left border-l pl-3">
-            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Correct</p>
-            <p className="text-lg font-bold text-green-600">{correctCount}</p>
+          <div className="text-left border-l pl-4">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Correct</p>
+            <p className="text-xl font-bold text-green-600">{correctCount}</p>
           </div>
-          <div className="text-left border-l pl-3">
-            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Incorrect</p>
-            <p className="text-lg font-bold text-red-500">{incorrectCount}</p>
+          <div className="text-left border-l pl-4">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Incorrect</p>
+            <p className="text-xl font-bold text-red-500">{incorrectCount}</p>
           </div>
-          {skippedCount > 0 && (
-            <div className="text-left border-l pl-3">
-              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Skipped</p>
-              <p className="text-lg font-bold text-muted-foreground">{skippedCount}</p>
-            </div>
-          )}
-          <div className="text-left border-l pl-3">
-            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Accuracy</p>
-            <p className="text-lg font-bold text-foreground">{accuracy}%</p>
+          <div className="text-left border-l pl-4">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Accuracy</p>
+            <p className="text-xl font-bold text-foreground">{accuracy}%</p>
           </div>
-          {avgTimePerQuestion !== undefined && (
-             <div className="text-left border-l pl-3">
-               <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Avg Time</p>
-               <p className="text-lg font-bold text-indigo-600">{avgTimePerQuestion}s</p>
-             </div>
-          )}
         </div>
 
         <Button onClick={onNextStep} size="lg" className="w-full sm:w-auto font-bold bg-foreground hover:bg-foreground/90 text-background px-8">
@@ -74,5 +58,13 @@ export function PracticeReportCard({
         </Button>
       </div>
     </Card>
+  );
+}
+
+<Button onClick={onNextStep} size="lg" className="w-full sm:w-auto font-bold bg-foreground hover:bg-foreground/90 text-background px-8">
+  {nextStepLabel}
+</Button>
+      </div >
+    </Card >
   );
 }

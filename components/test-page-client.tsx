@@ -73,7 +73,7 @@ export function TestPageClient({
 
   const currentSection = sections[currentSectionIndex] || sections[0];
   const currentQuestions = useMemo(() => questionsBySection[currentSection] || [], [questionsBySection, currentSection]);
-  
+
   // Order questions by ID
   const allQuestionsInSection = useMemo(() => {
     return currentQuestions.sort((a, b) => {
@@ -82,7 +82,7 @@ export function TestPageClient({
       return aId - bId;
     });
   }, [currentQuestions]);
-  
+
   const currentQuestion = allQuestionsInSection[currentQuestionIndex] || null;
   const currentQuestionRef = useRef<string | null>(null);
 
@@ -97,13 +97,13 @@ export function TestPageClient({
 
       // If we switched questions, record time for the previous one
       if (currentQuestionRef.current && currentQuestionRef.current !== currentQuestion.question_id) {
-         const elapsed = Math.floor((Date.now() - questionStartTime) / 1000);
-         setTimeTakenMap(prev => ({
-            ...prev,
-            [currentQuestionRef.current!]: (prev[currentQuestionRef.current!] || 0) + elapsed
-         }));
+        const elapsed = Math.floor((Date.now() - questionStartTime) / 1000);
+        setTimeTakenMap(prev => ({
+          ...prev,
+          [currentQuestionRef.current!]: (prev[currentQuestionRef.current!] || 0) + elapsed
+        }));
       }
-      
+
       currentQuestionRef.current = currentQuestion.question_id;
       setQuestionStartTime(Date.now());
     }
@@ -146,7 +146,7 @@ export function TestPageClient({
     const finalElapsed = currentQuestionRef.current ? Math.floor((Date.now() - questionStartTime) / 1000) : 0;
     const finalTimeTakenMap = { ...timeTakenMap };
     if (currentQuestionRef.current) {
-       finalTimeTakenMap[currentQuestionRef.current] = (finalTimeTakenMap[currentQuestionRef.current] || 0) + finalElapsed;
+      finalTimeTakenMap[currentQuestionRef.current] = (finalTimeTakenMap[currentQuestionRef.current] || 0) + finalElapsed;
     }
 
     setCompleted(true);
@@ -301,7 +301,7 @@ export function TestPageClient({
 
   const getQuestionButtonStyles = (questionId: string) => {
     const status = getQuestionStatus(questionId);
-    
+
     // CBT shapes and colors:
     // Answered: Green (rounded with a cut or just standard pill)
     if (status === 'answered') {
@@ -347,7 +347,7 @@ export function TestPageClient({
 
   return (
     <div className="h-screen max-h-screen overflow-hidden bg-background text-foreground flex flex-col font-sans">
-      
+
       {/* Review Mode Banner */}
       {completed && (
         <div className="bg-primary/10 border-b border-primary/20 p-3 flex justify-between items-center px-6 text-sm font-medium">
@@ -441,7 +441,7 @@ export function TestPageClient({
 
       {/* Main Workspace - CBT Split Screen & Sidebar */}
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-        
+
         {/* Left Side: Question Display */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           <QuestionDisplay
@@ -457,7 +457,7 @@ export function TestPageClient({
         {/* Right Side: Sidebar with Palette & Details */}
         <aside className="w-full md:w-80 border-t md:border-t-0 md:border-l border-border/80 bg-muted/10 p-6 flex flex-col justify-between shrink-0 overflow-y-auto">
           <div className="space-y-6">
-            
+
             {/* Candidate Box */}
             <Card className="border bg-card">
               <CardContent className="p-4 flex items-center gap-3">
@@ -482,9 +482,8 @@ export function TestPageClient({
                       key={question.question_id}
                       variant="ghost"
                       size="icon"
-                      className={`h-9 w-9 text-xs font-bold border transition-all duration-200 ${getQuestionButtonStyles(question.question_id)} ${
-                        isActive ? 'ring-2 ring-primary ring-offset-2' : ''
-                      }`}
+                      className={`h-9 w-9 text-xs font-bold border transition-all duration-200 ${getQuestionButtonStyles(question.question_id)} ${isActive ? 'ring-2 ring-primary ring-offset-2' : ''
+                        }`}
                       onClick={() => setCurrentQuestionIndex(idx)}
                     >
                       {idx + 1}
@@ -555,7 +554,7 @@ export function TestPageClient({
 
       {/* Bottom Control Bar - CBT Style */}
       <footer className="bg-zinc-100 dark:bg-zinc-900 border-t border-border/80 px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 shrink-0">
-        
+
         {/* Left Side Controls */}
         <div className="flex gap-2 w-full sm:w-auto">
           {!isCurrentSectionCompleted && !completed && (
@@ -640,7 +639,7 @@ export function TestPageClient({
             <DialogTitle>End Section?</DialogTitle>
             <DialogDescription className="text-sm">
               Are you sure you want to end the <strong>{currentSection}</strong> section? You will not be able to return to this section.
-              {currentSectionIndex < sections.length - 1 
+              {currentSectionIndex < sections.length - 1
                 ? ' You will automatically move to the next section.'
                 : ' Since this is the final section, ending it will submit and complete your entire exam.'}
             </DialogDescription>

@@ -53,34 +53,19 @@ export async function GET(request: NextRequest) {
     });
     const attemptedIdSet = new Set(attemptedIds.map(a => a.questionId));
 
-    // Fetch pool of relevant questions, prioritizing newer years (2017+)
-    const allMatching = await prisma.questions.findMany({
-      where: { 
-        subtopic,
-        // Optional: filter out questions that are known to be incomplete or malformed if necessary
-      },
+    // Phase 1: Fetch lightweight list for filtering (only IDs and year)
+    // This avoids the P6009 >5MB response error for large subtopics like Reading Comprehension
+    const allMatchingLightweight = await prisma.questions.findMany({
+      where: { subtopic },
       select: {
         question_id: true,
-        set_id: true,
-        set_html: true,
         year: true,
-        question_html: true,
-        option_a_html: true,
-        option_b_html: true,
-        option_c_html: true,
-        option_d_html: true,
-        option_e_html: true,
-        question_type: true,
-        subtopic: true,
-        answer: true,
-        explanation_html: true
       },
-      // Sorting desc by year to prefer newer ones
       orderBy: { year: 'desc' }
     });
 
     // Filter out attempted questions
-    const unattempted = allMatching.filter(q => !attemptedIdSet.has(q.question_id));
+    const unattempted = allMatchingLightweight.filter(q => !attemptedIdSet.has(q.question_id));
 
     // We prefer questions from 2017 onwards
     const modernQuestions = unattempted.filter(q => q.year && parseInt(q.year) >= 2017);
@@ -99,7 +84,6 @@ export async function GET(request: NextRequest) {
     // Build the final curated set
     // We want a mix: 70% modern (2017+), 30% older.
     // If one pool runs out, we fill from the other.
-    let selected: any[] = [];
     const shuffledModern = shuffle(modernQuestions);
     const shuffledOlder = shuffle(olderQuestions);
 
@@ -109,28 +93,53 @@ export async function GET(request: NextRequest) {
     const selectedModern = shuffledModern.slice(0, modernLimit);
     const selectedOlder = shuffledOlder.slice(0, olderLimit);
 
-    selected = [...selectedModern, ...selectedOlder];
+    let selectedIds = [...selectedModern, ...selectedOlder];
 
-    // If we didn't hit the total limit (e.g. not enough older questions), 
-    // backfill with whatever is left from either pool
-    if (selected.length < limit) {
-      const remainingNeeded = limit - selected.length;
+    // If we didn't hit the total limit, backfill from remaining
+    if (selectedIds.length < limit) {
+      const remainingNeeded = limit - selectedIds.length;
       const unusedModern = shuffledModern.slice(modernLimit);
       const unusedOlder = shuffledOlder.slice(olderLimit);
       
       const backfill = [...unusedModern, ...unusedOlder].slice(0, remainingNeeded);
-      selected = [...selected, ...backfill];
+      selectedIds = [...selectedIds, ...backfill];
     }
     
     // Final shuffle to mix modern and older questions seamlessly
-    selected = shuffle(selected);
+    selectedIds = shuffle(selectedIds);
 
-    if (selected.length === 0) {
+    if (selectedIds.length === 0) {
       return NextResponse.json(
         { success: false, error: 'No unattempted questions left for this subtopic.', code: ErrorCode.NOT_FOUND, correlationId },
         { status: 404 }
       );
     }
+
+    // Phase 2: Fetch full data for only the selected question IDs
+    const finalQuestionIds = selectedIds.map(q => q.question_id);
+    const selected = await prisma.questions.findMany({
+      where: { question_id: { in: finalQuestionIds } },
+      select: {
+        question_id: true,
+        set_id: true,
+        set_html: true,
+        year: true,
+        question_html: true,
+        option_a_html: true,
+        option_b_html: true,
+        option_c_html: true,
+        option_d_html: true,
+        option_e_html: true,
+        question_type: true,
+        subtopic: true,
+        answer: true,
+        explanation_html: true
+      },
+    });
+
+    // Preserve the shuffle order
+    const orderMap = new Map(finalQuestionIds.map((id, idx) => [id, idx]));
+    selected.sort((a, b) => (orderMap.get(a.question_id) ?? 0) - (orderMap.get(b.question_id) ?? 0));
 
     logger.info(`${operation} generated targeted set`, {
       correlationId,

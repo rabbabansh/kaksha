@@ -19,10 +19,9 @@ interface BrowseClientProps {
   attemptMap?: Record<string, { isCorrect: boolean; timeTaken: number | null }>;
   testAnswers?: Record<string, string>;
   showSolutionsDefault?: boolean;
-  recommended?: { strengths: string[], weaknesses: string[] };
 }
 
-export function BrowseClient({ questions, topics, subtopics, sections, attemptMap = {}, testAnswers, showSolutionsDefault, recommended }: BrowseClientProps) {
+export function BrowseClient({ questions, topics, subtopics, sections, attemptMap = {}, testAnswers, showSolutionsDefault }: BrowseClientProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTopic, setSelectedTopic] = useState<string>('all');
   const [selectedSubtopic, setSelectedSubtopic] = useState<string>('all');
@@ -134,28 +133,19 @@ export function BrowseClient({ questions, topics, subtopics, sections, attemptMa
     );
   }, [subtopics, selectedTopic, questions]);
 
-  const handleRandomQuestion = () => {
-    if (filteredQuestions.length > 0) {
-      const randomIndex = Math.floor(Math.random() * filteredQuestions.length);
-      setSelectedQuestion(filteredQuestions[randomIndex]);
-    }
-  };
-
-  const isReviewMode = !!testAnswers || showSolutionsDefault;
-
   return (
-    <div className="space-y-6">
-      {/* Horizontal Filters Section */}
-      <Card className="w-full">
-        <CardHeader className="pb-3 border-b bg-muted/20">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Filter className="h-4 w-4" />
-            {isReviewMode ? 'Question Review' : 'Practice Bank'}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-4">
-          <div className="flex flex-wrap gap-4 items-end">
-            <div className="flex-1 min-w-[200px] space-y-2">
+    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      {/* Filters Sidebar */}
+      <div className="lg:col-span-1">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Filter className="h-5 w-5" />
+              Filters
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
               <label className="text-sm font-medium">Search</label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -168,56 +158,58 @@ export function BrowseClient({ questions, topics, subtopics, sections, attemptMa
               </div>
             </div>
 
-            {!isReviewMode && (
-              <>
-                <div className="flex-1 min-w-[150px] space-y-2">
-                  <label className="text-sm font-medium">Section</label>
-                  <Select value={selectedSection} onValueChange={setSelectedSection}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All Sections" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Sections</SelectItem>
-                      {sections.map((section) => (
-                        <SelectItem key={section} value={section}>{section}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Section</label>
+              <Select value={selectedSection} onValueChange={setSelectedSection}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Sections" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Sections</SelectItem>
+                  {sections.map((section) => (
+                    <SelectItem key={section} value={section}>
+                      {section}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-                <div className="flex-1 min-w-[150px] space-y-2">
-                  <label className="text-sm font-medium">Topic</label>
-                  <Select value={selectedTopic} onValueChange={setSelectedTopic}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All Topics" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Topics</SelectItem>
-                      {topics.map((topic) => (
-                        <SelectItem key={topic} value={topic}>{topic}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Topic</label>
+              <Select value={selectedTopic} onValueChange={setSelectedTopic}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Topics" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Topics</SelectItem>
+                  {topics.map((topic) => (
+                    <SelectItem key={topic} value={topic}>
+                      {topic}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-                <div className="flex-1 min-w-[150px] space-y-2">
-                  <label className="text-sm font-medium">Subtopic</label>
-                  <Select value={selectedSubtopic} onValueChange={setSelectedSubtopic}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All Subtopics" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Subtopics</SelectItem>
-                      {availableSubtopics.map((subtopic) => (
-                        <SelectItem key={subtopic} value={subtopic}>{subtopic}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </>
-            )}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Subtopic</label>
+              <Select value={selectedSubtopic} onValueChange={setSelectedSubtopic}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Subtopics" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Subtopics</SelectItem>
+                  {availableSubtopics.map((subtopic) => (
+                    <SelectItem key={subtopic} value={subtopic}>
+                      {subtopic}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-            <div className="flex-1 min-w-[150px] space-y-2">
+            <div className="space-y-2">
               <label className="text-sm font-medium">Attempt Status</label>
               <Select value={selectedStatus} onValueChange={setSelectedStatus}>
                 <SelectTrigger>
@@ -233,137 +225,128 @@ export function BrowseClient({ questions, topics, subtopics, sections, attemptMa
               </Select>
             </div>
 
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setSearchQuery('');
-                  setSelectedTopic('all');
-                  setSelectedSubtopic('all');
-                  setSelectedSection('all');
-                  setSelectedStatus('all');
-                }}
-              >
-                Clear Filters
-              </Button>
-              
-              {!isReviewMode && (
-                <Button
-                  variant="default"
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white"
-                  onClick={handleRandomQuestion}
-                  disabled={filteredQuestions.length === 0}
-                >
-                  Surprise Me
-                </Button>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                setSearchQuery('');
+                setSelectedTopic('all');
+                setSelectedSubtopic('all');
+                setSelectedSection('all');
+                setSelectedStatus('all');
+              }}
+            >
+              Clear Filters
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
 
-      {/* 2-Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-6 items-start">
-        {/* Left Column: Active Question Display (takes up most space) */}
-        <div className="lg:col-span-2 xl:col-span-3">
-          <Card className="min-h-[500px] border-primary/10 shadow-sm">
-            <CardContent className="pt-6">
-              {!selectedQuestion ? (
-                <div className="flex flex-col items-center justify-center h-full py-24 text-muted-foreground space-y-4">
-                  <Search className="h-12 w-12 opacity-20" />
-                  <p className="text-lg">Select a question from the list to view it here.</p>
-                </div>
-              ) : loadingQuestion ? (
-                <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                  <p className="text-muted-foreground">Loading question...</p>
-                </div>
-              ) : fullQuestionData ? (
-                <QuestionDisplay
-                  question={fullQuestionData}
-                  allQuestionsInContext={setQuestions}
-                  isTestMode={isReviewMode}
-                  testFinished={isReviewMode}
-                  testAnswers={testAnswers}
-                />
-              ) : (
-                <div className="flex flex-col items-center justify-center min-h-[400px]">
-                  <p className="text-muted-foreground">Failed to load question.</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Right Column: Question List */}
-        <div className="lg:col-span-1 xl:col-span-1">
-          <Card className="sticky top-6 border-primary/10 shadow-sm h-[calc(100vh-100px)] flex flex-col">
-            <CardHeader className="pb-3 border-b shrink-0">
-              <CardTitle className="text-md flex justify-between items-center">
-                <span>Question List</span>
-                <span className="text-xs font-normal text-muted-foreground bg-muted px-2 py-1 rounded-full">
-                  {filteredQuestions.length} Found
-                </span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0 overflow-y-auto flex-1">
-              {filteredQuestions.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground text-sm">
-                  <p>No questions match filters.</p>
-                </div>
-              ) : (
-                <div className="divide-y">
-                  {filteredQuestions.map((q, idx) => {
-                    const isSelected = selectedQuestion?.question_id === q.question_id;
-                    return (
-                      <button
-                        key={q.question_id}
-                        onClick={() => setSelectedQuestion(q)}
-                        className={`w-full text-left p-4 transition-colors hover:bg-muted/50 ${
-                          isSelected ? 'bg-indigo-50 dark:bg-indigo-900/20 border-l-4 border-indigo-500' : 'border-l-4 border-transparent'
-                        }`}
-                      >
-                        <div className="flex justify-between items-start mb-2">
-                          <span className={`font-semibold text-sm ${isSelected ? 'text-indigo-700 dark:text-indigo-400' : ''}`}>
-                            Q{idx + 1}
-                          </span>
-                          <div className="flex items-center">
-                            {attemptMap[q.question_id] ? (
-                              attemptMap[q.question_id].isCorrect ? (
-                                <span className="flex items-center gap-1 text-[10px] font-bold text-green-600 bg-green-50 dark:bg-green-900/30 px-1.5 py-0.5 rounded-full">
-                                  <CheckCircle className="h-3 w-3" /> Correct
-                                </span>
-                              ) : (
-                                <span className="flex items-center gap-1 text-[10px] font-bold text-red-600 bg-red-50 dark:bg-red-900/30 px-1.5 py-0.5 rounded-full">
-                                  <XCircle className="h-3 w-3" /> Incorrect
-                                </span>
-                              )
-                            ) : (
-                              <span className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded-full">
-                                <MinusCircle className="h-3 w-3" /> Unattempted
-                              </span>
-                            )}
-                          </div>
+      {/* Questions List and Display */}
+      <div className="lg:col-span-3">
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              {filteredQuestions.length} Question{filteredQuestions.length !== 1 ? 's' : ''} Found
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {filteredQuestions.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <p>No questions found matching your filters.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Question List */}
+                <div className="max-h-96 overflow-y-auto space-y-2 border rounded-lg p-4">
+                  {filteredQuestions.map((q, idx) => (
+                    <Button
+                      key={q.question_id}
+                      variant={selectedQuestion?.question_id === q.question_id ? 'default' : 'outline'}
+                      className="w-full justify-between text-left h-auto py-3"
+                      onClick={() => setSelectedQuestion(q)}
+                    >
+                      <div className="flex-1 mr-4">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-semibold">Q{idx + 1}</span>
+                          {q.year && q.slot && (
+                            <span className="text-xs text-muted-foreground">
+                              CAT {q.year} - Slot {q.slot}
+                            </span>
+                          )}
+                          {q.section && (
+                            <span className="text-xs bg-muted px-2 py-0.5 rounded">
+                              {q.section}
+                            </span>
+                          )}
                         </div>
-                        <div className="text-xs text-muted-foreground line-clamp-2 mb-1">
-                          {q.question_id}
+                        <div className="text-sm text-muted-foreground line-clamp-2">
+                          {q.question_type || 'Question'} • ID: {q.question_id}
                         </div>
-                        {(!isReviewMode && q.topic) && (
-                          <div className="text-[10px] text-muted-foreground truncate">
-                            {q.topic} • {q.subtopic}
+                        {q.topic && (
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {q.topic} {q.subtopic && `• ${q.subtopic}`}
                           </div>
                         )}
-                      </button>
-                    );
-                  })}
+                      </div>
+
+                      <div className="flex flex-col items-end gap-1">
+                        {attemptMap[q.question_id] ? (
+                          attemptMap[q.question_id].isCorrect ? (
+                            <div className="flex items-center gap-1 text-xs font-bold text-green-600 bg-green-50 dark:bg-green-900/30 px-2 py-1 rounded-full">
+                              <CheckCircle className="h-3 w-3" /> Correct
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1 text-xs font-bold text-red-600 bg-red-50 dark:bg-red-900/30 px-2 py-1 rounded-full">
+                              <XCircle className="h-3 w-3" /> Incorrect
+                            </div>
+                          )
+                        ) : (
+                          <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground bg-muted/50 px-2 py-1 rounded-full">
+                            <MinusCircle className="h-3 w-3" /> Unattempted
+                          </div>
+                        )}
+
+                        {attemptMap[q.question_id]?.timeTaken && (
+                          <div className="text-[10px] text-muted-foreground font-semibold">
+                            {attemptMap[q.question_id].timeTaken}s
+                          </div>
+                        )}
+                      </div>
+                    </Button>
+                  ))}
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+
+                {/* Question Display */}
+                {selectedQuestion && (
+                  <div className="mt-6">
+                    {loadingQuestion ? (
+                      <Card className="flex items-center justify-center min-h-[400px]">
+                        <div className="flex flex-col items-center gap-2">
+                          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                          <p className="text-muted-foreground">Loading question...</p>
+                        </div>
+                      </Card>
+                    ) : fullQuestionData ? (
+                      <QuestionDisplay
+                        question={fullQuestionData}
+                        allQuestionsInContext={setQuestions}
+                        isTestMode={!!testAnswers || showSolutionsDefault}
+                        testFinished={showSolutionsDefault}
+                        testAnswers={testAnswers}
+                      />
+                    ) : (
+                      <Card className="flex items-center justify-center min-h-[400px]">
+                        <p className="text-muted-foreground">Failed to load question</p>
+                      </Card>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
 }
-
-

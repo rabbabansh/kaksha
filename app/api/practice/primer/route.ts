@@ -32,73 +32,34 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Fetch user progress for this subtopic FIRST
-    let userId = (session.user as any).id;
-    if (!userId && session.user.email) {
-      const { PrismaClient } = await import('@prisma/client');
-      const prisma = new PrismaClient();
-      const dbUser = await prisma.user.findUnique({ where: { email: session.user.email }, select: { id: true } });
-      if (dbUser) userId = dbUser.id;
-    }
-    
-    let grade = 'N/A';
-    let masteryLevel = 0;
-    
-    if (userId) {
-      const { PrismaClient } = await import('@prisma/client');
-      const prisma = new PrismaClient();
-      const progress = await prisma.userProgress.findFirst({
-        where: { userId, subtopic }
-      });
-      if (progress) {
-        masteryLevel = Math.round(progress.masteryLevel * 100);
-        if (masteryLevel >= 90) grade = 'S';
-        else if (masteryLevel >= 80) grade = 'A';
-        else if (masteryLevel >= 70) grade = 'B';
-        else if (masteryLevel >= 60) grade = 'C';
-        else if (masteryLevel >= 50) grade = 'D';
-        else grade = 'F';
-      }
+    if (!genAI) {
+      return NextResponse.json(
+        { success: false, error: 'AI not configured', code: ErrorCode.INTERNAL_ERROR, correlationId },
+        { status: 500 }
+      );
     }
 
-    let text = 'Get ready to master this topic!';
+    const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' });
+    const prompt = `You are an expert CAT tutor. A student is about to start a practice session on the subtopic: "${subtopic}". 
+    Provide a highly encouraging, 2-paragraph "Concept Primer". 
+    The first paragraph should explain the core concept in simple terms.
+    The second paragraph should give 1 golden rule or formula to remember for this topic.
+    Keep it concise, formatting in Markdown. Do not include any questions.`;
 
-    try {
-      if (genAI) {
-        const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' });
-        const prompt = `You are an expert CAT tutor. A student is about to start a practice session on the subtopic: "${subtopic}". 
-        Provide a highly encouraging, 2-paragraph "Concept Primer". 
-        The first paragraph should explain the core concept in simple terms.
-        The second paragraph should give 1 golden rule or formula to remember for this topic.
-        Keep it concise, formatting in Markdown. Do not include any questions.`;
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
 
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        text = response.text();
-        logger.info(`${operation} generated primer`, { correlationId, subtopic });
-      } else {
-        logger.warn(`${operation} AI not configured, returning fallback`, { correlationId, subtopic });
-      }
-    } catch (aiError) {
-      logger.error(`${operation} AI generation failed`, {
-        correlationId,
-        error: aiError instanceof Error ? aiError.message : String(aiError)
-      });
-      // Continue with fallback text
-    }
+    logger.info(`${operation} generated primer`, { correlationId, subtopic });
 
     return NextResponse.json({
       success: true,
-      data: {
-        primerText: text,
-        masteryLevel,
-        grade
-      },
+      data: text,
       correlationId
     });
 
   } catch (error) {
-    logger.error(`${operation} failed completely`, {
+    logger.error(`${operation} failed`, {
       correlationId,
       error: error instanceof Error ? error.message : String(error)
     });
@@ -106,5 +67,11 @@ export async function GET(request: NextRequest) {
       { success: false, error: 'Internal server error', code: ErrorCode.INTERNAL_ERROR, correlationId },
       { status: 500 }
     );
+  }
+}
+return NextResponse.json(
+  { success: false, error: 'Internal server error', code: ErrorCode.INTERNAL_ERROR, correlationId },
+  { status: 500 }
+);
   }
 }
