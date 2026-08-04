@@ -44,7 +44,7 @@ export default async function HomePage() {
 
     // Get user's test progress
     const userId = (session.user as { id?: string })?.id;
-    const userProgress = userId ? await prisma.testProgress.findMany({
+    const userProgress = userId ? await prisma.session.findMany({
       where: { userId },
       select: { year: true, slot: true, completed: true, score: true },
     }) : [];

@@ -77,7 +77,7 @@ export function DashboardClient() {
       const groupKey = `${key}_${localDateStr}`;
 
       if (!acc[groupKey]) {
-        acc[groupKey] = { subtopic: key, count: 0, date: localDateStr, topic: curr.question.topic, source: curr.source };
+        acc[groupKey] = { subtopic: key, count: 0, date: localDateStr, timestamp: new Date(curr.attemptedAt).getTime(), topic: curr.question.topic, source: curr.source };
       }
       acc[groupKey].count++;
       return acc;
@@ -85,16 +85,65 @@ export function DashboardClient() {
     return Object.values(grouped);
   }, [historyData]);
 
-  const filteredPracticeHistory = useMemo(() => {
-    if (historyFilter !== 'All' && historyFilter !== 'Practice') return [];
-    return practiceHistory.filter((g: any) => g.subtopic.toLowerCase().includes(historySearch.toLowerCase()));
-  }, [practiceHistory, historyFilter, historySearch]);
+  const combinedHistory = useMemo(() => {
+    const combined: any[] = [];
 
-  const filteredMockHistory = useMemo(() => {
-    if (!historyData?.mockProgress) return [];
-    if (historyFilter !== 'All' && historyFilter !== 'Mock Test') return [];
-    return historyData.mockProgress.filter((mock: any) => `CAT ${mock.year}`.toLowerCase().includes(historySearch.toLowerCase()));
-  }, [historyData, historyFilter, historySearch]);
+    // Add practice history from QuestionAttempts
+    if (historyFilter === 'All' || historyFilter === 'Practice') {
+      const filteredPractice = practiceHistory.filter((g: any) => g.subtopic.toLowerCase().includes(historySearch.toLowerCase()));
+      filteredPractice.forEach((group: any) => {
+        combined.push({
+          type: 'practice',
+          data: group,
+          timestamp: group.timestamp // We added timestamp in practiceHistory
+        });
+      });
+      
+      // Add practice history from Sessions (migrated data)
+      if (historyData?.mockProgress) {
+        const oldPracticeSessions = historyData.mockProgress.filter((s: any) => s.type === 'PRACTICE_MODULE' && s.subtopic?.toLowerCase().includes(historySearch.toLowerCase()));
+        oldPracticeSessions.forEach((s: any) => {
+          // Check if this session is already covered by question attempts (same day, same subtopic) to avoid duplicates
+          const dateStr = new Date(s.updatedAt).toLocaleDateString();
+          const isDuplicate = combined.some((item: any) => item.type === 'practice' && item.data.subtopic === s.subtopic && item.data.date === dateStr);
+          if (!isDuplicate) {
+            let count = 0;
+            try {
+              const answers = JSON.parse(s.answers || '{}');
+              count = Object.keys(answers).length;
+            } catch (e) {}
+            
+            combined.push({
+              type: 'practice',
+              data: {
+                subtopic: s.subtopic,
+                count: count,
+                date: dateStr,
+                timestamp: new Date(s.updatedAt).getTime(),
+                topic: s.topic || 'Practice Module'
+              },
+              timestamp: new Date(s.updatedAt).getTime()
+            });
+          }
+        });
+      }
+    }
+
+    // Add mock history
+    if (historyData?.mockProgress && (historyFilter === 'All' || historyFilter === 'Mock Test')) {
+      const filteredMocks = historyData.mockProgress.filter((mock: any) => mock.type === 'MOCK' && `CAT ${mock.year}`.toLowerCase().includes(historySearch.toLowerCase()));
+      filteredMocks.forEach((mock: any) => {
+        combined.push({
+          type: 'mock',
+          data: mock,
+          timestamp: new Date(mock.updatedAt).getTime()
+        });
+      });
+    }
+
+    // Sort by timestamp descending
+    return combined.sort((a, b) => b.timestamp - a.timestamp);
+  }, [practiceHistory, historyData, historyFilter, historySearch]);
 
 
   if (loading) {
@@ -387,10 +436,14 @@ export function DashboardClient() {
               if (t.id === 'challenge') {
                 attemptedToday = historyData?.attempts?.some((a: any) => {
                   return new Date(a.attemptedAt).toDateString() === new Date().toDateString() && a.source === 'mixed';
+                }) || historyData?.mockProgress?.some((s: any) => {
+                  return s.type === 'MIXED_SESSION' && new Date(s.updatedAt).toDateString() === new Date().toDateString();
                 });
               } else {
                 attemptedToday = historyData?.attempts?.some((a: any) => {
                   return a.question?.subtopic === t.subtopic && new Date(a.attemptedAt).toDateString() === new Date().toDateString();
+                }) || historyData?.mockProgress?.some((s: any) => {
+                  return (s.type === 'PRACTICE_MODULE' || s.type === 'MOCK') && s.subtopic === t.subtopic && new Date(s.updatedAt).toDateString() === new Date().toDateString();
                 });
               }
               return { ...t, attemptedToday };
@@ -497,39 +550,43 @@ export function DashboardClient() {
         <CardContent>
           {historyData && (historyData.mockProgress.length > 0 || historyData.attempts.length > 0) ? (
             <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
-              {/* Render filtered Mocks */}
-              {filteredMockHistory.map((mock: any, idx: number) => (
-                <div key={`mock-${idx}`} className="p-4 border rounded-xl flex items-center justify-between hover:bg-muted/30 transition-colors">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <Badge variant="outline" className="bg-primary/5 border-primary/20 text-primary">Mock Test</Badge>
-                      <span className="text-xs text-muted-foreground font-medium">{new Date(mock.updatedAt).toLocaleDateString()}</span>
+              {combinedHistory.map((item, idx) => {
+                if (item.type === 'mock') {
+                  const mock = item.data;
+                  return (
+                    <div key={`hist-${idx}`} className="p-4 border rounded-xl flex items-center justify-between hover:bg-muted/30 transition-colors">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <Badge variant="outline" className="bg-primary/5 border-primary/20 text-primary">Mock Test</Badge>
+                          <span className="text-xs text-muted-foreground font-medium">{new Date(mock.updatedAt).toLocaleDateString()}</span>
+                        </div>
+                        <h4 className="font-bold">CAT {mock.year} - Slot {mock.slot}</h4>
+                        <p className="text-sm text-muted-foreground">Score: {mock.score || 'In Progress'}</p>
+                      </div>
+                      <Button variant="outline" size="sm" onClick={() => window.location.href = `/mocks/${mock.year}/${mock.slot}/report`}>
+                        Review
+                      </Button>
                     </div>
-                    <h4 className="font-bold">CAT {mock.year} - Slot {mock.slot}</h4>
-                    <p className="text-sm text-muted-foreground">Score: {mock.score || 'In Progress'}</p>
-                  </div>
-                  <Button variant="outline" size="sm" onClick={() => window.location.href = `/mocks/${mock.year}/${mock.slot}/report`}>
-                    Review
-                  </Button>
-                </div>
-              ))}
-
-              {/* Render filtered Practice Modules */}
-              {filteredPracticeHistory.map((group: any, idx: number) => (
-                <div key={`prac-${idx}`} className="p-4 border rounded-xl flex items-center justify-between hover:bg-muted/30 transition-colors">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <Badge variant="outline" className="bg-secondary/10 border-secondary/20">Practice</Badge>
-                      <span className="text-xs text-muted-foreground font-medium">{group.date}</span>
+                  );
+                } else {
+                  const group = item.data;
+                  return (
+                    <div key={`hist-${idx}`} className="p-4 border rounded-xl flex items-center justify-between hover:bg-muted/30 transition-colors">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <Badge variant="outline" className="bg-secondary/10 border-secondary/20">Practice</Badge>
+                          <span className="text-xs text-muted-foreground font-medium">{group.date}</span>
+                        </div>
+                        <h4 className="font-bold">{group.subtopic}</h4>
+                        <p className="text-sm text-muted-foreground">{group.count} questions attempted in {group.topic}</p>
+                      </div>
+                      <Button variant="outline" size="sm" onClick={() => window.location.href = `/practice/review/${encodeURIComponent(group.subtopic)}`}>
+                        Review Sprint
+                      </Button>
                     </div>
-                    <h4 className="font-bold">{group.subtopic}</h4>
-                    <p className="text-sm text-muted-foreground">{group.count} questions attempted in {group.topic}</p>
-                  </div>
-                  <Button variant="outline" size="sm" onClick={() => window.location.href = `/practice/review/${encodeURIComponent(group.subtopic)}`}>
-                    Review Sprint
-                  </Button>
-                </div>
-              ))}
+                  );
+                }
+              })}
             </div>
           ) : (
             <div className="rounded-xl border-2 border-dashed border-border p-8 text-center bg-muted/20">

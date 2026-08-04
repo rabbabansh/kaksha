@@ -220,7 +220,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const diagnosticProgress = await prisma.testProgress.findFirst({
+    const diagnosticProgress = await prisma.session.findFirst({
       where: { userId, year: 'Diagnostic', slot: '1', completed: true }
     });
     const diagnosticCompleted = !!diagnosticProgress;

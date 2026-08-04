@@ -2,14 +2,11 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { MarkdownRenderer } from '@/components/markdown-renderer';
+import { AITutorPanel } from '@/components/ai-tutor-panel';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { CheckCircle, XCircle, Loader2, BrainCircuit, PlayCircle, Trophy, BookOpen, ArrowRight } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
-import remarkMath from 'remark-math';
-import rehypeKatex from 'rehype-katex';
-import rehypeRaw from 'rehype-raw';
-import 'katex/dist/katex.min.css';
+import { CheckCircle, XCircle, Loader2, BrainCircuit, Trophy, BookOpen, ArrowRight } from 'lucide-react';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Question = any;
@@ -33,13 +30,6 @@ export function PracticeSessionClient({ subtopic }: PracticeSessionClientProps) 
   const [errorMsg, setErrorMsg] = useState('');
   const [score, setScore] = useState(0);
   const [questionStartTime, setQuestionStartTime] = useState<number>(Date.now());
-
-  // AI Tutor States
-  const [explanation, setExplanation] = useState<string | null>(null);
-  const [isExplaining, setIsExplaining] = useState(false);
-  const [chatHistory, setChatHistory] = useState<{ role: string, text: string }[]>([]);
-  const [followUpQuery, setFollowUpQuery] = useState('');
-  const [isChatting, setIsChatting] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -124,10 +114,6 @@ export function PracticeSessionClient({ subtopic }: PracticeSessionClientProps) 
     setSelectedAnswer(null);
     setIsCorrect(null);
     setCorrectAnswer(null);
-    setExplanation(null);
-    setIsExplaining(false);
-    setChatHistory([]);
-    setFollowUpQuery('');
 
     if (scrollRef.current) scrollRef.current.scrollTo({ top: 0 });
 
@@ -137,61 +123,6 @@ export function PracticeSessionClient({ subtopic }: PracticeSessionClientProps) 
       setCurrentIndex(curr => curr + 1);
       setQuestionStartTime(Date.now());
     }
-  };
-
-  const askTutor = async (query?: string) => {
-    if (isExplaining || isChatting) return;
-    const isFollowUp = !!query;
-    if (isFollowUp) setIsChatting(true);
-    else setIsExplaining(true);
-
-    const question = questions[currentIndex];
-
-    if (isFollowUp) {
-      setChatHistory(prev => [...prev, { role: 'user', text: query }]);
-    }
-
-    try {
-      const payload = {
-        ...question,
-        subtopic,
-        userQuery: isFollowUp ? query : undefined,
-        userAnswer: selectedAnswer
-      };
-
-      // If it's a follow-up we use explain with userQuery. 
-      // If it's the first explanation we use feedback because it's a practice session and they want formative feedback
-      const endpoint = isFollowUp ? '/api/practice/explain' : '/api/practice/feedback';
-
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-
-      if (data.success) {
-        if (isFollowUp) {
-          setChatHistory(prev => [...prev, { role: 'tutor', text: data.data }]);
-          setFollowUpQuery('');
-        } else {
-          setExplanation(data.data);
-        }
-      } else {
-        if (isFollowUp) setChatHistory(prev => [...prev, { role: 'error', text: 'Failed to get answer.' }]);
-        else setExplanation('Failed to get explanation.');
-      }
-    } catch (err) {
-      if (isFollowUp) setChatHistory(prev => [...prev, { role: 'error', text: 'Error.' }]);
-      else setExplanation('An error occurred while fetching the explanation.');
-    }
-
-    setIsExplaining(false);
-    setIsChatting(false);
-
-    setTimeout(() => {
-      if (scrollRef.current) scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
-    }, 100);
   };
 
   if (state === 'loading') {
@@ -238,9 +169,7 @@ export function PracticeSessionClient({ subtopic }: PracticeSessionClientProps) 
             <CardDescription>Read this carefully before attempting the sprint.</CardDescription>
           </CardHeader>
           <CardContent className="pt-6 prose dark:prose-invert max-w-none">
-            <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
-              {primerText}
-            </ReactMarkdown>
+            <MarkdownRenderer content={primerText} />
           </CardContent>
           <CardFooter className="bg-muted/50 p-6 flex justify-end">
             <Button size="lg" onClick={handleStartQuestions} className="w-full sm:w-auto">
@@ -326,9 +255,7 @@ export function PracticeSessionClient({ subtopic }: PracticeSessionClientProps) 
                         >
                           <span className="font-bold mr-3">({opt})</span>
                           <span className="flex-1 whitespace-normal">
-                            <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex, rehypeRaw]}>
-                              {optHtml}
-                            </ReactMarkdown>
+                            <MarkdownRenderer content={optHtml} />
                           </span>
                         </Button>
                       );
@@ -374,81 +301,23 @@ export function PracticeSessionClient({ subtopic }: PracticeSessionClientProps) 
                       <><XCircle className="h-7 w-7 mr-2" /> <span className="font-extrabold text-xl tracking-tight">Incorrect. Answer is Option {correctAnswer}.</span></>
                     )}
                   </div>
-                  <div className="flex gap-3">
-                    {!currentQ.explanation_html && !explanation && (
-                      <Button size="sm" onClick={() => askTutor()} disabled={isExplaining} className="font-bold bg-indigo-600 hover:bg-indigo-700 text-white">
-                        {isExplaining ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <BrainCircuit className="h-4 w-4 mr-2" />}
-                        Ask AI Tutor
-                      </Button>
-                    )}
-                  </div>
                 </div>
 
-                {/* Tier 1: Static / Tier 2: Generated Explanation */}
-                {(currentQ.explanation_html || explanation) && (
+                {/* Static Explanation (if provided) */}
+                {currentQ.explanation_html && currentQ.explanation_html.trim() !== '' && (
                   <div className="space-y-4">
-                    <div className="flex items-center gap-2 text-sm font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-2">
-                      <BookOpen className="h-4 w-4" /> Solution Breakdown
+                    <div className="flex items-center gap-2 text-sm font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-2 mt-6">
+                      <BookOpen className="h-4 w-4" /> Provided Solution
                     </div>
                     <div className="prose dark:prose-invert max-w-none text-sm notranslate bg-background/60 p-6 rounded-lg border border-black/5 dark:border-white/5" translate="no">
-                      {/* If we just generated it, show that. Else show static. */}
-                      {explanation && !currentQ.explanation_html ? (
-                        <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex, rehypeRaw]}>
-                          {explanation}
-                        </ReactMarkdown>
-                      ) : (
-                        <div dangerouslySetInnerHTML={{ __html: currentQ.explanation_html }} />
-                      )}
-                    </div>
-
-                    {/* Tier 3: Interactive Chat */}
-                    <div className="mt-6 border border-indigo-200 dark:border-indigo-900 rounded-xl bg-indigo-50/30 dark:bg-indigo-950/10 overflow-hidden">
-                      <div className="bg-indigo-100/50 dark:bg-indigo-900/50 px-4 py-2 flex items-center gap-2">
-                        <BrainCircuit className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-                        <span className="text-xs font-bold text-indigo-800 dark:text-indigo-300 uppercase tracking-wider">AI Tutor Follow-up</span>
-                      </div>
-
-                      <div className="p-4 space-y-4">
-                        {chatHistory.length > 0 && (
-                          <div className="space-y-4 mb-4">
-                            {chatHistory.map((msg, i) => (
-                              <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`p-3 rounded-xl max-w-[85%] text-sm ${msg.role === 'user'
-                                    ? 'bg-indigo-600 text-white rounded-br-none'
-                                    : msg.role === 'error'
-                                      ? 'bg-destructive/10 text-destructive'
-                                      : 'bg-background border shadow-sm rounded-bl-none'
-                                  }`}>
-                                  <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex, rehypeRaw]}>
-                                    {msg.text}
-                                  </ReactMarkdown>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        <div className="flex gap-2">
-                          <input
-                            className="flex h-11 w-full rounded-lg border border-input bg-background px-4 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 shadow-sm"
-                            placeholder="Still confused? Ask the AI a specific question..."
-                            value={followUpQuery}
-                            onChange={(e) => setFollowUpQuery(e.target.value)}
-                            onKeyDown={(e) => { if (e.key === 'Enter' && followUpQuery.trim()) askTutor(followUpQuery); }}
-                            disabled={isChatting}
-                          />
-                          <Button
-                            className="h-11 px-6 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
-                            disabled={isChatting || !followUpQuery.trim()}
-                            onClick={() => askTutor(followUpQuery)}
-                          >
-                            {isChatting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Ask'}
-                          </Button>
-                        </div>
-                      </div>
+                      <div dangerouslySetInnerHTML={{ __html: currentQ.explanation_html }} />
                     </div>
                   </div>
                 )}
+
+                {/* AI Tutor Panel */}
+                <AITutorPanel question={currentQ} userAnswer={selectedAnswer} mode="feedback" />
+
               </div>
             </div>
           )}

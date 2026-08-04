@@ -87,14 +87,15 @@ export default async function TestPage({
   let actualTimeRemaining = 40 * 60; // 40 mins
 
   if (userId) {
-    progress = await prisma.testProgress.findUnique({
+    progress = await prisma.session.findFirst({
       where: {
-        userId_year_slot: {
-          userId,
-          year,
-          slot,
-        },
+        userId,
+        year,
+        slot,
+        type: 'MOCK',
+        completed: false,
       },
+      orderBy: { createdAt: 'desc' },
     });
 
     if (progress && progress.timeRemaining !== null && !progress.completed) {

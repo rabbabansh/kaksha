@@ -134,86 +134,60 @@ export function BrowseClient({ questions, topics, subtopics, sections, attemptMa
   }, [subtopics, selectedTopic, questions]);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-      {/* Filters Sidebar */}
-      <div className="lg:col-span-1">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+    <div className="flex flex-col gap-6">
+      {/* Horizontal Filters Top Bar */}
+      <Card className="w-full">
+        <CardContent className="p-4">
+          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+            <div className="flex items-center gap-2 text-primary font-bold whitespace-nowrap">
               <Filter className="h-5 w-5" />
-              Filters
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Search</label>
-              <div className="relative">
+              Practice Bank
+            </div>
+            
+            <div className="flex-1 flex flex-wrap gap-3 items-center justify-end">
+              <div className="relative min-w-[200px]">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search questions..."
+                  placeholder="Search..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
+                  className="pl-9 h-9"
                 />
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Section</label>
               <Select value={selectedSection} onValueChange={setSelectedSection}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Sections" />
+                <SelectTrigger className="h-9 w-[140px]">
+                  <SelectValue placeholder="Section" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Sections</SelectItem>
-                  {sections.map((section) => (
-                    <SelectItem key={section} value={section}>
-                      {section}
-                    </SelectItem>
-                  ))}
+                  {sections.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                 </SelectContent>
               </Select>
-            </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Topic</label>
               <Select value={selectedTopic} onValueChange={setSelectedTopic}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Topics" />
+                <SelectTrigger className="h-9 w-[140px]">
+                  <SelectValue placeholder="Topic" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Topics</SelectItem>
-                  {topics.map((topic) => (
-                    <SelectItem key={topic} value={topic}>
-                      {topic}
-                    </SelectItem>
-                  ))}
+                  {topics.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                 </SelectContent>
               </Select>
-            </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Subtopic</label>
               <Select value={selectedSubtopic} onValueChange={setSelectedSubtopic}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Subtopics" />
+                <SelectTrigger className="h-9 w-[150px]">
+                  <SelectValue placeholder="Subtopic" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Subtopics</SelectItem>
-                  {availableSubtopics.map((subtopic) => (
-                    <SelectItem key={subtopic} value={subtopic}>
-                      {subtopic}
-                    </SelectItem>
-                  ))}
+                  {availableSubtopics.map((st) => <SelectItem key={st} value={st}>{st}</SelectItem>)}
                 </SelectContent>
               </Select>
-            </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Attempt Status</label>
               <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Questions" />
+                <SelectTrigger className="h-9 w-[150px]">
+                  <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Questions</SelectItem>
@@ -223,129 +197,146 @@ export function BrowseClient({ questions, topics, subtopics, sections, attemptMa
                   <SelectItem value="incorrect">Incorrectly Answered</SelectItem>
                 </SelectContent>
               </Select>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-9"
+                onClick={() => {
+                  setSearchQuery('');
+                  setSelectedTopic('all');
+                  setSelectedSubtopic('all');
+                  setSelectedSection('all');
+                  setSelectedStatus('all');
+                }}
+              >
+                Clear
+              </Button>
             </div>
+          </div>
+        </CardContent>
+      </Card>
 
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => {
-                setSearchQuery('');
-                setSelectedTopic('all');
-                setSelectedSubtopic('all');
-                setSelectedSection('all');
-                setSelectedStatus('all');
-              }}
-            >
-              Clear Filters
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Main Two Pane Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        
+        {/* Left Pane: Question Display */}
+        <div className="lg:col-span-2 order-2 lg:order-1">
+          {selectedQuestion ? (
+            <div className="space-y-4">
+              {loadingQuestion ? (
+                <Card className="flex items-center justify-center min-h-[500px]">
+                  <div className="flex flex-col items-center gap-2">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                    <p className="text-muted-foreground">Loading question...</p>
+                  </div>
+                </Card>
+              ) : fullQuestionData ? (
+                <div className="bg-background rounded-xl shadow-sm border overflow-hidden">
+                  <QuestionDisplay
+                    question={fullQuestionData}
+                    allQuestionsInContext={setQuestions}
+                    isTestMode={!!testAnswers || showSolutionsDefault}
+                    testFinished={showSolutionsDefault}
+                    testAnswers={testAnswers}
+                  />
+                </div>
+              ) : (
+                <Card className="flex items-center justify-center min-h-[500px]">
+                  <p className="text-muted-foreground">Failed to load question</p>
+                </Card>
+              )}
+            </div>
+          ) : (
+            <Card className="flex flex-col items-center justify-center min-h-[500px] text-muted-foreground bg-muted/10 border-dashed">
+              <Search className="h-12 w-12 mb-4 opacity-20" />
+              <p className="text-lg">Select a question from the list to view it here.</p>
+            </Card>
+          )}
+        </div>
 
-      {/* Questions List and Display */}
-      <div className="lg:col-span-3">
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              {filteredQuestions.length} Question{filteredQuestions.length !== 1 ? 's' : ''} Found
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {filteredQuestions.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <p>No questions found matching your filters.</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {/* Question List */}
-                <div className="max-h-96 overflow-y-auto space-y-2 border rounded-lg p-4">
-                  {filteredQuestions.map((q, idx) => (
+        {/* Right Pane: Questions List */}
+        <div className="lg:col-span-1 order-1 lg:order-2 sticky top-6">
+          <Card className="flex flex-col h-[calc(100vh-140px)]">
+            <CardHeader className="py-4 border-b">
+              <CardTitle className="text-base flex items-center justify-between">
+                <span>Question List</span>
+                <span className="text-xs font-normal text-muted-foreground bg-muted px-2 py-1 rounded-full">
+                  {filteredQuestions.length} found
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 overflow-y-auto p-2 space-y-1">
+              {filteredQuestions.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground text-sm">
+                  <p>No questions found.</p>
+                </div>
+              ) : (
+                filteredQuestions.map((q, idx) => {
+                  const isSelected = selectedQuestion?.question_id === q.question_id;
+                  return (
                     <Button
                       key={q.question_id}
-                      variant={selectedQuestion?.question_id === q.question_id ? 'default' : 'outline'}
-                      className="w-full justify-between text-left h-auto py-3"
+                      variant="ghost"
+                      className={`w-full justify-between text-left h-auto py-3 px-3 rounded-lg border border-transparent hover:border-border transition-all ${
+                        isSelected 
+                          ? 'bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground shadow-md' 
+                          : 'hover:bg-muted/50'
+                      }`}
                       onClick={() => setSelectedQuestion(q)}
                     >
-                      <div className="flex-1 mr-4">
+                      <div className="flex-1 mr-3 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="font-semibold">Q{idx + 1}</span>
-                          {q.year && q.slot && (
-                            <span className="text-xs text-muted-foreground">
-                              CAT {q.year} - Slot {q.slot}
-                            </span>
-                          )}
+                          <span className={`font-semibold ${isSelected ? 'text-primary-foreground' : ''}`}>Q{idx + 1}</span>
                           {q.section && (
-                            <span className="text-xs bg-muted px-2 py-0.5 rounded">
+                            <span className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded ${
+                              isSelected ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-muted text-muted-foreground'
+                            }`}>
                               {q.section}
                             </span>
                           )}
                         </div>
-                        <div className="text-sm text-muted-foreground line-clamp-2">
-                          {q.question_type || 'Question'} • ID: {q.question_id}
+                        <div className={`text-xs truncate ${isSelected ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>
+                          {q.topic} {q.subtopic && `• ${q.subtopic}`}
                         </div>
-                        {q.topic && (
-                          <div className="text-xs text-muted-foreground mt-1">
-                            {q.topic} {q.subtopic && `• ${q.subtopic}`}
-                          </div>
-                        )}
                       </div>
 
-                      <div className="flex flex-col items-end gap-1">
+                      <div className="flex flex-col items-end gap-1 shrink-0">
                         {attemptMap[q.question_id] ? (
                           attemptMap[q.question_id].isCorrect ? (
-                            <div className="flex items-center gap-1 text-xs font-bold text-green-600 bg-green-50 dark:bg-green-900/30 px-2 py-1 rounded-full">
-                              <CheckCircle className="h-3 w-3" /> Correct
+                            <div className={`flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                              isSelected ? 'bg-green-400/20 text-green-100' : 'text-green-600 bg-green-50 dark:bg-green-900/30'
+                            }`}>
+                              <CheckCircle className="h-3 w-3" />
                             </div>
                           ) : (
-                            <div className="flex items-center gap-1 text-xs font-bold text-red-600 bg-red-50 dark:bg-red-900/30 px-2 py-1 rounded-full">
-                              <XCircle className="h-3 w-3" /> Incorrect
+                            <div className={`flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                              isSelected ? 'bg-red-400/20 text-red-100' : 'text-red-600 bg-red-50 dark:bg-red-900/30'
+                            }`}>
+                              <XCircle className="h-3 w-3" />
                             </div>
                           )
                         ) : (
-                          <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground bg-muted/50 px-2 py-1 rounded-full">
-                            <MinusCircle className="h-3 w-3" /> Unattempted
+                          <div className={`flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
+                            isSelected ? 'bg-primary-foreground/20 text-primary-foreground' : 'text-muted-foreground bg-muted/50'
+                          }`}>
+                            <MinusCircle className="h-3 w-3" />
                           </div>
                         )}
-
                         {attemptMap[q.question_id]?.timeTaken && (
-                          <div className="text-[10px] text-muted-foreground font-semibold">
+                          <div className={`text-[9px] font-semibold ${isSelected ? 'text-primary-foreground/70' : 'text-muted-foreground/70'}`}>
                             {attemptMap[q.question_id].timeTaken}s
                           </div>
                         )}
                       </div>
                     </Button>
-                  ))}
-                </div>
+                  );
+                })
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
-                {/* Question Display */}
-                {selectedQuestion && (
-                  <div className="mt-6">
-                    {loadingQuestion ? (
-                      <Card className="flex items-center justify-center min-h-[400px]">
-                        <div className="flex flex-col items-center gap-2">
-                          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                          <p className="text-muted-foreground">Loading question...</p>
-                        </div>
-                      </Card>
-                    ) : fullQuestionData ? (
-                      <QuestionDisplay
-                        question={fullQuestionData}
-                        allQuestionsInContext={setQuestions}
-                        isTestMode={!!testAnswers || showSolutionsDefault}
-                        testFinished={showSolutionsDefault}
-                        testAnswers={testAnswers}
-                      />
-                    ) : (
-                      <Card className="flex items-center justify-center min-h-[400px]">
-                        <p className="text-muted-foreground">Failed to load question</p>
-                      </Card>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

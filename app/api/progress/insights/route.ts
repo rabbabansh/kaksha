@@ -42,11 +42,12 @@ Use markdown. Highlight strengths, pinpoint weaknesses based on time taken and i
 
     // If it's a diagnostic/mock test, save it to TestProgress
     if (!isPractice && year && slot) {
-      const progress = await prisma.testProgress.findUnique({
-        where: { userId_year_slot: { userId, year, slot } }
+      const progress = await prisma.session.findFirst({
+        where: { userId, year, slot, type: 'MOCK' },
+        orderBy: { createdAt: 'desc' }
       });
       if (progress) {
-        await prisma.testProgress.update({
+        await prisma.session.update({
           where: { id: progress.id },
           data: { aiInsights: insight }
         });

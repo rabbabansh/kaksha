@@ -2,14 +2,10 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { MarkdownRenderer } from '@/components/markdown-renderer';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, BrainCircuit, Target, CheckCircle, XCircle, MinusCircle, Award } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
-import remarkMath from 'remark-math';
-import rehypeKatex from 'rehype-katex';
-import rehypeRaw from 'rehype-raw';
-import 'katex/dist/katex.min.css';
 import { BrowseClient } from './browse-client';
 
 interface MockReportClientProps {
@@ -196,9 +192,7 @@ export function MockReportClient({ year, slot }: MockReportClientProps) {
                 <div className="flex flex-col">
                   <div className="p-6 space-y-6">
                     <div className="prose dark:prose-invert max-w-none text-sm leading-relaxed">
-                      <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex, rehypeRaw]}>
-                        {aiInsights}
-                      </ReactMarkdown>
+                      <MarkdownRenderer content={aiInsights} />
                     </div>
 
                     {/* Chat History */}
@@ -211,9 +205,7 @@ export function MockReportClient({ year, slot }: MockReportClientProps) {
                                 ? 'bg-indigo-600 text-white rounded-br-sm shadow-sm'
                                 : 'bg-muted/50 border shadow-sm rounded-bl-sm prose dark:prose-invert'
                               }`}>
-                              <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex, rehypeRaw]}>
-                                {msg.text}
-                              </ReactMarkdown>
+                              <MarkdownRenderer content={msg.text} />
                             </div>
                           </div>
                         ))}

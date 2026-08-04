@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { MarkdownRenderer } from '@/components/markdown-renderer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -8,8 +9,6 @@ import { Send, Bot, User } from 'lucide-react';
 import { ChatQuestionCard } from './chat-question-card';
 import { ChatSetCard } from './chat-set-card';
 import { InlineMath, BlockMath } from 'react-katex';
-import 'katex/dist/katex.min.css';
-import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -215,12 +214,7 @@ export function ChatClient() {
 
     return (
       <div className="prose prose-sm dark:prose-invert max-w-none">
-        <ReactMarkdown
-          remarkPlugins={[remarkGfm]}
-          components={components}
-        >
-          {content}
-        </ReactMarkdown>
+        <MarkdownRenderer content={content} />
       </div>
     );
   };

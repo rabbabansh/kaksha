@@ -2,14 +2,11 @@
 'use client';
 
 import React, { useEffect, useRef, useReducer, memo } from 'react';
+import { MarkdownRenderer } from '@/components/markdown-renderer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { CheckCircle, XCircle, Loader2, BrainCircuit, PlayCircle, Trophy, BookOpen } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
-import remarkMath from 'remark-math';
-import rehypeKatex from 'rehype-katex';
-import rehypeRaw from 'rehype-raw';
-import 'katex/dist/katex.min.css';
+import { ChevronRight, CheckCircle, XCircle, Loader2, PlayCircle, Trophy, BookOpen, ArrowRight } from 'lucide-react';
+import { AITutorPanel } from '@/components/ai-tutor-panel';
 import { ReportDialog } from '@/components/report-dialog';
 import { PracticeReport } from './practice-report';
 import { QuestionDisplay } from './question-display';
@@ -32,11 +29,6 @@ type State = {
   sessionAttempts: any[];
   score: number;
   reviewIndex: number | null;
-  explanation: string | null;
-  isExplaining: boolean;
-  chatHistory: {role: string, text: string}[];
-  followUpQuery: string;
-  isChatting: boolean;
 };
 
 type Action = 
@@ -44,12 +36,9 @@ type Action =
   | { type: 'INIT_ERROR'; payload: string }
   | { type: 'SUBMIT_ANSWER'; payload: { answer: string; isCorrect: boolean | null; correctAnswer: string; timeTaken: number; question: Question } }
   | { type: 'NEXT_QUESTION' }
+  | { type: 'NEXT_QUESTION' }
   | { type: 'FINISH_SESSION' }
-  | { type: 'SET_REVIEW_INDEX'; payload: number | null }
-  | { type: 'TUTOR_REQUEST'; isFollowUp: boolean; query?: string }
-  | { type: 'TUTOR_SUCCESS'; isFollowUp: boolean; data: string }
-  | { type: 'TUTOR_ERROR'; isFollowUp: boolean }
-  | { type: 'SET_FOLLOWUP_QUERY'; payload: string };
+  | { type: 'SET_REVIEW_INDEX'; payload: number | null };
 
 const initialState: State = {
   status: 'loading',
@@ -63,12 +52,7 @@ const initialState: State = {
   correctAnswer: null,
   sessionAttempts: [],
   score: 0,
-  reviewIndex: null,
-  explanation: null,
-  isExplaining: false,
-  chatHistory: [],
-  followUpQuery: '',
-  isChatting: false
+  reviewIndex: null
 };
 
 function reducer(state: State, action: Action): State {
@@ -99,10 +83,6 @@ function reducer(state: State, action: Action): State {
         selectedAnswer: null,
         isCorrect: null,
         correctAnswer: null,
-        explanation: null,
-        isExplaining: false,
-        chatHistory: [],
-        followUpQuery: '',
         currentIndex: state.currentIndex + 1,
         startTime: Date.now()
       };
@@ -110,38 +90,6 @@ function reducer(state: State, action: Action): State {
       return { ...state, status: 'completed' };
     case 'SET_REVIEW_INDEX':
       return { ...state, reviewIndex: action.payload };
-    case 'TUTOR_REQUEST':
-      return {
-        ...state,
-        isExplaining: !action.isFollowUp,
-        isChatting: action.isFollowUp,
-        chatHistory: action.isFollowUp && action.query 
-          ? [...state.chatHistory, { role: 'user', text: action.query }]
-          : state.chatHistory
-      };
-    case 'TUTOR_SUCCESS':
-      return {
-        ...state,
-        isExplaining: false,
-        isChatting: false,
-        explanation: !action.isFollowUp ? action.data : state.explanation,
-        chatHistory: action.isFollowUp 
-          ? [...state.chatHistory, { role: 'tutor', text: action.data }]
-          : state.chatHistory,
-        followUpQuery: action.isFollowUp ? '' : state.followUpQuery
-      };
-    case 'TUTOR_ERROR':
-      return {
-        ...state,
-        isExplaining: false,
-        isChatting: false,
-        explanation: !action.isFollowUp ? 'Failed to get explanation.' : state.explanation,
-        chatHistory: action.isFollowUp 
-          ? [...state.chatHistory, { role: 'error', text: 'Error.' }]
-          : state.chatHistory
-      };
-    case 'SET_FOLLOWUP_QUERY':
-      return { ...state, followUpQuery: action.payload };
     default:
       return state;
   }
@@ -185,9 +133,7 @@ const MemoizedQuestionBody = memo(({ question, selectedAnswer, correctAnswer, is
               >
                 <span className="font-bold mr-3">({opt})</span>
                 <span className="flex-1 whitespace-normal">
-                  <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex, rehypeRaw]}>
-                    {optHtml}
-                  </ReactMarkdown>
+                  <MarkdownRenderer content={optHtml} />
                 </span>
               </Button>
             );
@@ -299,41 +245,6 @@ export function MixedSessionClient({ topic }: { topic?: string }) {
     } else {
       dispatch({ type: 'NEXT_QUESTION' });
     }
-  };
-  
-  const askTutor = async (query?: string) => {
-    if (state.isExplaining || state.isChatting) return;
-    const isFollowUp = !!query;
-    
-    dispatch({ type: 'TUTOR_REQUEST', isFollowUp, query });
-
-    const question = state.questions[state.currentIndex];
-
-    try {
-      const payload = {
-        ...question,
-        userQuery: isFollowUp ? query : undefined,
-      };
-
-      const res = await fetch('/api/practice/explain', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-      
-      if (data.success) {
-        dispatch({ type: 'TUTOR_SUCCESS', isFollowUp, data: data.data });
-      } else {
-        dispatch({ type: 'TUTOR_ERROR', isFollowUp });
-      }
-    } catch (err) {
-      dispatch({ type: 'TUTOR_ERROR', isFollowUp });
-    }
-    
-    setTimeout(() => {
-      if (scrollRef.current) scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
-    }, 100);
   };
   
   if (state.status === 'loading') {
@@ -452,80 +363,22 @@ export function MixedSessionClient({ topic }: { topic?: string }) {
                         ) : (
                            <><PlayCircle className="h-7 w-7 mr-2 text-yellow-600" /> <span className="font-extrabold text-xl tracking-tight">Answer Not Available.</span></>
                         )}
+                  </div>
+               </div>
+
+               {currentQ.explanation_html && currentQ.explanation_html.trim() !== '' && (
+                  <div className="space-y-4">
+                     <div className="flex items-center gap-2 text-sm font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-2 mt-6">
+                        <BookOpen className="h-4 w-4" /> Provided Solution
                      </div>
-                     <div className="flex gap-3">
-                        {!state.explanation && (
-                           <Button size="sm" onClick={() => askTutor()} disabled={state.isExplaining} className="font-bold bg-indigo-600 hover:bg-indigo-700 text-white">
-                              {state.isExplaining ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <BrainCircuit className="h-4 w-4 mr-2" />}
-                              Ask AI Tutor
-                           </Button>
-                        )}
+                     <div className="prose dark:prose-invert max-w-none text-sm notranslate bg-background/60 p-6 rounded-lg border border-black/5 dark:border-white/5" translate="no">
+                        <div dangerouslySetInnerHTML={{ __html: currentQ.explanation_html }} />
                      </div>
                   </div>
+               )}
 
-                  {(currentQ.explanation_html || state.explanation) && (
-                     <div className="space-y-4">
-                        <div className="flex items-center gap-2 text-sm font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-2">
-                           <BookOpen className="h-4 w-4" /> Solution Breakdown
-                        </div>
-                        <div className="prose dark:prose-invert max-w-none text-sm notranslate bg-background/60 p-6 rounded-lg border border-black/5 dark:border-white/5" translate="no">
-                           {state.explanation && !currentQ.explanation_html ? (
-                              <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex, rehypeRaw]}>
-                                 {state.explanation}
-                              </ReactMarkdown>
-                           ) : (
-                              <div dangerouslySetInnerHTML={{ __html: currentQ.explanation_html }} />
-                           )}
-                        </div>
+               <AITutorPanel question={currentQ} userAnswer={state.selectedAnswer} mode="explain" />
 
-                        <div className="mt-6 border border-indigo-200 dark:border-indigo-900 rounded-xl bg-indigo-50/30 dark:bg-indigo-950/10 overflow-hidden">
-                           <div className="bg-indigo-100/50 dark:bg-indigo-900/50 px-4 py-2 flex items-center gap-2">
-                              <BrainCircuit className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-                              <span className="text-xs font-bold text-indigo-800 dark:text-indigo-300 uppercase tracking-wider">AI Tutor Follow-up</span>
-                           </div>
-                           
-                           <div className="p-4 space-y-4">
-                              {state.chatHistory.length > 0 && (
-                                 <div className="space-y-4 mb-4">
-                                    {state.chatHistory.map((msg, i) => (
-                                       <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                          <div className={`p-3 rounded-xl max-w-[85%] text-sm ${
-                                             msg.role === 'user' 
-                                                ? 'bg-indigo-600 text-white rounded-br-none' 
-                                                : msg.role === 'error'
-                                                ? 'bg-destructive/10 text-destructive'
-                                                : 'bg-background border shadow-sm rounded-bl-none'
-                                          }`}>
-                                             <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex, rehypeRaw]}>
-                                                {msg.text}
-                                             </ReactMarkdown>
-                                          </div>
-                                       </div>
-                                    ))}
-                                 </div>
-                              )}
-                              
-                              <div className="flex gap-2">
-                                 <input 
-                                    className="flex h-11 w-full rounded-lg border border-input bg-background px-4 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 shadow-sm"
-                                    placeholder="Still confused? Ask the AI a specific question..."
-                                    value={state.followUpQuery}
-                                    onChange={(e) => dispatch({ type: 'SET_FOLLOWUP_QUERY', payload: e.target.value })}
-                                    onKeyDown={(e) => { if (e.key === 'Enter' && state.followUpQuery.trim()) askTutor(state.followUpQuery); }}
-                                    disabled={state.isChatting}
-                                 />
-                                 <Button 
-                                    className="h-11 px-6 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
-                                    disabled={state.isChatting || !state.followUpQuery.trim()} 
-                                    onClick={() => askTutor(state.followUpQuery)}
-                                 >
-                                    {state.isChatting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Ask'}
-                                 </Button>
-                              </div>
-                           </div>
-                        </div>
-                     </div>
-                  )}
                </div>
             </div>
           )}

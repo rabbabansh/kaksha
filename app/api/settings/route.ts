@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
 
   if (action === 'retake_diagnostic') {
     // Delete previous diagnostic test progress and diagnostic attempts so they start fresh
-    await prisma.testProgress.deleteMany({
+    await prisma.session.deleteMany({
       where: {
         userId: user.id,
         year: 'Diagnostic',
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
 
   if (action === 'reset_progress') {
     // Delete all progress data
-    await prisma.testProgress.deleteMany({ where: { userId: user.id } });
+    await prisma.session.deleteMany({ where: { userId: user.id } });
     await prisma.questionAttempt.deleteMany({ where: { userId: user.id } });
     await prisma.userProgress.deleteMany({ where: { userId: user.id } });
     

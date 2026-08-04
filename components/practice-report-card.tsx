@@ -61,10 +61,3 @@ export function PracticeReportCard({
   );
 }
 
-<Button onClick={onNextStep} size="lg" className="w-full sm:w-auto font-bold bg-foreground hover:bg-foreground/90 text-background px-8">
-  {nextStepLabel}
-</Button>
-      </div >
-    </Card >
-  );
-}

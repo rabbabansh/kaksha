@@ -34,8 +34,9 @@ export async function POST(request: NextRequest) {
 
     const isFollowUp = !!userQuery;
 
-    const testProgress = await prisma.testProgress.findUnique({
-      where: { userId_year_slot: { userId, year, slot } }
+    const testProgress = await prisma.session.findFirst({
+      where: { userId, year, slot, type: 'MOCK' },
+      orderBy: { createdAt: 'desc' }
     });
 
     if (!testProgress) {
@@ -86,7 +87,7 @@ Format beautifully in Markdown using bullet points, bold text for emphasis, and 
 
     // If it's the initial generation, save it to the DB
     if (!isFollowUp) {
-      await prisma.testProgress.update({
+      await prisma.session.update({
         where: { id: testProgress.id },
         data: { aiInsights: responseText }
       });

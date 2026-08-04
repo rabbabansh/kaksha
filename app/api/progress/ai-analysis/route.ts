@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
         // Gather all necessary context
         const [progressStats, completedTests, recentAttempts] = await Promise.all([
             getUserProgressStats(userId),
-            prisma.testProgress.findMany({
+            prisma.session.findMany({
                 where: { userId, completed: true },
                 orderBy: { updatedAt: 'desc' },
                 take: 5,

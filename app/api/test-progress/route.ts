@@ -49,14 +49,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const progress = await prisma.testProgress.findUnique({
+    const progress = await prisma.session.findFirst({
       where: {
-        userId_year_slot: {
-          userId,
-          year,
-          slot,
-        },
+        userId,
+        year,
+        slot,
+        type: 'MOCK',
+        completed: false,
       },
+      orderBy: { createdAt: 'desc' },
     });
 
     logger.info(`${operation} completed successfully`, {
@@ -145,34 +146,44 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const progress = await prisma.testProgress.upsert({
+    let progress = await prisma.session.findFirst({
       where: {
-        userId_year_slot: {
-          userId,
-          year,
-          slot,
-        },
-      },
-      update: {
-        answers: JSON.stringify(answers || {}),
-        flagged: JSON.stringify(flagged || []),
-        timeRemaining: timeRemaining ?? undefined,
-        currentSection: currentSection ?? undefined,
-        completed: completed ?? false,
-        score: score ?? undefined,
-      },
-      create: {
         userId,
         year,
         slot,
-        answers: JSON.stringify(answers || {}),
-        flagged: JSON.stringify(flagged || []),
-        timeRemaining: timeRemaining ?? undefined,
-        currentSection: currentSection ?? undefined,
-        completed: completed ?? false,
-        score: score ?? undefined,
+        completed: false
       },
+      orderBy: { createdAt: 'desc' }
     });
+
+    if (progress) {
+      progress = await prisma.session.update({
+        where: { id: progress.id },
+        data: {
+          answers: JSON.stringify(answers || {}),
+          flagged: JSON.stringify(flagged || []),
+          timeRemaining: timeRemaining ?? undefined,
+          currentSection: currentSection ?? undefined,
+          completed: completed ?? false,
+          score: score ?? undefined,
+        }
+      });
+    } else {
+      progress = await prisma.session.create({
+        data: {
+          userId,
+          type: 'MOCK',
+          year,
+          slot,
+          answers: JSON.stringify(answers || {}),
+          flagged: JSON.stringify(flagged || []),
+          timeRemaining: timeRemaining ?? undefined,
+          currentSection: currentSection ?? undefined,
+          completed: completed ?? false,
+          score: score ?? undefined,
+        }
+      });
+    }
 
     // When a test is submitted as completed, create QuestionAttempt records
     // so that Progress tab and Chat AI have full context of test performance.

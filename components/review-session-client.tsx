@@ -1,14 +1,10 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { MarkdownRenderer } from '@/components/markdown-renderer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { CheckCircle, XCircle, Loader2, BrainCircuit, BookOpen, Clock } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
-import remarkMath from 'remark-math';
-import rehypeKatex from 'rehype-katex';
-import rehypeRaw from 'rehype-raw';
-import 'katex/dist/katex.min.css';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Question = any;
@@ -217,7 +213,7 @@ export function ReviewSessionClient({ subtopic }: ReviewSessionClientProps) {
                          >
                            <span className="font-bold mr-3">({opt})</span>
                            <span className="flex-1 whitespace-normal">
-                             <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex, rehypeRaw]}>{optHtml}</ReactMarkdown>
+                             <MarkdownRenderer content={optHtml} />
                            </span>
                            {opt === currentAttempt.userAnswer && (
                               <span className="ml-2 text-xs font-bold uppercase tracking-wider opacity-70">Your Answer</span>
@@ -284,7 +280,7 @@ export function ReviewSessionClient({ subtopic }: ReviewSessionClientProps) {
                       </div>
                       <div className="prose dark:prose-invert max-w-none text-sm notranslate bg-background/60 p-6 rounded-lg border border-black/5 dark:border-white/5" translate="no">
                          {explanation[qId] && !currentQ.explanation_html ? (
-                            <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex, rehypeRaw]}>{explanation[qId]}</ReactMarkdown>
+                            <MarkdownRenderer content={explanation[qId]} />
                          ) : (
                             <div dangerouslySetInnerHTML={{ __html: currentQ.explanation_html }} />
                          )}
@@ -309,7 +305,7 @@ export function ReviewSessionClient({ subtopic }: ReviewSessionClientProps) {
                                               ? 'bg-destructive/10 text-destructive'
                                               : 'bg-background border shadow-sm rounded-bl-none'
                                         }`}>
-                                           <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex, rehypeRaw]}>{msg.text}</ReactMarkdown>
+                                           <MarkdownRenderer content={msg.text} />
                                         </div>
                                      </div>
                                   ))}

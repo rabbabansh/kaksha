@@ -6,6 +6,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model questions {
@@ -54,10 +55,49 @@ model User {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   testProgress  TestProgress[]
+  sessions      Session[]
   questionAttempts QuestionAttempt[]
   userProgress  UserProgress[]
   reportedQuestions ReportedQuestion[]
   profile       UserProfile?
+}
+
+model Session {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  type            String   // 'MOCK', 'PRACTICE_MODULE', 'MIXED_SESSION', 'BANK', 'DIAGNOSTIC'
+  
+  // Identifiers for the session (optional based on type)
+  year            String?  // MOCK
+  slot            String?  // MOCK
+  topic           String?  // PRACTICE_MODULE
+  subtopic        String?  // PRACTICE_MODULE
+  
+  // Data
+  questionIds     String   @default("[]") // JSON array of questions included in this session
+  answers         String   @default("{}") // JSON string of { questionId: answer }
+  flagged         String   @default("[]") // JSON string of [questionId]
+  
+  // Progress & State
+  timeRemaining   Int?     // seconds remaining for current section
+  currentSection  String?  // current active section
+  completed       Boolean  @default(false)
+  score           Float?   // Float instead of Int for fractional negative marking
+  
+  // Results
+  correct         Int      @default(0)
+  incorrect       Int      @default(0)
+  skipped         Int      @default(0)
+  totalQuestions  Int      @default(0)
+  timeTaken       Int?
+  
+  aiInsights      String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
 }
 
 model TestProgress {
@@ -77,7 +117,7 @@ model TestProgress {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  @@unique([userId, year, slot])
+  // @@unique([userId, year, slot]) - removed for migration
   @@index([userId])
 }
 

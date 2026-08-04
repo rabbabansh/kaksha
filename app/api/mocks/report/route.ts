@@ -30,13 +30,15 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch TestProgress
-    const testProgress = await prisma.testProgress.findUnique({
+    const testProgress = await prisma.session.findFirst({
       where: {
-        userId_year_slot: {
-          userId,
-          year,
-          slot
-        }
+        userId,
+        year,
+        slot,
+        type: 'MOCK'
+      },
+      orderBy: {
+        createdAt: 'desc'
       }
     });
 

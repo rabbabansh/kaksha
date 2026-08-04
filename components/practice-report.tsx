@@ -2,15 +2,11 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { MarkdownRenderer } from '@/components/markdown-renderer';
 import { Button } from '@/components/ui/button';
 import { CheckCircle2, XCircle, ArrowRight, BookOpen, BarChart3, HelpCircle, Clock, BrainCircuit, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkMath from 'remark-math';
-import rehypeKatex from 'rehype-katex';
-import rehypeRaw from 'rehype-raw';
-import 'katex/dist/katex.min.css';
 import { PracticeReportCard } from './practice-report-card';
 
 interface PracticeReportProps {
@@ -125,9 +121,7 @@ export function PracticeReport({
         {aiInsights ? (
           <CardContent>
             <div className="prose dark:prose-invert max-w-none text-sm leading-relaxed" translate="no">
-              <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex, rehypeRaw]}>
-                {aiInsights}
-              </ReactMarkdown>
+              <MarkdownRenderer content={aiInsights} />
             </div>
           </CardContent>
         ) : (

@@ -69,9 +69,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-return NextResponse.json(
-  { success: false, error: 'Internal server error', code: ErrorCode.INTERNAL_ERROR, correlationId },
-  { status: 500 }
-);
-  }
-}

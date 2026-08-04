@@ -12,7 +12,7 @@ export default async function DiagnosticPage() {
     if (!profile) redirect('/onboarding');
     
     // Check if progress already exists
-    const progress = await prisma.testProgress.findFirst({
+    const progress = await prisma.session.findFirst({
         where: { userId: profile.userId, year: 'Diagnostic', slot: '1' }
     });
 

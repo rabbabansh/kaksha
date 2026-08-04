@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Also fetch mock tests progress
-    const mockProgress = await prisma.testProgress.findMany({
+    const mockProgress = await prisma.session.findMany({
       where: { userId },
       orderBy: { updatedAt: 'desc' }
     });
