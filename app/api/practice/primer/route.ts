@@ -32,25 +32,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    if (!genAI) {
-      return NextResponse.json(
-        { success: false, error: 'AI not configured', code: ErrorCode.INTERNAL_ERROR, correlationId },
-        { status: 500 }
-      );
-    }
-
-    const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' });
-    const prompt = `You are an expert CAT tutor. A student is about to start a practice session on the subtopic: "${subtopic}". 
-    Provide a highly encouraging, 2-paragraph "Concept Primer". 
-    The first paragraph should explain the core concept in simple terms.
-    The second paragraph should give 1 golden rule or formula to remember for this topic.
-    Keep it concise, formatting in Markdown. Do not include any questions.`;
-
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
-    
-    // Fetch user progress for this subtopic
+    // Fetch user progress for this subtopic FIRST
     let userId = (session.user as any).id;
     if (!userId && session.user.email) {
       const { PrismaClient } = await import('@prisma/client');
@@ -79,7 +61,31 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    logger.info(`${operation} generated primer`, { correlationId, subtopic });
+    let text = 'Get ready to master this topic!';
+
+    try {
+      if (genAI) {
+        const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' });
+        const prompt = `You are an expert CAT tutor. A student is about to start a practice session on the subtopic: "${subtopic}". 
+        Provide a highly encouraging, 2-paragraph "Concept Primer". 
+        The first paragraph should explain the core concept in simple terms.
+        The second paragraph should give 1 golden rule or formula to remember for this topic.
+        Keep it concise, formatting in Markdown. Do not include any questions.`;
+
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        text = response.text();
+        logger.info(`${operation} generated primer`, { correlationId, subtopic });
+      } else {
+        logger.warn(`${operation} AI not configured, returning fallback`, { correlationId, subtopic });
+      }
+    } catch (aiError) {
+      logger.error(`${operation} AI generation failed`, {
+        correlationId,
+        error: aiError instanceof Error ? aiError.message : String(aiError)
+      });
+      // Continue with fallback text
+    }
 
     return NextResponse.json({
       success: true,
@@ -92,7 +98,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    logger.error(`${operation} failed`, {
+    logger.error(`${operation} failed completely`, {
       correlationId,
       error: error instanceof Error ? error.message : String(error)
     });

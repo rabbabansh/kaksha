@@ -6,6 +6,7 @@ import { Trophy } from 'lucide-react';
 interface PracticeReportCardProps {
   totalQuestions: number;
   correctCount: number;
+  skippedCount?: number;
   avgTimePerQuestion?: number;
   onNextStep?: () => void;
   nextStepLabel?: string;
@@ -15,12 +16,13 @@ interface PracticeReportCardProps {
 export function PracticeReportCard({
   totalQuestions,
   correctCount,
+  skippedCount = 0,
   avgTimePerQuestion,
   onNextStep = () => window.location.href = '/dashboard',
   nextStepLabel = "Return to Dashboard",
   title = "Kaksha Complete!"
 }: PracticeReportCardProps) {
-  const incorrectCount = totalQuestions - correctCount;
+  const incorrectCount = totalQuestions - correctCount - skippedCount;
   const accuracy = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
 
   return (
@@ -36,7 +38,7 @@ export function PracticeReportCard({
           You scored {correctCount} out of {totalQuestions}. XP updated!
         </p>
 
-        <div className={`grid ${avgTimePerQuestion !== undefined ? 'grid-cols-5' : 'grid-cols-4'} gap-4 bg-white rounded-xl shadow-sm border p-4 mb-8`}>
+        <div className={`grid ${avgTimePerQuestion !== undefined ? (skippedCount > 0 ? 'grid-cols-6' : 'grid-cols-5') : (skippedCount > 0 ? 'grid-cols-5' : 'grid-cols-4')} gap-4 bg-white rounded-xl shadow-sm border p-4 mb-8`}>
           <div className="text-left">
             <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Total</p>
             <p className="text-lg font-bold text-foreground">{totalQuestions}</p>
@@ -49,6 +51,12 @@ export function PracticeReportCard({
             <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Incorrect</p>
             <p className="text-lg font-bold text-red-500">{incorrectCount}</p>
           </div>
+          {skippedCount > 0 && (
+            <div className="text-left border-l pl-3">
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Skipped</p>
+              <p className="text-lg font-bold text-muted-foreground">{skippedCount}</p>
+            </div>
+          )}
           <div className="text-left border-l pl-3">
             <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Accuracy</p>
             <p className="text-lg font-bold text-foreground">{accuracy}%</p>

@@ -258,23 +258,11 @@ export function QuestionDisplay({
           )}
         </div>
 
-        {/* Check Answer Button & Ask AI Tutor Button - Only show in non-test mode or after test is finished */}
+        {/* Check Answer Button - Only show in non-test mode or after test is finished */}
         <div className="mt-4 flex flex-wrap gap-3 items-center">
           {!isTestMode && (
             <Button onClick={() => handleCheckAnswer(q.question_id)} disabled={showSolution} className="font-semibold">
               Check Answer
-            </Button>
-          )}
-          
-          {showSolution && !explanation[q.question_id] && (
-            <Button 
-              variant="outline" 
-              onClick={() => askTutor(q)} 
-              disabled={isExplaining[q.question_id]}
-              className="border-indigo-200 bg-indigo-50 hover:bg-indigo-100 font-bold text-indigo-700 dark:text-indigo-400 shadow-sm"
-            >
-              {isExplaining[q.question_id] ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <BrainCircuit className="h-4 w-4 mr-2" />}
-              Ask AI Tutor
             </Button>
           )}
         </div>
@@ -294,6 +282,20 @@ export function QuestionDisplay({
               <div className="prose dark:prose-invert max-w-none leading-relaxed text-sm notranslate" translate="no" dangerouslySetInnerHTML={{ __html: q.explanation_html }} />
             ) : (
               <p className="text-sm text-muted-foreground italic">No preloaded explanation available for this question.</p>
+            )}
+
+            {!explanation[q.question_id] && (
+              <div className="mt-4">
+                <Button 
+                  variant="outline" 
+                  onClick={() => askTutor(q)} 
+                  disabled={isExplaining[q.question_id]}
+                  className="border-indigo-200 bg-indigo-50 hover:bg-indigo-100 font-bold text-indigo-700 dark:text-indigo-400 shadow-sm"
+                >
+                  {isExplaining[q.question_id] ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <BrainCircuit className="h-4 w-4 mr-2" />}
+                  Ask AI Tutor for Detailed Explanation
+                </Button>
+              </div>
             )}
 
             {explanation[q.question_id] && (

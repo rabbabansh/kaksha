@@ -7,10 +7,11 @@ import { Input } from '@/components/ui/input';
 import { Send, Bot, User } from 'lucide-react';
 import { ChatQuestionCard } from './chat-question-card';
 import { ChatSetCard } from './chat-set-card';
-import { InlineMath, BlockMath } from 'react-katex';
-import 'katex/dist/katex.min.css';
 import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import rehypeRaw from 'rehype-raw';
+import 'katex/dist/katex.min.css';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Question = any;
@@ -186,114 +187,15 @@ export function ChatClient() {
     handleSend(answer);
   };
 
-  // Render markdown with math support
+  // Render markdown with math support using rehype/remark
   const renderMarkdownContent = (content: string) => {
-    // Custom components for markdown that handle math
-    const components: {
-      p: ({ children }: { children?: React.ReactNode }) => React.ReactElement;
-      li: ({ children }: { children?: React.ReactNode }) => React.ReactElement;
-      strong: ({ children }: { children?: React.ReactNode }) => React.ReactElement;
-      em: ({ children }: { children?: React.ReactNode }) => React.ReactElement;
-      code: ({ children, className }: { children?: React.ReactNode; className?: string }) => React.ReactElement;
-    } = {
-      p: ({ children }) => {
-        return <p>{processMathInChildren(children)}</p>;
-      },
-      li: ({ children }) => {
-        return <li>{processMathInChildren(children)}</li>;
-      },
-      strong: ({ children }) => {
-        return <strong>{processMathInChildren(children)}</strong>;
-      },
-      em: ({ children }) => {
-        return <em>{processMathInChildren(children)}</em>;
-      },
-      code: ({ children, className }) => {
-        return <code className={className}>{children}</code>;
-      },
-    };
-    
     return (
-      <div className="prose prose-sm dark:prose-invert max-w-none">
-        <ReactMarkdown
-          remarkPlugins={[remarkGfm]}
-          components={components}
-        >
+      <div className="prose dark:prose-invert max-w-none text-sm leading-relaxed notranslate" translate="no">
+        <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex, rehypeRaw]}>
           {content}
         </ReactMarkdown>
       </div>
     );
-  };
-  
-  // Process children to render math expressions
-  const processMathInChildren = (children: React.ReactNode): React.ReactNode => {
-    if (typeof children === 'string') {
-      return renderMathInText(children);
-    }
-    if (Array.isArray(children)) {
-      return children.map((child, idx) => (
-        <span key={idx}>{processMathInChildren(child)}</span>
-      ));
-    }
-    return children;
-  };
-  
-  // Render math expressions in text
-  const renderMathInText = (text: string): React.ReactNode => {
-    const parts: (string | React.ReactElement)[] = [];
-    let lastIndex = 0;
-    
-    // Match inline math: $...$ and block math: $$...$$
-    const mathRegex = /\$\$?([^$]+)\$\$?/g;
-    const matches: Array<{ start: number; end: number; content: string; isBlock: boolean }> = [];
-    let match;
-    
-    while ((match = mathRegex.exec(text)) !== null) {
-      const isBlock = match[0].startsWith('$$') && match[0].endsWith('$$');
-      matches.push({
-        start: match.index,
-        end: match.index + match[0].length,
-        content: match[1],
-        isBlock,
-      });
-    }
-    
-    if (matches.length === 0) {
-      return text;
-    }
-    
-    matches.forEach((mathMatch, idx) => {
-      // Add text before
-      if (mathMatch.start > lastIndex) {
-        const textBefore = text.substring(lastIndex, mathMatch.start);
-        if (textBefore) {
-          parts.push(<span key={`text-${idx}`}>{textBefore}</span>);
-        }
-      }
-      
-      // Add math
-      try {
-        if (mathMatch.isBlock) {
-          parts.push(<BlockMath key={`math-${idx}`} math={mathMatch.content} />);
-        } else {
-          parts.push(<InlineMath key={`math-${idx}`} math={mathMatch.content} />);
-        }
-      } catch {
-        parts.push(<span key={`math-${idx}`}>{mathMatch.content}</span>);
-      }
-      
-      lastIndex = mathMatch.end;
-    });
-    
-    // Add remaining text
-    if (lastIndex < text.length) {
-      const textAfter = text.substring(lastIndex);
-      if (textAfter) {
-        parts.push(<span key="text-end">{textAfter}</span>);
-      }
-    }
-    
-    return <>{parts}</>;
   };
 
   return (
@@ -347,15 +249,15 @@ export function ChatClient() {
                 }`}
               >
                 {message.role === 'assistant' && (
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-500 text-white flex items-center justify-center">
                     <Bot className="h-4 w-4" />
                   </div>
                 )}
                 <div
-                  className={`max-w-[80%] rounded-lg p-4 ${
+                  className={`max-w-[80%] rounded-2xl p-4 shadow-sm ${
                     message.role === 'user'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted'
+                      ? 'bg-indigo-600 text-white rounded-br-sm'
+                      : 'bg-muted/50 border rounded-bl-sm'
                   }`}
                 >
                   {message.content && (
@@ -365,7 +267,7 @@ export function ChatClient() {
                   )}
                 </div>
                 {message.role === 'user' && (
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center">
                     <User className="h-4 w-4" />
                   </div>
                 )}

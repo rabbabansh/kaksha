@@ -77,12 +77,12 @@ export function DashboardClient() {
       const groupKey = `${key}_${localDateStr}`;
       
       if (!acc[groupKey]) {
-        acc[groupKey] = { subtopic: key, count: 0, date: localDateStr, topic: curr.question.topic, source: curr.source };
+        acc[groupKey] = { subtopic: key, count: 0, date: localDateStr, topic: curr.question.topic, source: curr.source, timestamp: new Date(curr.attemptedAt).getTime() };
       }
       acc[groupKey].count++;
       return acc;
     }, {});
-    return Object.values(grouped);
+    return Object.values(grouped).sort((a: any, b: any) => b.timestamp - a.timestamp);
   }, [historyData]);
 
   const filteredPracticeHistory = useMemo(() => {
@@ -92,8 +92,12 @@ export function DashboardClient() {
 
   const filteredMockHistory = useMemo(() => {
     if (!historyData?.mockProgress) return [];
+    let mocks = historyData.mockProgress;
     if (historyFilter !== 'All' && historyFilter !== 'Mock Test') return [];
-    return historyData.mockProgress.filter((mock: any) => `CAT ${mock.year}`.toLowerCase().includes(historySearch.toLowerCase()));
+    if (historySearch) {
+      mocks = mocks.filter((mock: any) => `CAT ${mock.year}`.toLowerCase().includes(historySearch.toLowerCase()));
+    }
+    return mocks.sort((a: any, b: any) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
   }, [historyData, historyFilter, historySearch]);
 
 

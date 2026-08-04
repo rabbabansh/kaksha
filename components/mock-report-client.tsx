@@ -11,6 +11,7 @@ import rehypeKatex from 'rehype-katex';
 import rehypeRaw from 'rehype-raw';
 import 'katex/dist/katex.min.css';
 import { BrowseClient } from './browse-client';
+import { PracticeReportCard } from './practice-report-card';
 
 interface MockReportClientProps {
   year: string;
@@ -121,42 +122,15 @@ export function MockReportClient({ year, slot }: MockReportClientProps) {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <Card className="bg-primary/5 border-primary/20">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2"><Award className="h-5 w-5 text-primary" /> Total Score</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-4xl font-black text-primary">{stats.totalScore}</div>
-            <p className="text-sm text-muted-foreground mt-1">Marks</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2"><CheckCircle className="h-5 w-5 text-green-600" /> Accuracy</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-4xl font-black text-green-600">
-              {stats.correct + stats.incorrect > 0 
-                ? Math.round((stats.correct / (stats.correct + stats.incorrect)) * 100) 
-                : 0}%
-            </div>
-            <p className="text-sm text-muted-foreground mt-1">{stats.correct} correct out of {stats.correct + stats.incorrect} attempts</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2"><Target className="h-5 w-5 text-blue-600" /> Attempt Rate</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-4xl font-black text-blue-600">
-              {Math.round(((stats.correct + stats.incorrect) / (stats.correct + stats.incorrect + stats.skipped)) * 100)}%
-            </div>
-            <p className="text-sm text-muted-foreground mt-1">{stats.skipped} questions skipped</p>
-          </CardContent>
-        </Card>
+      <div className="mb-8">
+        <PracticeReportCard
+          title={`Mock Test Complete: CAT ${year} Slot ${slot}`}
+          totalQuestions={stats.correct + stats.incorrect + stats.skipped}
+          correctCount={stats.correct}
+          skippedCount={stats.skipped}
+          nextStepLabel="Return to Hub"
+          onNextStep={() => window.location.href='/dashboard'}
+        />
       </div>
 
       {/* AI Insights Banner / Expanded Card */}
