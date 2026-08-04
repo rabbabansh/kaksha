@@ -1,12 +1,13 @@
 /* eslint-disable */
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { DashboardCharts } from './dashboard-charts';
 import { DashboardTimeline } from './dashboard-timeline';
 import { UserProfileModal } from './user-profile-modal';
-import { Loader2, TrendingUp, TrendingDown, Award, Star, Medal, Zap, PlayCircle, History, BookOpen, Trophy } from 'lucide-react';
+import { Loader2, TrendingUp, TrendingDown, Award, Star, Medal, Zap, PlayCircle, History, BookOpen, Trophy, CheckCircle2, Lock } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -66,10 +67,21 @@ export function DashboardClient() {
   }, []);
 
   if (loading) {
-    console.log('DashboardClient: rendering loading spinner');
+    console.log('DashboardClient: rendering skeleton loaders');
     return (
-      <div className="flex justify-center items-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="space-y-6 mb-12 animate-pulse">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Skeleton className="h-24 w-full rounded-xl" />
+          <Skeleton className="h-24 w-full rounded-xl" />
+          <Skeleton className="h-24 w-full rounded-xl" />
+          <Skeleton className="h-24 w-full rounded-xl" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <Skeleton className="col-span-1 md:col-span-2 h-64 rounded-xl" />
+          <Skeleton className="col-span-1 md:col-span-2 h-64 rounded-xl" />
+          <Skeleton className="col-span-1 md:col-span-4 h-48 rounded-xl" />
+          <Skeleton className="col-span-1 md:col-span-4 h-64 rounded-xl" />
+        </div>
       </div>
     );
   }
@@ -88,6 +100,35 @@ export function DashboardClient() {
     if (score >= 30) return (40 + (score - 30) * 1.5).toFixed(1);  // 30=40, 50=70
     return Math.max(0, score).toFixed(1);
   };
+
+  const practiceHistory = useMemo(() => {
+    if (!historyData?.attempts) return [];
+    const grouped = historyData.attempts.reduce((acc: any, curr: any) => {
+      const key = curr.question?.subtopic;
+      if (!key) return acc;
+      
+      const localDateStr = new Date(curr.attemptedAt).toLocaleDateString();
+      const groupKey = `${key}_${localDateStr}`;
+      
+      if (!acc[groupKey]) {
+        acc[groupKey] = { subtopic: key, count: 0, date: localDateStr, topic: curr.question.topic, source: curr.source };
+      }
+      acc[groupKey].count++;
+      return acc;
+    }, {});
+    return Object.values(grouped);
+  }, [historyData]);
+
+  const filteredPracticeHistory = useMemo(() => {
+    if (historyFilter !== 'All' && historyFilter !== 'Practice') return [];
+    return practiceHistory.filter((g: any) => g.subtopic.toLowerCase().includes(historySearch.toLowerCase()));
+  }, [practiceHistory, historyFilter, historySearch]);
+
+  const filteredMockHistory = useMemo(() => {
+    if (!historyData?.mockProgress) return [];
+    if (historyFilter !== 'All' && historyFilter !== 'Mock Test') return [];
+    return historyData.mockProgress.filter((mock: any) => `CAT ${mock.year}`.toLowerCase().includes(historySearch.toLowerCase()));
+  }, [historyData, historyFilter, historySearch]);
 
   return (
     <div className="space-y-6 mb-12">
@@ -257,29 +298,36 @@ export function DashboardClient() {
             </CardTitle>
             <CardDescription className="text-indigo-900/70 dark:text-indigo-300/70 font-medium">Actionable practice modules dynamically generated to target your weakest subtopics today.</CardDescription>
           </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <CardContent>
             {data.weaknesses.length > 0 ? (() => {
-              const targets = data.weaknesses.slice(0, 3);
-              const taskStatuses = targets.map((w: string, i: number) => {
-                 const subtopic = w.split(' > ').pop();
-                 const tasks = ["Solve 10 Rapid Questions", "Complete 1 Practice Sprint", "Review Core Concepts"];
-                 const taskName = tasks[i % tasks.length];
-                 const attemptedToday = historyData?.attempts?.some((a: any) => {
-                   if (a.question?.subtopic !== subtopic) return false;
-                   const attemptDate = new Date(a.attemptedAt);
-                   const today = new Date();
-                   return attemptDate.getDate() === today.getDate() && 
-                          attemptDate.getMonth() === today.getMonth() && 
-                          attemptDate.getFullYear() === today.getFullYear();
-                 });
-                 return { subtopic, taskName, attemptedToday, w };
+              const reviewTopic = data.weaknesses[0]?.split(' > ').pop() || 'Percentage';
+              const newTopic = data.weaknesses[1]?.split(' > ').pop() || 'Average';
+              
+              const tasks = [
+                 { id: 'review', name: 'Review', desc: 'Strengthen weak areas', subtopic: reviewTopic, action: 'Solve 10 Questions' },
+                 { id: 'new', name: 'Learn New', desc: 'Advance your Master Path', subtopic: newTopic, action: 'Complete Module' },
+                 { id: 'challenge', name: 'Daily Challenge', desc: 'Mixed concepts sprint', subtopic: 'Mixed Arena', action: 'Enter Arena', link: '/practice/mixed' }
+              ];
+              
+              const taskStatuses = tasks.map((t) => {
+                 let attemptedToday = false;
+                 if (t.id === 'challenge') {
+                    attemptedToday = historyData?.attempts?.some((a: any) => {
+                       return new Date(a.attemptedAt).toDateString() === new Date().toDateString() && a.source === 'mixed';
+                    });
+                 } else {
+                    attemptedToday = historyData?.attempts?.some((a: any) => {
+                       return a.question?.subtopic === t.subtopic && new Date(a.attemptedAt).toDateString() === new Date().toDateString();
+                    });
+                 }
+                 return { ...t, attemptedToday };
               });
 
-              const allCompleted = taskStatuses.every((t: any) => t.attemptedToday);
+              const allCompleted = taskStatuses.every((t) => t.attemptedToday);
 
               if (allCompleted) {
                 return (
-                  <div className="col-span-1 md:col-span-3 rounded-xl border-2 border-dashed border-green-500/50 bg-green-500/10 p-8 text-center flex flex-col items-center">
+                  <div className="rounded-xl border-2 border-dashed border-green-500/50 bg-green-500/10 p-8 text-center flex flex-col items-center">
                     <Trophy className="h-12 w-12 text-green-500 mb-4" />
                     <h3 className="font-bold text-2xl mb-2 text-green-700 dark:text-green-400">All Daily Targets Completed!</h3>
                     <p className="text-muted-foreground max-w-md mx-auto mb-6 text-sm">You've successfully finished your personalized Kaksha tasks for today. Keep up the streak!</p>
@@ -290,34 +338,54 @@ export function DashboardClient() {
                 );
               }
 
-              return taskStatuses.map((t: any) => (
-                  <div key={t.w} className={`p-4 rounded-xl border flex flex-col justify-between transition-colors ${t.attemptedToday ? 'bg-green-500/10 border-green-500/30' : 'bg-background hover:border-indigo-500 hover:shadow-md'}`}>
-                     <div>
-                        <div className="flex items-center gap-2 mb-2">
-                           {t.attemptedToday ? (
-                             <Badge className="bg-green-500 text-white border-0 font-bold">COMPLETED</Badge>
-                           ) : (
-                             <Badge variant="outline" className="bg-indigo-500/10 text-indigo-700 border-indigo-200 font-bold uppercase tracking-wider text-[10px]">Priority Task</Badge>
-                           )}
-                        </div>
-                        <h4 className={`font-bold text-base leading-tight mb-1 ${t.attemptedToday ? 'line-through text-muted-foreground' : ''}`}>{t.taskName}</h4>
-                        <p className={`text-sm ${t.attemptedToday ? 'text-muted-foreground line-through' : 'text-muted-foreground'}`}>Focus: {t.subtopic}</p>
-                     </div>
-                     {!t.attemptedToday && (
-                       <Button variant="default" size="sm" className="mt-4 w-full bg-indigo-600 hover:bg-indigo-700 shadow-sm font-bold" onClick={() => window.location.href=`/practice/modules/${encodeURIComponent(t.subtopic || '')}`}>
-                          <PlayCircle className="h-4 w-4 mr-2" /> Start Now
-                       </Button>
-                     )}
-                     {t.attemptedToday && (
-                       <Button variant="outline" size="sm" className="mt-4 w-full border-green-500/30 text-green-700 bg-transparent cursor-default font-bold hover:bg-transparent">
-                          Task Finished
-                       </Button>
-                     )}
-                  </div>
-              ));
+              return (
+                 <div className="flex flex-col md:flex-row gap-4 items-center justify-between w-full relative">
+                    {/* Background connecting line (desktop) */}
+                    <div className="hidden md:block absolute top-1/2 left-0 right-0 h-1 bg-indigo-500/20 -translate-y-1/2 z-0 rounded-full" />
+                    
+                    {taskStatuses.map((t, idx) => (
+                       <div key={t.id} className={`w-full md:w-1/3 p-5 rounded-2xl border-2 flex flex-col justify-between transition-transform duration-300 z-10 ${t.attemptedToday ? 'bg-green-500/10 border-green-500/30' : idx === 0 || taskStatuses[idx-1].attemptedToday ? 'bg-background border-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.2)] scale-105' : 'bg-muted/50 border-muted opacity-60 grayscale'}`}>
+                          <div>
+                             <div className="flex items-center justify-between mb-3">
+                                {t.attemptedToday ? (
+                                  <Badge className="bg-green-500 text-white border-0 font-bold px-2 py-1"><CheckCircle2 className="h-3 w-3 mr-1" /> DONE</Badge>
+                                ) : idx === 0 || taskStatuses[idx-1].attemptedToday ? (
+                                  <Badge variant="outline" className="bg-indigo-500/10 text-indigo-700 border-indigo-200 font-bold uppercase tracking-wider text-[10px] animate-pulse">Up Next</Badge>
+                                ) : (
+                                  <Badge variant="outline" className="bg-transparent border-muted-foreground/30 text-muted-foreground font-bold uppercase tracking-wider text-[10px]"><Lock className="h-3 w-3 mr-1" /> Locked</Badge>
+                                )}
+                                <span className="text-xs font-black text-muted-foreground/50">STEP {idx + 1}</span>
+                             </div>
+                             <h4 className={`font-black text-lg leading-tight mb-1 ${t.attemptedToday ? 'text-green-700 dark:text-green-400' : ''}`}>{t.name}</h4>
+                             <p className="text-sm font-semibold text-muted-foreground mb-4">{t.desc}</p>
+                             
+                             <div className="bg-muted/50 rounded-lg p-3 mb-4">
+                                <p className="text-xs text-muted-foreground uppercase tracking-wider font-bold mb-1">Focus Area</p>
+                                <p className="font-semibold text-sm leading-tight">{t.subtopic}</p>
+                             </div>
+                          </div>
+                          
+                          <Button 
+                             variant={t.attemptedToday ? 'outline' : 'default'} 
+                             size="sm" 
+                             className={`mt-auto w-full font-bold h-10 ${!t.attemptedToday && (idx === 0 || taskStatuses[idx-1].attemptedToday) ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md' : ''}`}
+                             disabled={!t.attemptedToday && idx > 0 && !taskStatuses[idx-1].attemptedToday}
+                             onClick={() => {
+                                if (t.attemptedToday) return;
+                                window.location.href = t.link ? t.link : `/practice/modules/${encodeURIComponent(t.subtopic)}`;
+                             }}
+                          >
+                             {t.attemptedToday ? 'Task Finished' : <><PlayCircle className="h-4 w-4 mr-2" /> {t.action}</>}
+                          </Button>
+                       </div>
+                    ))}
+                 </div>
+              );
             })() : (
-               <div className="col-span-3 text-center py-6 text-muted-foreground font-medium">
-                  Complete your Diagnostic test to unlock daily targets.
+               <div className="text-center py-8 text-muted-foreground font-medium bg-muted/20 rounded-xl border border-dashed border-border">
+                  <h3 className="font-bold text-lg mb-2 text-foreground">Diagnostic Required</h3>
+                  <p className="max-w-md mx-auto mb-4 text-sm">Complete your Diagnostic test to unlock personalized daily targets.</p>
+                  <Button onClick={() => window.location.href='/diagnostic'} variant="outline" className="font-bold">Take Diagnostic</Button>
                </div>
             )}
           </CardContent>
@@ -357,9 +425,7 @@ export function DashboardClient() {
             {historyData && (historyData.mockProgress.length > 0 || historyData.attempts.length > 0) ? (
               <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
                 {/* Render filtered Mocks */}
-                {(historyFilter === 'All' || historyFilter === 'Mock Test') && historyData.mockProgress
-                  .filter((mock: any) => `CAT ${mock.year}`.toLowerCase().includes(historySearch.toLowerCase()))
-                  .map((mock: any, idx: number) => (
+                {filteredMockHistory.map((mock: any, idx: number) => (
                   <div key={`mock-${idx}`} className="p-4 border rounded-xl flex items-center justify-between hover:bg-muted/30 transition-colors">
                     <div>
                       <div className="flex items-center gap-2 mb-1">
@@ -376,23 +442,7 @@ export function DashboardClient() {
                 ))}
                 
                 {/* Render filtered Practice Modules */}
-                {(historyFilter === 'All' || historyFilter === 'Practice') && Object.entries(
-                  historyData.attempts.reduce((acc: any, curr: any) => {
-                    const key = curr.question?.subtopic;
-                    if (!key) return acc;
-                    
-                    // Convert UTC attempt string to local date string to group correctly by day
-                    const localDateStr = new Date(curr.attemptedAt).toLocaleDateString();
-                    const groupKey = `${key}_${localDateStr}`;
-                    
-                    if (!acc[groupKey]) {
-                      acc[groupKey] = { subtopic: key, count: 0, date: localDateStr, topic: curr.question.topic, source: curr.source };
-                    }
-                    acc[groupKey].count++;
-                    return acc;
-                  }, {})
-                ).filter(([_, group]: any) => group.subtopic.toLowerCase().includes(historySearch.toLowerCase()))
-                 .map(([key, group]: any, idx: number) => (
+                {filteredPracticeHistory.map((group: any, idx: number) => (
                   <div key={`prac-${idx}`} className="p-4 border rounded-xl flex items-center justify-between hover:bg-muted/30 transition-colors">
                     <div>
                       <div className="flex items-center gap-2 mb-1">

@@ -83,7 +83,8 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    await updateUserProgress(userId, questionId, isCorrect, source);
+    // Removed updateUserProgress cascade for performance. 
+    // It will be batched via /api/progress/session/complete instead.
 
     logger.info(`${operation} completed successfully`, {
       operation,

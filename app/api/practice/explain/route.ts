@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
 
       Student's New Doubt: "${userQuery}"
       
-      Provide a highly targeted, crisp, and intuitive explanation specifically addressing the student's doubt. Use standard markdown and perfectly rendered LaTeX for any math equations.
+      Provide a highly targeted, crisp, and intuitive explanation specifically addressing the student's doubt. Use standard markdown. STRICTLY enforce perfectly formatted LaTeX for any math equations, variables, or numbers using Notion-style delimiters (wrap inline math with single $ and block math with $$). Do NOT use \\( or \\) or \\[ or \\].
       `;
     } else {
       // One-Time Generation Mode (Dual-Method)
@@ -77,7 +77,8 @@ export async function POST(request: NextRequest) {
       Correct Answer: Option ${answer}
       Official Base Solution (for grounding/accuracy only, do not refer to it directly): ${stripBloat(explanation_html) || 'Not provided'}
       
-      Your output MUST be structured into exactly three sections using standard markdown headers, with plenty of breathing room (blank lines between paragraphs/steps):
+      Your output MUST be structured into exactly three sections using standard markdown headers, with plenty of breathing room (blank lines between paragraphs/steps).
+      STRICTLY enforce perfectly formatted LaTeX for any math equations, variables, or numbers using Notion-style delimiters (wrap inline math with single $ and block math with $$). Do NOT use \\( or \\) or \\[ or \\].
       
       ### 1. The Standard Approach
       Provide a rigorous, step-by-step mathematical or logical method. Break it down into clear, numbered steps. Use markdown tables if helpful and perfectly rendered LaTeX for math. Explain the "why" behind each step.

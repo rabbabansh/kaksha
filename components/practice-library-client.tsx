@@ -8,8 +8,10 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { 
   Play, BookOpen, Search, Clock, Target, 
-  ChevronRight, Award, BrainCircuit, ShieldAlert 
+  ChevronRight, Award, BrainCircuit, ShieldAlert,
+  Map as MapIcon
 } from 'lucide-react';
+import { MasterPathsClient } from './master-paths-client';
 
 interface ProgressRecord {
   section: string;
@@ -192,7 +194,7 @@ const SECTIONALS_MOCKS = [
 ];
 
 export function PracticeLibraryClient({ progressRecords }: PracticeLibraryClientProps) {
-  const [activeTab, setActiveTab] = useState<'sprints' | 'mixed' | 'sectionals'>('sprints');
+  const [activeTab, setActiveTab] = useState<'paths' | 'sprints' | 'mixed' | 'sectionals'>('paths');
   const [searchQuery, setSearchQuery] = useState('');
   const [sectionFilter, setSectionFilter] = useState<string>('All');
 
@@ -281,7 +283,14 @@ export function PracticeLibraryClient({ progressRecords }: PracticeLibraryClient
         </p>
 
         {/* Tab Switcher */}
-        <div className="inline-flex p-1 bg-muted rounded-xl gap-1">
+        <div className="inline-flex p-1 bg-muted rounded-xl gap-1 overflow-x-auto max-w-full">
+          <Button 
+            variant={activeTab === 'paths' ? 'default' : 'ghost'} 
+            onClick={() => setActiveTab('paths')}
+            className="rounded-lg px-6"
+          >
+            <MapIcon className="h-4 w-4 mr-2" /> Master Paths
+          </Button>
           <Button 
             variant={activeTab === 'sprints' ? 'default' : 'ghost'} 
             onClick={() => setActiveTab('sprints')}
@@ -305,6 +314,11 @@ export function PracticeLibraryClient({ progressRecords }: PracticeLibraryClient
           </Button>
         </div>
       </div>
+
+      {/* ---------------- Master Paths Tab ---------------- */}
+      {activeTab === 'paths' && (
+        <MasterPathsClient progressRecords={progressRecords} />
+      )}
 
       {/* ---------------- Sprint Modules Tab ---------------- */}
       {activeTab === 'sprints' && (
