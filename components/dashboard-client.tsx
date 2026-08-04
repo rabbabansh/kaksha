@@ -6,11 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { DashboardCharts } from './dashboard-charts';
 import { DashboardTimeline } from './dashboard-timeline';
 import { UserProfileModal } from './user-profile-modal';
-import { Loader2, TrendingUp, TrendingDown, Award, Star, Medal, Zap, PlayCircle, History, BookOpen, Trophy, CheckCircle2, Lock } from 'lucide-react';
+import { Loader2, TrendingUp, TrendingDown, Award, Star, Medal, Zap, PlayCircle, History, BookOpen, Trophy, CheckCircle2, Lock, Info, Map as MapIcon, ChevronRight, Layers } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { SubtopicsExplorerModal } from './subtopics-explorer-modal';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Input } from '@/components/ui/input';
@@ -66,6 +67,36 @@ export function DashboardClient() {
     }
   }, []);
 
+  const practiceHistory = useMemo(() => {
+    if (!historyData?.attempts) return [];
+    const grouped = historyData.attempts.reduce((acc: any, curr: any) => {
+      const key = curr.question?.subtopic;
+      if (!key) return acc;
+      
+      const localDateStr = new Date(curr.attemptedAt).toLocaleDateString();
+      const groupKey = `${key}_${localDateStr}`;
+      
+      if (!acc[groupKey]) {
+        acc[groupKey] = { subtopic: key, count: 0, date: localDateStr, topic: curr.question.topic, source: curr.source };
+      }
+      acc[groupKey].count++;
+      return acc;
+    }, {});
+    return Object.values(grouped);
+  }, [historyData]);
+
+  const filteredPracticeHistory = useMemo(() => {
+    if (historyFilter !== 'All' && historyFilter !== 'Practice') return [];
+    return practiceHistory.filter((g: any) => g.subtopic.toLowerCase().includes(historySearch.toLowerCase()));
+  }, [practiceHistory, historyFilter, historySearch]);
+
+  const filteredMockHistory = useMemo(() => {
+    if (!historyData?.mockProgress) return [];
+    if (historyFilter !== 'All' && historyFilter !== 'Mock Test') return [];
+    return historyData.mockProgress.filter((mock: any) => `CAT ${mock.year}`.toLowerCase().includes(historySearch.toLowerCase()));
+  }, [historyData, historyFilter, historySearch]);
+
+
   if (loading) {
     console.log('DashboardClient: rendering skeleton loaders');
     return (
@@ -101,34 +132,7 @@ export function DashboardClient() {
     return Math.max(0, score).toFixed(1);
   };
 
-  const practiceHistory = useMemo(() => {
-    if (!historyData?.attempts) return [];
-    const grouped = historyData.attempts.reduce((acc: any, curr: any) => {
-      const key = curr.question?.subtopic;
-      if (!key) return acc;
-      
-      const localDateStr = new Date(curr.attemptedAt).toLocaleDateString();
-      const groupKey = `${key}_${localDateStr}`;
-      
-      if (!acc[groupKey]) {
-        acc[groupKey] = { subtopic: key, count: 0, date: localDateStr, topic: curr.question.topic, source: curr.source };
-      }
-      acc[groupKey].count++;
-      return acc;
-    }, {});
-    return Object.values(grouped);
-  }, [historyData]);
 
-  const filteredPracticeHistory = useMemo(() => {
-    if (historyFilter !== 'All' && historyFilter !== 'Practice') return [];
-    return practiceHistory.filter((g: any) => g.subtopic.toLowerCase().includes(historySearch.toLowerCase()));
-  }, [practiceHistory, historyFilter, historySearch]);
-
-  const filteredMockHistory = useMemo(() => {
-    if (!historyData?.mockProgress) return [];
-    if (historyFilter !== 'All' && historyFilter !== 'Mock Test') return [];
-    return historyData.mockProgress.filter((mock: any) => `CAT ${mock.year}`.toLowerCase().includes(historySearch.toLowerCase()));
-  }, [historyData, historyFilter, historySearch]);
 
   return (
     <div className="space-y-6 mb-12">
@@ -183,9 +187,30 @@ export function DashboardClient() {
                 <CardDescription className="text-primary font-medium flex items-center gap-2 tracking-wider uppercase text-xs">
                   <Award className="h-4 w-4" /> Overall Mastery Profile
                 </CardDescription>
-                <CardTitle className="text-6xl font-black flex items-baseline gap-2 tracking-tighter mt-1">
+                <CardTitle className="text-6xl font-black flex items-center gap-3 tracking-tighter mt-1">
                   {data.overallScore}
-                  <span className="text-2xl text-muted-foreground font-semibold">/ 100</span>
+                  <div className="flex flex-col">
+                     <span className="text-xl text-muted-foreground font-semibold leading-none">/ 100</span>
+                     <span className="text-sm text-primary font-bold leading-none mt-1">Grade {data.overallScore >= 90 ? 'A+' : data.overallScore >= 75 ? 'A' : data.overallScore >= 60 ? 'B' : data.overallScore >= 40 ? 'C' : 'D'}</span>
+                  </div>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full ml-2 text-muted-foreground hover:text-primary">
+                        <Info className="h-5 w-5" />
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>How Kaksha Scoring Works</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4 text-sm mt-4">
+                        <p><strong>Overall Kaksha Score (0-100):</strong> This is your global mastery level. We use a sophisticated algorithm that analyzes the difficulty of questions you answer, how recently you practiced them, and the breadth of topics you cover. A score of 80+ indicates you are highly proficient and ready for advanced mocks!</p>
+                        <p><strong>Sectional Score:</strong> This aggregates your performance across all topics within a major section (like Quantitative Ability or Verbal Ability). Mastering sections unlocks advanced tiers in your Master Path.</p>
+                        <p><strong>Topic Score (0-10):</strong> A more granular, accuracy-based metric for specific topics (e.g., Arithmetic or Algebra). It helps you quickly identify which areas need a quick review.</p>
+                        <p><strong>Subtopic Grades (A-F):</strong> The finest level of detail. Grades are assigned based on your raw accuracy and the number of questions you've attempted in a subtopic. You need an 'A' grade to consider a subtopic fully Mastered.</p>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                 </CardTitle>
               </div>
               <div className="text-right flex flex-col items-end">
@@ -200,6 +225,11 @@ export function DashboardClient() {
             <p className="text-sm text-muted-foreground mb-4">
               Your Kaksha Score dynamically adjusts based on Item Response Theory and daily consistency.
             </p>
+            <SubtopicsExplorerModal hierarchy={data.hierarchy}>
+              <Button variant="secondary" size="sm" className="w-full sm:w-auto font-bold cursor-pointer text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 shadow-sm mb-4">
+                <Layers className="w-4 h-4 mr-2" /> Explore Full Hierarchy & Scores
+              </Button>
+            </SubtopicsExplorerModal>
             <div className="flex gap-6 border-t pt-4 border-primary/10">
               <div>
                 <p className="text-xs text-muted-foreground uppercase tracking-wider font-bold mb-1">XP Earned</p>
@@ -289,8 +319,51 @@ export function DashboardClient() {
             </div>
           </CardContent>
         </Card>
+      </div>
 
-        {/* Dynamic Task Engine */}
+      {/* Master Paths Progression Showcase */}
+      <div className="mt-8 space-y-4">
+         <div className="flex items-center justify-between px-2">
+            <div>
+               <h3 className="text-xl font-bold flex items-center gap-2 text-foreground"><MapIcon className="h-5 w-5 text-primary" /> Master Paths</h3>
+               <p className="text-sm text-muted-foreground">Continue your personalized progression journey.</p>
+            </div>
+            <SubtopicsExplorerModal hierarchy={data.hierarchy}>
+              <Button variant="outline" size="sm" className="font-bold cursor-pointer">
+                 View All Paths <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </SubtopicsExplorerModal>
+         </div>
+         <div className="flex gap-4 overflow-x-auto pb-4 snap-x px-2">
+            {['QA', 'VARC', 'DILR'].map(sec => {
+               // Approximate progress based on practice history
+               const secCount = practiceHistory.filter((h: any) => h.topic?.toLowerCase().includes(sec === 'VARC' ? 'verbal' : sec === 'DILR' ? 'logical' : 'arithmetic')).length;
+               const totalSec = 20; // dummy total
+               const pct = Math.min(100, Math.round((secCount / totalSec) * 100)) || 0;
+               return (
+                  <SubtopicsExplorerModal key={sec} hierarchy={data.hierarchy} defaultSection={sec}>
+                    <Card className="min-w-[280px] snap-center cursor-pointer hover:border-primary/50 transition-colors shadow-sm bg-gradient-to-br from-background to-muted/20">
+                       <CardContent className="p-5">
+                          <div className="flex items-center justify-between mb-4">
+                             <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-inner ${sec === 'QA' ? 'bg-gradient-to-br from-blue-500 to-indigo-600' : sec === 'VARC' ? 'bg-gradient-to-br from-green-500 to-emerald-600' : 'bg-gradient-to-br from-orange-500 to-red-600'}`}>
+                                {sec}
+                             </div>
+                             <Badge variant="secondary" className="font-bold">{pct}% Mastered</Badge>
+                          </div>
+                          <h4 className="font-extrabold text-lg mb-1">{sec} Path</h4>
+                          <p className="text-xs text-muted-foreground mb-4">Complete subtopics to unlock Sectional Checkpoints.</p>
+                          <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                             <div className={`h-full ${sec === 'QA' ? 'bg-indigo-500' : sec === 'VARC' ? 'bg-emerald-500' : 'bg-orange-500'}`} style={{ width: `${pct}%` }} />
+                          </div>
+                       </CardContent>
+                    </Card>
+                  </SubtopicsExplorerModal>
+               );
+            })}
+         </div>
+      </div>
+
+      {/* Dynamic Task Engine */}
         <Card className="col-span-1 md:col-span-4 border-indigo-200 dark:border-indigo-900 bg-indigo-50/30 dark:bg-indigo-950/20 shadow-sm mt-2">
           <CardHeader>
             <CardTitle className="text-xl flex items-center gap-2 text-indigo-700 dark:text-indigo-400">
@@ -472,7 +545,6 @@ export function DashboardClient() {
             )}
           </CardContent>
         </Card>
-      </div>
 
       {/* Preparation Timeline */}
       <div className="mt-8">

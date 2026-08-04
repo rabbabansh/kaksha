@@ -159,8 +159,8 @@ export function DashboardCharts({ hierarchy, totalRawAttempts, totalRawCorrect, 
 
       <div className="h-[400px] w-full relative">
         <div className="absolute inset-0 pointer-events-none flex justify-between px-[15%] pt-4 z-10 opacity-60">
-           <div className="text-red-600 dark:text-red-400 text-2xl" style={{ fontFamily: '"Comic Sans MS", "Caveat", cursive', transform: 'rotate(-4deg)' }}>Danger Zone</div>
-           <div className="text-green-600 dark:text-green-400 text-2xl" style={{ fontFamily: '"Comic Sans MS", "Caveat", cursive', transform: 'rotate(2deg)' }}>Better Zone</div>
+           <div className="text-red-600 dark:text-red-400 text-2xl font-bold">Needs Attention</div>
+           <div className="text-green-600 dark:text-green-400 text-2xl font-bold">Proficient</div>
         </div>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart

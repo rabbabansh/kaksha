@@ -49,12 +49,45 @@ export async function GET(request: NextRequest) {
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
+    
+    // Fetch user progress for this subtopic
+    let userId = (session.user as any).id;
+    if (!userId && session.user.email) {
+      const { PrismaClient } = await import('@prisma/client');
+      const prisma = new PrismaClient();
+      const dbUser = await prisma.user.findUnique({ where: { email: session.user.email }, select: { id: true } });
+      if (dbUser) userId = dbUser.id;
+    }
+    
+    let grade = 'N/A';
+    let masteryLevel = 0;
+    
+    if (userId) {
+      const { PrismaClient } = await import('@prisma/client');
+      const prisma = new PrismaClient();
+      const progress = await prisma.userProgress.findFirst({
+        where: { userId, subtopic }
+      });
+      if (progress) {
+        masteryLevel = Math.round(progress.masteryLevel * 100);
+        if (masteryLevel >= 90) grade = 'S';
+        else if (masteryLevel >= 80) grade = 'A';
+        else if (masteryLevel >= 70) grade = 'B';
+        else if (masteryLevel >= 60) grade = 'C';
+        else if (masteryLevel >= 50) grade = 'D';
+        else grade = 'F';
+      }
+    }
 
     logger.info(`${operation} generated primer`, { correlationId, subtopic });
 
     return NextResponse.json({
       success: true,
-      data: text,
+      data: {
+        primerText: text,
+        masteryLevel,
+        grade
+      },
       correlationId
     });
 

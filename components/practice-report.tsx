@@ -11,6 +11,7 @@ import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import rehypeRaw from 'rehype-raw';
 import 'katex/dist/katex.min.css';
+import { PracticeReportCard } from './practice-report-card';
 
 interface PracticeReportProps {
   topic?: string;
@@ -98,48 +99,13 @@ export function PracticeReport({
       </div>
 
       {/* Main Score Dashboard */}
-      <div className="grid md:grid-cols-3 gap-6">
-        <Card className="md:col-span-2 border-primary/20 bg-primary/5 flex flex-col justify-between">
-          <CardHeader>
-            <CardTitle className="text-xl flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-primary" /> Overall Performance
-            </CardTitle>
-            <CardDescription>Your practice session metrics</CardDescription>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center my-auto pb-8">
-            <div>
-              <p className="text-3xl font-black text-primary">{totalScore}</p>
-              <p className="text-xs text-muted-foreground mt-1 uppercase font-semibold">Kaksha Score</p>
-            </div>
-            <div>
-              <p className="text-3xl font-black text-green-600">{totalCorrect}</p>
-              <p className="text-xs text-muted-foreground mt-1 uppercase font-semibold">Correct</p>
-            </div>
-            <div>
-              <p className="text-3xl font-black text-blue-500">{accuracy}%</p>
-              <p className="text-xs text-muted-foreground mt-1 uppercase font-semibold">Accuracy</p>
-            </div>
-            <div>
-              <p className="text-3xl font-black text-muted-foreground">{formatTime(avgTimeTaken)}</p>
-              <p className="text-xs text-muted-foreground mt-1 uppercase font-semibold">Avg Time / Q</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* CTA Next Steps */}
-        <Card className="border-green-200 dark:border-green-950/40 bg-green-500/5 flex flex-col justify-between p-6">
-          <div className="space-y-4">
-            <h3 className="font-extrabold text-xl text-green-700 dark:text-green-400">Great Job!</h3>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Your XP and Kaksha Mastery have been updated based on your performance. Keep practicing to reach your target!
-            </p>
-          </div>
-          <Button onClick={handleFinish} className="w-full h-12 rounded-xl mt-6 font-bold bg-green-600 hover:bg-green-700 text-white shadow-lg">
-            Return to Dashboard
-            <ArrowRight className="h-5 w-5 ml-2" />
-          </Button>
-        </Card>
-      </div>
+      <PracticeReportCard 
+        title="Kaksha Complete!"
+        totalQuestions={totalAttempted}
+        correctCount={totalCorrect}
+        onNextStep={() => window.location.href = '/dashboard'}
+        nextStepLabel="Return to Dashboard"
+      />
 
       {/* AI Insights Section */}
       <Card className="border-indigo-200 dark:border-indigo-900 bg-indigo-50/50 dark:bg-indigo-950/20">

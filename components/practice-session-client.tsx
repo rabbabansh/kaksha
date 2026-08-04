@@ -10,6 +10,7 @@ import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import rehypeRaw from 'rehype-raw';
 import 'katex/dist/katex.min.css';
+import { PracticeReportCard } from './practice-report-card';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Question = any;
@@ -25,6 +26,8 @@ export function PracticeSessionClient({ subtopic }: PracticeSessionClientProps) 
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [primerText, setPrimerText] = useState('');
+  const [primerGrade, setPrimerGrade] = useState('N/A');
+  const [primerMastery, setPrimerMastery] = useState(0);
   
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -33,6 +36,7 @@ export function PracticeSessionClient({ subtopic }: PracticeSessionClientProps) 
   const [errorMsg, setErrorMsg] = useState('');
   const [score, setScore] = useState(0);
   const [questionStartTime, setQuestionStartTime] = useState<number>(Date.now());
+  const [totalTimeTaken, setTotalTimeTaken] = useState(0);
   
   // AI Tutor States
   const [explanation, setExplanation] = useState<string | null>(null);
@@ -61,7 +65,13 @@ export function PracticeSessionClient({ subtopic }: PracticeSessionClientProps) 
         const pRes = await fetch(`/api/practice/primer?subtopic=${encodeURIComponent(subtopic)}`);
         const pData = await pRes.json();
         if (pData.success && pData.data) {
-          setPrimerText(pData.data);
+          if (typeof pData.data === 'string') {
+            setPrimerText(pData.data);
+          } else {
+            setPrimerText(pData.data.primerText || '');
+            setPrimerGrade(pData.data.grade || 'N/A');
+            setPrimerMastery(pData.data.masteryLevel || 0);
+          }
           setState('primer');
         } else {
           // Fallback if primer fails
@@ -91,21 +101,26 @@ export function PracticeSessionClient({ subtopic }: PracticeSessionClientProps) 
     const question = questions[currentIndex];
     const correct = answer === question.answer;
     const timeTaken = Math.round((Date.now() - questionStartTime) / 1000);
+    setTotalTimeTaken(prev => prev + timeTaken);
     
     setIsCorrect(correct);
     setCorrectAnswer(question.answer);
     if (correct) setScore(s => s + 1);
 
-    fetch('/api/progress/attempt', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        questionId: question.question_id,
-        userAnswer: answer,
-        source: 'practice',
-        timeTaken
-      }),
-    }).catch(console.error);
+    try {
+      await fetch('/api/progress/attempt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          questionId: question.question_id,
+          userAnswer: answer,
+          source: 'practice',
+          timeTaken
+        }),
+      });
+    } catch (e) {
+      console.error(e);
+    }
 
     // Scroll up mechanic: gently scroll the left pane down so the solution is perfectly in view
     setTimeout(() => {
@@ -212,12 +227,14 @@ export function PracticeSessionClient({ subtopic }: PracticeSessionClientProps) 
   }
 
   if (state === 'completed') {
+    const avgTime = questions.length > 0 ? Math.round(totalTimeTaken / questions.length) : 0;
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 text-center">
-        <Trophy className="h-16 w-16 text-yellow-500 mb-4" />
-        <h2 className="text-3xl font-bold mb-2">Kaksha Complete!</h2>
-        <p className="text-muted-foreground mb-8">You scored {score} out of {questions.length}. XP updated!</p>
-        <Button onClick={() => window.location.href='/dashboard'}>Return to Dashboard</Button>
+      <div className="py-12 px-4">
+        <PracticeReportCard
+          totalQuestions={questions.length}
+          correctCount={score}
+          avgTimePerQuestion={avgTime}
+        />
       </div>
     );
   }
@@ -226,12 +243,39 @@ export function PracticeSessionClient({ subtopic }: PracticeSessionClientProps) 
     return (
       <div className="max-w-3xl mx-auto py-10 px-4">
         <Card className="border-2 border-primary/20 shadow-lg">
-          <CardHeader className="bg-primary/5 pb-8">
-            <div className="flex items-center gap-3 mb-2">
-              <BrainCircuit className="h-6 w-6 text-primary" />
-              <CardTitle className="text-2xl">Module Primer: {subtopic}</CardTitle>
+          <CardHeader className="bg-primary/5 pb-8 relative">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="absolute top-4 left-4 text-muted-foreground"
+              onClick={() => window.location.href='/practice/modules'}
+            >
+              ← Back to Modules
+            </Button>
+            <div className="mt-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-3 mb-2">
+                  <BrainCircuit className="h-6 w-6 text-primary" />
+                  <CardTitle className="text-2xl">Module Primer: {subtopic}</CardTitle>
+                </div>
+                <CardDescription>Read this carefully before attempting the sprint.</CardDescription>
+              </div>
+              <div className="flex items-center gap-4 bg-white/50 dark:bg-black/20 p-3 rounded-lg border border-primary/10">
+                <div className="flex flex-col items-center">
+                  <span className="text-xs uppercase font-bold text-muted-foreground">Grade</span>
+                  <span className={`text-2xl font-black ${
+                    primerGrade === 'S' || primerGrade === 'A' ? 'text-green-600' :
+                    primerGrade === 'B' || primerGrade === 'C' ? 'text-yellow-600' :
+                    primerGrade === 'N/A' ? 'text-muted-foreground' : 'text-red-600'
+                  }`}>{primerGrade}</span>
+                </div>
+                <div className="w-px h-10 bg-border"></div>
+                <div className="flex flex-col items-center">
+                  <span className="text-xs uppercase font-bold text-muted-foreground">Mastery</span>
+                  <span className="text-lg font-bold">{primerMastery}%</span>
+                </div>
+              </div>
             </div>
-            <CardDescription>Read this carefully before attempting the sprint.</CardDescription>
           </CardHeader>
           <CardContent className="pt-6 prose dark:prose-invert max-w-none">
             <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>

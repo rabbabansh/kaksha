@@ -65,12 +65,15 @@ export default async function BrowsePage() {
         return a.localeCompare(b);
       });
 
+    const { getUserProgressStats } = await import('@/lib/progress');
+    const stats = userId ? await getUserProgressStats(userId) : { strengths: [], weaknesses: [] };
+
     return (
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
+      <div className="container mx-auto px-4 py-8 max-w-[1400px]">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold mb-2">Browse Questions</h1>
+          <h1 className="text-3xl font-bold mb-2 tracking-tight">Question Bank</h1>
           <p className="text-muted-foreground">
-            Search and filter questions by topic, subtopic, section, and more
+            Search, filter, and practice specific questions to master your weaknesses.
           </p>
         </div>
         <BrowseClient
@@ -79,6 +82,7 @@ export default async function BrowsePage() {
           subtopics={subtopics}
           sections={sections}
           attemptMap={attemptMap}
+          recommended={stats}
         />
       </div>
     );

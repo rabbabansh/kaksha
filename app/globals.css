@@ -134,3 +134,28 @@
     @apply max-w-full h-auto mx-auto my-4 rounded-md shadow-sm;
   }
 }
+
+/* Global Math & Markdown Overrides */
+.katex-display {
+  padding: 1rem 0;
+  margin: 1.5rem 0 !important;
+  font-size: 1.15em;
+  overflow-x: auto;
+  overflow-y: hidden;
+  text-align: left !important; /* Notion style left aligned */
+}
+
+.katex {
+  font-size: 1.1em;
+  padding: 0 0.1em;
+}
+
+.prose p {
+  margin-bottom: 1.2em;
+  line-height: 1.7;
+}
+
+.prose h3, .prose h4 {
+  margin-top: 2em;
+  margin-bottom: 1em;
+}

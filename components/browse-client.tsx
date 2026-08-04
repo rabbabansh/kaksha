@@ -19,9 +19,10 @@ interface BrowseClientProps {
   attemptMap?: Record<string, { isCorrect: boolean; timeTaken: number | null }>;
   testAnswers?: Record<string, string>;
   showSolutionsDefault?: boolean;
+  recommended?: { strengths: string[], weaknesses: string[] };
 }
 
-export function BrowseClient({ questions, topics, subtopics, sections, attemptMap = {}, testAnswers, showSolutionsDefault }: BrowseClientProps) {
+export function BrowseClient({ questions, topics, subtopics, sections, attemptMap = {}, testAnswers, showSolutionsDefault, recommended }: BrowseClientProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTopic, setSelectedTopic] = useState<string>('all');
   const [selectedSubtopic, setSelectedSubtopic] = useState<string>('all');
@@ -133,14 +134,21 @@ export function BrowseClient({ questions, topics, subtopics, sections, attemptMa
     );
   }, [subtopics, selectedTopic, questions]);
 
+  const handleRandomQuestion = () => {
+    if (filteredQuestions.length > 0) {
+      const randomIndex = Math.floor(Math.random() * filteredQuestions.length);
+      setSelectedQuestion(filteredQuestions[randomIndex]);
+    }
+  };
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 lg:grid-cols-5 xl:grid-cols-6 gap-6">
       {/* Filters Sidebar */}
-      <div className="lg:col-span-1">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Filter className="h-5 w-5" />
+      <div className="lg:col-span-1 xl:col-span-1">
+        <Card className="sticky top-6">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Filter className="h-4 w-4" />
               Filters
             </CardTitle>
           </CardHeader>
@@ -238,15 +246,24 @@ export function BrowseClient({ questions, topics, subtopics, sections, attemptMa
             >
               Clear Filters
             </Button>
+            
+            <Button
+              variant="default"
+              className="w-full mt-4 bg-indigo-600 hover:bg-indigo-700 text-white"
+              onClick={handleRandomQuestion}
+              disabled={filteredQuestions.length === 0}
+            >
+              Surprise Me (Random)
+            </Button>
           </CardContent>
         </Card>
       </div>
 
       {/* Questions List and Display */}
-      <div className="lg:col-span-3">
-        <Card>
-          <CardHeader>
-            <CardTitle>
+      <div className="lg:col-span-3 xl:col-span-4">
+        <Card className="h-full border-primary/10 shadow-sm">
+          <CardHeader className="pb-3 border-b">
+            <CardTitle className="text-xl">
               {filteredQuestions.length} Question{filteredQuestions.length !== 1 ? 's' : ''} Found
             </CardTitle>
           </CardHeader>
@@ -344,6 +361,55 @@ export function BrowseClient({ questions, topics, subtopics, sections, attemptMa
                 )}
               </div>
             )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Recommended & Daily Tasks Sidebar */}
+      <div className="lg:col-span-1 xl:col-span-1 space-y-6">
+        <Card className="border-green-500/20 bg-green-50/30 dark:bg-green-900/10">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm uppercase tracking-wider text-green-700 dark:text-green-400 font-bold flex items-center gap-2">
+              <CheckCircle className="h-4 w-4" /> Recommended
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-xs text-muted-foreground">Focus on these weak areas to improve your score rapidly:</p>
+            {recommended?.weaknesses && recommended.weaknesses.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {recommended.weaknesses.slice(0, 5).map(w => (
+                  <Button 
+                    key={w} 
+                    variant="outline" 
+                    size="sm" 
+                    className="text-[10px] h-7 px-2 border-red-200 hover:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-700 dark:text-red-400"
+                    onClick={() => {
+                       setSelectedSubtopic(w);
+                       setSelectedStatus('all');
+                       setSearchQuery('');
+                    }}
+                  >
+                    {w}
+                  </Button>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs italic text-muted-foreground">Keep practicing to generate targeted recommendations!</p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm uppercase tracking-wider font-bold">Quick Links</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <Button variant="ghost" className="w-full justify-start text-sm" onClick={() => window.location.href='/dashboard'}>
+              View Dashboard Stats
+            </Button>
+            <Button variant="ghost" className="w-full justify-start text-sm" onClick={() => window.location.href='/practice/modules'}>
+              Master Paths
+            </Button>
           </CardContent>
         </Card>
       </div>

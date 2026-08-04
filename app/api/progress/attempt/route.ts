@@ -83,8 +83,10 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Removed updateUserProgress cascade for performance. 
-    // It will be batched via /api/progress/session/complete instead.
+    // Restore updateUserProgress cascade for immediate consistency. 
+    // This ensures Daily Task tracking and Kaksha score stays up to date 
+    // even if session/complete is missed due to a race condition.
+    await updateUserProgress(userId, questionId, isCorrect, source);
 
     logger.info(`${operation} completed successfully`, {
       operation,

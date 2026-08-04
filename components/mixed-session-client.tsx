@@ -260,16 +260,20 @@ export function MixedSessionClient({ topic }: { topic?: string }) {
       payload: { answer, isCorrect: correct, correctAnswer: actualAnswer, timeTaken, question }
     });
 
-    fetch('/api/progress/attempt', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        questionId: question.question_id,
-        userAnswer: answer,
-        source: 'practice',
-        timeTaken
-      }),
-    }).catch(console.error);
+    try {
+      await fetch('/api/progress/attempt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          questionId: question.question_id,
+          userAnswer: answer,
+          source: 'practice',
+          timeTaken
+        }),
+      });
+    } catch (e) {
+      console.error(e);
+    }
 
     setTimeout(() => {
       if (scrollRef.current) {
