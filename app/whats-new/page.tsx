@@ -22,7 +22,8 @@ import {
   Flame,
   RotateCcw,
   CheckCircle2,
-  SlidersHorizontal
+  SlidersHorizontal,
+  BookOpen
 } from 'lucide-react';
 
 export default function WhatsNewPage() {
