@@ -64,31 +64,31 @@ export default function WhatsNewPage() {
 
       <div className="max-w-4xl mx-auto px-6 mt-8 space-y-16">
         
-        {/* Kaksha v1.4 */}
+        {/* Kaksha v1.4.1 */}
         <div className="relative animate-in slide-in-from-bottom-12 fade-in duration-1000 delay-300">
           <div className="absolute top-0 bottom-0 left-8 md:left-1/2 w-0.5 bg-border -translate-x-1/2 hidden md:block" />
           
           <div className="flex items-center justify-center mb-12 relative z-10 hidden md:flex">
              <div className="bg-primary text-primary-foreground font-black px-6 py-2 rounded-full border-4 border-background shadow-sm">
-                Kaksha v1.4 (Latest)
+                Kaksha v1.4.1 (Latest)
              </div>
           </div>
           <div className="md:hidden mb-8">
-             <h2 className="text-2xl font-black text-primary">Kaksha v1.4 <span className="text-sm font-medium text-muted-foreground">(Latest)</span></h2>
+             <h2 className="text-2xl font-black text-primary">Kaksha v1.4.1 <span className="text-sm font-medium text-muted-foreground">(Latest)</span></h2>
           </div>
 
           <div className="space-y-6">
             <Card className="border-primary/40 bg-gradient-to-br from-primary/10 to-transparent shadow-md transform transition-all hover:-translate-y-1 hover:shadow-xl">
               <CardContent className="p-6 md:p-8 flex flex-col md:flex-row gap-6 items-center md:items-start">
                 <div className="bg-primary/20 p-4 rounded-2xl shrink-0">
-                  <Calendar className="w-8 h-8 text-primary" />
+                  <BookOpen className="w-8 h-8 text-primary" />
                 </div>
                 <div>
                   <h3 className="text-2xl font-black mb-2 flex items-center gap-2">
-                    Consistency Heatmap & Daily Tasks Explorer <span className="bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded uppercase font-bold tracking-wider">New</span>
+                    Daily RC Passage & Daily DILR Caselet Pillars <span className="bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded uppercase font-bold tracking-wider">New</span>
                   </h3>
                   <p className="text-muted-foreground text-lg">
-                    Track your preparation journey with our GitHub-style consistency calendar. Click on any day to inspect exactly which tests and practice sprints you attempted, check your daily target completion, and reattempt any missed tasks!
+                    Every single day, Kaksha serves a fresh, deterministic CAT Reading Comprehension passage and DILR multi-question caselet. Built with authentic 2-pane CBT split-screens, real-time feedback, and streak tracking!
                   </p>
                 </div>
               </CardContent>
@@ -97,31 +97,31 @@ export default function WhatsNewPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Card className="hover:shadow-md transition-shadow">
                 <CardHeader>
-                  <div className="bg-orange-500/10 w-12 h-12 rounded-xl flex items-center justify-center mb-4">
-                    <Flame className="w-6 h-6 text-orange-500" />
+                  <div className="bg-indigo-500/10 w-12 h-12 rounded-xl flex items-center justify-center mb-4">
+                    <Award className="w-6 h-6 text-indigo-500" />
                   </div>
-                  <CardTitle>Streak Engine & Gamification</CardTitle>
-                  <CardDescription className="text-base mt-2">Stay motivated with active Current and Longest Streak tracking on your dashboard. Consistency is key to cracking CAT!</CardDescription>
+                  <CardTitle>Unified Hero Command Center</CardTitle>
+                  <CardDescription className="text-base mt-2">Consolidated your Global Mastery Profile, Estimated Percentile, Streaks, XP, and 140-day Activity Heatmap into one cohesive mission control module.</CardDescription>
                 </CardHeader>
               </Card>
 
               <Card className="hover:shadow-md transition-shadow">
                 <CardHeader>
                   <div className="bg-emerald-500/10 w-12 h-12 rounded-xl flex items-center justify-center mb-4">
-                    <CheckCircle2 className="w-6 h-6 text-emerald-500" />
+                    <TrendingUp className="w-6 h-6 text-emerald-500" />
                   </div>
-                  <CardTitle>Historical Dailies & 1-Click Retries</CardTitle>
-                  <CardDescription className="text-base mt-2">Missed a daily challenge or want to retry a weak area? The Day Detail panel lets you launch targeted practice sessions and review past sprints instantly.</CardDescription>
+                  <CardTitle>Adaptive Preparation Roadmap</CardTitle>
+                  <CardDescription className="text-base mt-2">Dynamic CAT countdown, live weekly question velocity gauge, and milestone phase transitions that adapt automatically to your proficiency.</CardDescription>
                 </CardHeader>
               </Card>
 
               <Card className="hover:shadow-md transition-shadow md:col-span-2">
                 <CardHeader>
-                  <div className="bg-indigo-500/10 w-12 h-12 rounded-xl flex items-center justify-center mb-4">
-                    <SlidersHorizontal className="w-6 h-6 text-indigo-500" />
+                  <div className="bg-purple-500/10 w-12 h-12 rounded-xl flex items-center justify-center mb-4">
+                    <Layers className="w-6 h-6 text-purple-500" />
                   </div>
-                  <CardTitle>DRY Refactored Component & Service Layer</CardTitle>
-                  <CardDescription className="text-base mt-2">Standardized reusable UI components across Practice Bank, Mock Tests, and Review Sessions with unified Markdown/LaTeX rendering, custom filter bars, and centralized database service utilities.</CardDescription>
+                  <CardTitle>Diagnostics & Competency Hub</CardTitle>
+                  <CardDescription className="text-base mt-2">Combined granular QA/VARC/DILR subtopic rankings with interactive performance bar charts and accuracy drill-downs in a seamless tabbed workspace.</CardDescription>
                 </CardHeader>
               </Card>
             </div>
