@@ -4,22 +4,17 @@ import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { ErrorCode, generateCorrelationId } from '@/lib/action-response';
 
+import { getAuthenticatedUserId } from '@/lib/services/session-service';
+
 export async function GET(request: NextRequest) {
   const correlationId = generateCorrelationId();
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ success: false, error: 'Unauthorized', code: ErrorCode.UNAUTHORIZED }, { status: 401 });
+    const userId = await getAuthenticatedUserId();
+    
+    if (!userId) {
+      return NextResponse.json({ success: false, error: 'Unauthorized or User ID not found', code: ErrorCode.UNAUTHORIZED }, { status: 401 });
     }
 
-    let userId = (session.user as { id?: string })?.id;
-    if (!userId && session.user?.email) {
-      const dbUser = await prisma.user.findUnique({ where: { email: session.user.email }, select: { id: true } });
-      if (dbUser) userId = dbUser.id;
-    }
-    if (!userId) {
-      return NextResponse.json({ success: false, error: 'User ID not found' }, { status: 400 });
-    }
 
     const { searchParams } = new URL(request.url);
     const year = searchParams.get('year');

@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { ProgressCalendar } from './progress-calendar';
 import { SubtopicsExplorerModal } from './subtopics-explorer-modal';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -56,7 +57,7 @@ export function DashboardClient() {
   }
 
   useEffect(() => {
-    const hasSeenWhatsNew = localStorage.getItem('kaksha_whats_new_v1.2');
+    const hasSeenWhatsNew = localStorage.getItem('kaksha_whats_new_v1.4');
     console.log('DashboardClient useEffect running', { hasSeenWhatsNew });
     if (!hasSeenWhatsNew) {
       console.log('Redirecting to whats-new');
@@ -279,11 +280,22 @@ export function DashboardClient() {
                 <Layers className="w-4 h-4 mr-2" /> Explore Full Hierarchy & Scores
               </Button>
             </SubtopicsExplorerModal>
-            <div className="flex gap-6 border-t pt-4 border-primary/10">
+            <div className="flex gap-6 border-t pt-4 border-primary/10 flex-wrap">
               <div>
                 <p className="text-xs text-muted-foreground uppercase tracking-wider font-bold mb-1">XP Earned</p>
                 <p className="text-xl font-black text-yellow-500 flex items-center gap-1"><Star className="h-5 w-5 fill-yellow-500" /> {data.xp}</p>
               </div>
+              
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider font-bold mb-1">Current Streak</p>
+                <p className="text-xl font-black text-orange-500 flex items-center gap-1">🔥 {data.currentStreak || 0} Days</p>
+              </div>
+
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider font-bold mb-1">Longest Streak</p>
+                <p className="text-xl font-black text-orange-700 dark:text-orange-400 flex items-center gap-1">🏆 {data.longestStreak || 0} Days</p>
+              </div>
+
               <div>
                 <p className="text-xs text-muted-foreground uppercase tracking-wider font-bold mb-1">Badges</p>
                 <Dialog>
@@ -516,6 +528,11 @@ export function DashboardClient() {
           )}
         </CardContent>
       </Card>
+
+      {/* Calendar Heatmap */}
+      <div className="mt-8 mb-2">
+        <ProgressCalendar historyData={historyData} weaknesses={data?.weaknesses || []} />
+      </div>
 
       {/* History & Review Hub */}
       <Card className="col-span-1 md:col-span-4 mt-2 shadow-sm">

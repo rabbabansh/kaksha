@@ -6,21 +6,15 @@ import { updateUserProgress } from '@/lib/progress';
 import { logger, createTimer } from '@/lib/logger';
 import { ErrorCode, generateCorrelationId } from '@/lib/action-response';
 
+import { getAuthenticatedUserId } from '@/lib/services/session-service';
+
 export async function POST(request: NextRequest) {
   const correlationId = generateCorrelationId();
   const timer = createTimer();
   const operation = 'record_progress_attempt';
 
   try {
-    const session = await getServerSession(authOptions);
-    let userId = (session?.user as { id?: string })?.id;
-    if (!userId && session?.user?.email) {
-      const dbUser = await prisma.user.findUnique({
-        where: { email: session.user.email },
-        select: { id: true },
-      });
-      if (dbUser) userId = dbUser.id;
-    }
+    let userId = await getAuthenticatedUserId();
 
     if (!userId) {
       // Fallback for MVP testing if no session

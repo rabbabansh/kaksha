@@ -229,12 +229,83 @@ export async function GET(request: NextRequest) {
     const totalRawCorrect = rawAttemptsAgg.reduce((acc, curr) => acc + (Number(curr.rawCorrect) || 0), 0);
     const totalRawWrong = totalRawAttempts - totalRawCorrect;
 
+    // Calculate Streaks
+    const attemptDatesRaw = await prisma.questionAttempt.findMany({
+      where: { userId },
+      select: { attemptedAt: true }
+    });
+    const sessionDatesRaw = await prisma.session.findMany({
+      where: { userId },
+      select: { createdAt: true, updatedAt: true }
+    });
+
+    const uniqueDates = Array.from(new Set([
+      ...attemptDatesRaw.map(r => r.attemptedAt.toISOString().split('T')[0]),
+      ...sessionDatesRaw.map(r => r.createdAt.toISOString().split('T')[0]),
+      ...sessionDatesRaw.map(r => r.updatedAt.toISOString().split('T')[0])
+    ])).sort().reverse();
+
+    let currentStreak = 0;
+    let longestStreak = 0;
+    
+    if (uniqueDates.length > 0) {
+      // Create a Date object for today in UTC to match toISOString date parts
+      const todayDate = new Date();
+      const todayStr = todayDate.toISOString().split('T')[0];
+      
+      const yesterdayDate = new Date(todayDate);
+      yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+      const yesterdayStr = yesterdayDate.toISOString().split('T')[0];
+
+      // Current Streak
+      let dateToCheck = new Date(uniqueDates[0]);
+      let streakDateStr = uniqueDates[0];
+      
+      // If the latest activity is today or yesterday, they have an active streak
+      if (streakDateStr === todayStr || streakDateStr === yesterdayStr) {
+        let tempCurrent = 1;
+        let currDateObj = new Date(streakDateStr);
+        
+        for (let i = 1; i < uniqueDates.length; i++) {
+          const nextDateObj = new Date(uniqueDates[i]);
+          const diffDays = Math.round((currDateObj.getTime() - nextDateObj.getTime()) / (1000 * 3600 * 24));
+          if (diffDays === 1) {
+            tempCurrent++;
+            currDateObj = nextDateObj;
+          } else {
+            break; // Streak broken
+          }
+        }
+        currentStreak = tempCurrent;
+      }
+
+      // Longest Streak
+      let maxTemp = 1;
+      let currTemp = 1;
+      let prevDateObj = new Date(uniqueDates[0]);
+
+      for (let i = 1; i < uniqueDates.length; i++) {
+        const nextDateObj = new Date(uniqueDates[i]);
+        const diffDays = Math.round((prevDateObj.getTime() - nextDateObj.getTime()) / (1000 * 3600 * 24));
+        if (diffDays === 1) {
+          currTemp++;
+        } else {
+          currTemp = 1;
+        }
+        if (currTemp > maxTemp) maxTemp = currTemp;
+        prevDateObj = nextDateObj;
+      }
+      longestStreak = maxTemp;
+    }
+
     return NextResponse.json({
       success: true,
       data: {
         diagnosticCompleted,
         overallScore,
         hierarchy,
+        currentStreak,
+        longestStreak,
         strengths: stats.strengths || [],
         weaknesses: stats.weaknesses || [],
         xp: profile?.xp || 0,

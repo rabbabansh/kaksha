@@ -8,32 +8,19 @@ import { getUserProgressStats } from '@/lib/progress';
 import { ErrorCode, generateCorrelationId } from '@/lib/action-response';
 import { logger } from '@/lib/logger';
 
+import { getAuthenticatedUserId } from '@/lib/services/session-service';
+
 export async function GET(request: NextRequest) {
   const correlationId = generateCorrelationId();
   const operation = 'generate_mixed_module';
 
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized', code: ErrorCode.UNAUTHORIZED, correlationId },
-        { status: 401 }
-      );
-    }
-
-    let userId = (session.user as { id?: string })?.id;
-    if (!userId && session.user?.email) {
-      const dbUser = await prisma.user.findUnique({
-        where: { email: session.user.email },
-        select: { id: true },
-      });
-      if (dbUser) userId = dbUser.id;
-    }
+    const userId = await getAuthenticatedUserId();
 
     if (!userId) {
       return NextResponse.json(
-        { success: false, error: 'User ID not found', code: ErrorCode.NOT_FOUND, correlationId },
-        { status: 400 }
+        { success: false, error: 'Unauthorized or User ID not found', code: ErrorCode.UNAUTHORIZED, correlationId },
+        { status: 401 }
       );
     }
 
