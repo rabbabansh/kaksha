@@ -22,6 +22,7 @@ export function PracticeSessionClient({ subtopic }: PracticeSessionClientProps) 
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [primerText, setPrimerText] = useState('');
+  const [attemptResults, setAttemptResults] = useState<('correct' | 'incorrect' | null)[]>([]);
 
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -85,6 +86,12 @@ export function PracticeSessionClient({ subtopic }: PracticeSessionClientProps) 
     setIsCorrect(correct);
     setCorrectAnswer(question.answer);
     if (correct) setScore(s => s + 1);
+
+    setAttemptResults(prev => {
+      const newResults = [...prev];
+      newResults[currentIndex] = correct ? 'correct' : 'incorrect';
+      return newResults;
+    });
 
     try {
       await fetch('/api/progress/attempt', {
@@ -332,8 +339,18 @@ export function PracticeSessionClient({ subtopic }: PracticeSessionClientProps) 
                 <div className="grid grid-cols-5 gap-2">
                   {questions.map((q, idx) => {
                     let stateClass = "bg-muted text-muted-foreground border-transparent"; // Unattempted
-                    if (idx === currentIndex) stateClass = "bg-primary text-primary-foreground border-primary";
-                    else if (idx < currentIndex) stateClass = "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300";
+                    
+                    if (attemptResults[idx] === 'correct') {
+                      stateClass = idx === currentIndex 
+                        ? "bg-green-600 text-white border-green-700 dark:bg-green-600 dark:border-green-700 shadow-[0_0_10px_rgba(22,163,74,0.4)]" 
+                        : "bg-green-100 text-green-700 border-green-300 dark:bg-green-900 dark:text-green-300";
+                    } else if (attemptResults[idx] === 'incorrect') {
+                      stateClass = idx === currentIndex 
+                        ? "bg-red-600 text-white border-red-700 dark:bg-red-600 dark:border-red-700 shadow-[0_0_10px_rgba(220,38,38,0.4)]" 
+                        : "bg-red-100 text-red-700 border-red-300 dark:bg-red-900 dark:text-red-300";
+                    } else if (idx === currentIndex) {
+                      stateClass = "bg-primary text-primary-foreground border-primary";
+                    }
 
                     return (
                       <div key={idx} className={`h-10 rounded-md border flex items-center justify-center text-xs font-bold ${stateClass}`}>

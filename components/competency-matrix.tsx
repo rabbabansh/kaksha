@@ -65,6 +65,7 @@ export function CompetencyMatrix({ hierarchy }: CompetencyMatrixProps) {
 
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [expandedTopics, setExpandedTopics] = useState<Record<string, boolean>>({});
+  const [showAllRankings, setShowAllRankings] = useState<boolean>(false);
 
   const toggleTopic = (topicName: string) => {
     setExpandedTopics(prev => ({
@@ -350,95 +351,114 @@ export function CompetencyMatrix({ hierarchy }: CompetencyMatrixProps) {
             </div>
           </div>
 
-          <div className="space-y-3">
-            {filteredTopics.map(topic => {
-              const isExpanded = expandedTopics[topic.name] || Boolean(searchQuery.trim());
+          <div className={`relative ${showAllRankings || searchQuery.trim() ? '' : 'max-h-[300px] overflow-hidden'}`}>
+            <div className="space-y-3">
+              {filteredTopics.map(topic => {
+                const isExpanded = expandedTopics[topic.name] || Boolean(searchQuery.trim());
 
-              return (
-                <div 
-                  key={topic.name}
-                  className="rounded-xl border border-border/80 overflow-hidden bg-card transition-shadow hover:shadow-sm"
-                >
-                  {/* Topic Header Row */}
+                return (
                   <div 
-                    onClick={() => toggleTopic(topic.name)}
-                    className="p-3.5 sm:p-4 flex items-center justify-between gap-3 cursor-pointer bg-muted/20 hover:bg-muted/40 transition-colors select-none"
-                    role="button"
-                    tabIndex={0}
-                    aria-expanded={isExpanded}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        toggleTopic(topic.name);
-                      }
-                    }}
+                    key={topic.name}
+                    className="rounded-xl border border-border/80 overflow-hidden bg-card transition-shadow hover:shadow-sm"
                   >
-                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                      <div className="p-1 rounded-md text-muted-foreground shrink-0">
-                        {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <h5 className="font-bold text-sm text-foreground truncate">{topic.name}</h5>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {topic.subtopics.length} Subtopics • {topic.rawAttempts} questions attempted
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-xs font-bold text-muted-foreground hidden sm:inline">Module Score</span>
-                      <Badge variant="outline" className={`font-extrabold text-xs px-2.5 py-1 shrink-0 whitespace-nowrap ${getScoreBadgeClass(topic.score)}`}>
-                        {topic.score} / 100
-                      </Badge>
-                    </div>
-                  </div>
-
-                  {/* Expandable Subtopics List */}
-                  {isExpanded && (
-                    <div className="p-2 sm:p-3 bg-muted/10 border-t border-border/50 space-y-2">
-                      {topic.subtopics.map(sub => (
-                        <div 
-                          key={sub.name}
-                          className="p-2.5 sm:p-3 rounded-lg bg-background border border-border/60 flex items-center justify-between gap-2 text-xs"
-                        >
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="font-semibold text-foreground truncate">{sub.name}</span>
-                              {sub.rawAttempts > 0 ? (
-                                <Badge variant="secondary" className="text-[10px] font-bold px-1.5 py-0 shrink-0">
-                                  {sub.accuracy}% Acc
-                                </Badge>
-                              ) : (
-                                <Badge variant="outline" className="text-[10px] text-muted-foreground px-1.5 py-0 shrink-0">
-                                  Unattempted
-                                </Badge>
-                              )}
-                            </div>
-                            <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
-                              {sub.rawAttempts} attempted • {sub.rawCorrect} correct
-                            </p>
-                          </div>
-
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className="font-bold text-xs shrink-0">
-                              {sub.score} <span className="text-[10px] text-muted-foreground font-normal">pts</span>
-                            </span>
-
-                            <Link href={`/practice/modules/${encodeURIComponent(sub.name)}`}>
-                              <Button size="sm" variant="outline" className="h-7 px-2 text-xs font-bold hover:bg-primary hover:text-primary-foreground shrink-0">
-                                Practice <ArrowRight className="h-3 w-3 ml-1" />
-                              </Button>
-                            </Link>
-                          </div>
+                    {/* Topic Header Row */}
+                    <div 
+                      onClick={() => toggleTopic(topic.name)}
+                      className="p-3.5 sm:p-4 flex items-center justify-between gap-3 cursor-pointer bg-muted/20 hover:bg-muted/40 transition-colors select-none"
+                      role="button"
+                      tabIndex={0}
+                      aria-expanded={isExpanded}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          toggleTopic(topic.name);
+                        }
+                      }}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        <div className="p-1 rounded-md text-muted-foreground shrink-0">
+                          {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                         </div>
-                      ))}
-                    </div>
-                  )}
+                        <div className="min-w-0 flex-1">
+                          <h5 className="font-bold text-sm text-foreground truncate">{topic.name}</h5>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {topic.subtopics.length} Subtopics • {topic.rawAttempts} questions attempted
+                          </p>
+                        </div>
+                      </div>
 
-                </div>
-              );
-            })}
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-xs font-bold text-muted-foreground hidden sm:inline">Module Score</span>
+                        <Badge variant="outline" className={`font-extrabold text-xs px-2.5 py-1 shrink-0 whitespace-nowrap ${getScoreBadgeClass(topic.score)}`}>
+                          {topic.score} / 100
+                        </Badge>
+                      </div>
+                    </div>
+
+                    {/* Expandable Subtopics List */}
+                    {isExpanded && (
+                      <div className="p-2 sm:p-3 bg-muted/10 border-t border-border/50 space-y-2">
+                        {topic.subtopics.map(sub => (
+                          <div 
+                            key={sub.name}
+                            className="p-2.5 sm:p-3 rounded-lg bg-background border border-border/60 flex items-center justify-between gap-2 text-xs"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="font-semibold text-foreground truncate">{sub.name}</span>
+                                {sub.rawAttempts > 0 ? (
+                                  <Badge variant="secondary" className="text-[10px] font-bold px-1.5 py-0 shrink-0">
+                                    {sub.accuracy}% Acc
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="text-[10px] text-muted-foreground px-1.5 py-0 shrink-0">
+                                    Unattempted
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                                {sub.rawAttempts} attempted • {sub.rawCorrect} correct
+                              </p>
+                            </div>
+
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="font-bold text-xs shrink-0">
+                                {sub.score} <span className="text-[10px] text-muted-foreground font-normal">pts</span>
+                              </span>
+
+                              <Link href={`/practice/modules/${encodeURIComponent(sub.name)}`}>
+                                <Button size="sm" variant="outline" className="h-7 px-2 text-xs font-bold hover:bg-primary hover:text-primary-foreground shrink-0">
+                                  Practice <ArrowRight className="h-3 w-3 ml-1" />
+                                </Button>
+                              </Link>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                  </div>
+                );
+              })}
+            </div>
+            {!(showAllRankings || searchQuery.trim()) && (
+              <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-card via-card/80 to-transparent pointer-events-none" />
+            )}
           </div>
+          
+          {!searchQuery.trim() && (
+            <div className="flex justify-center pt-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setShowAllRankings(!showAllRankings)} 
+                className="font-bold text-xs bg-background"
+              >
+                {showAllRankings ? 'Hide Detailed Rankings' : 'Show All Detailed Rankings'} 
+                {showAllRankings ? <ChevronUp className="h-4 w-4 ml-1" /> : <ChevronDown className="h-4 w-4 ml-1" />}
+              </Button>
+            </div>
+          )}
         </div>
 
       </CardContent>

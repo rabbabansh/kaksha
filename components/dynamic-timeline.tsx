@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
@@ -13,9 +13,10 @@ import {
   CheckCircle2, 
   Zap, 
   ArrowRight,
-  TrendingUp,
-  Award,
-  Layers
+  ChevronDown,
+  ChevronUp,
+  Lock,
+  BookOpen
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -41,6 +42,8 @@ export function DynamicTimeline({
   strengths = [], 
   weaknesses = [] 
 }: DynamicTimelineProps) {
+  const [expandedPhase, setExpandedPhase] = useState<number | null>(null);
+
   const { daysRemaining, examDate, monthsRemaining, phaseNumber, phaseTitle, phaseDesc } = useMemo(() => {
     const examYear = targetExamYear || '2026';
     const date = CAT_DATES[examYear] || new Date(`${examYear}-11-29T00:00:00`);
@@ -48,7 +51,6 @@ export function DynamicTimeline({
     const days = Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
     const months = Math.max(0, Math.ceil(days / 30));
 
-    // Dynamic phase calculation based on actual mastery and attempts
     let pNum = 1;
     let pTitle = 'Phase 1: Foundation & Core Concepts';
     let pDesc = 'Focus on eliminating high-frequency errors in basic subtopics.';
@@ -63,25 +65,50 @@ export function DynamicTimeline({
       pDesc = 'Master tricky permutations, DILR multi-variable sets, and speed up RC comprehension.';
     }
 
-    return {
-      daysRemaining: days,
-      examDate: date,
-      monthsRemaining: months,
-      phaseNumber: pNum,
-      phaseTitle: pTitle,
-      phaseDesc: pDesc
-    };
+    return { daysRemaining: days, examDate: date, monthsRemaining: months, phaseNumber: pNum, phaseTitle: pTitle, phaseDesc: pDesc };
   }, [targetExamYear, overallScore, totalAttempts]);
 
-  // Weekly question target calculation (e.g. 50 questions/week)
   const weeklyTarget = 50;
   const weeklyCompleted = Math.min(weeklyTarget, totalAttempts % 100);
   const weeklyPercent = Math.round((weeklyCompleted / weeklyTarget) * 100);
 
   const cleanWeakness = weaknesses[0]?.split(' > ').pop() || 'Arithmetic Concepts';
 
+  const phases = [
+    {
+      num: 1,
+      title: 'Foundation Mastery',
+      desc: 'Arithmetic, Algebra basics, Reading & Logic drills.',
+      details: [
+        'Master the fundamental concepts across QA, VARC, and DILR.',
+        'Focus on untimed accuracy to build a strong base.',
+        'Target 90%+ accuracy in basic foundational subtopics before moving on.'
+      ]
+    },
+    {
+      num: 2,
+      title: 'Sectional Stamina',
+      desc: 'Timed sectionals, 40-min sprints & mixed arena.',
+      details: [
+        'Shift focus to timed practice using the Mixed Arena.',
+        'Complete 40-minute sectional tests to build mental stamina.',
+        'Identify and drill specific weak areas dynamically.'
+      ]
+    },
+    {
+      num: 3,
+      title: 'PYQ Mocks & Calibrations',
+      desc: 'Full CBT simulations, percentile optimization & strategy.',
+      details: [
+        'Take full-length weekly mock tests to simulate the real exam.',
+        'Analyze mock reports deeply to refine question selection strategy.',
+        'Focus strictly on high-yield topics and speed optimization.'
+      ]
+    }
+  ];
+
   return (
-    <Card className="col-span-1 md:col-span-4 shadow-sm border-border/80 overflow-hidden bg-card">
+    <Card className="shadow-sm border-border/80 overflow-hidden bg-card">
       <CardHeader className="pb-4 bg-muted/20 border-b border-border/40">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -152,10 +179,10 @@ export function DynamicTimeline({
           </div>
 
           {/* Weekly Pacing Velocity Gauge */}
-          <div className="md:col-span-5 space-y-3 bg-card p-4 rounded-2xl border border-border/80 shadow-sm">
+          <div className="md:col-span-5 space-y-3 bg-background p-4 rounded-2xl border border-border/80 shadow-sm">
             <div className="flex items-center justify-between text-xs font-bold">
               <span className="text-muted-foreground uppercase tracking-wider text-[10px] flex items-center gap-1">
-                <Zap className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" /> Weekly Question Velocity
+                <Zap className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" /> Weekly Velocity
               </span>
               <span className="text-foreground">{weeklyPercent}%</span>
             </div>
@@ -163,78 +190,72 @@ export function DynamicTimeline({
             <Progress value={weeklyPercent} className="h-2 rounded-full" />
 
             <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>{weeklyCompleted} / {weeklyTarget} Solved this week</span>
+              <span>{weeklyCompleted} / {weeklyTarget} Solved</span>
               <span className="font-bold text-primary">{Math.max(0, weeklyTarget - weeklyCompleted)} to goal</span>
             </div>
           </div>
 
         </div>
 
-        {/* 3 Step Stage Progression Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-          
-          {/* Phase 1 */}
-          <div className={`p-4 rounded-2xl border transition-all ${
-            phaseNumber === 1 
-              ? 'bg-primary/5 border-primary/40 shadow-sm ring-1 ring-primary/20' 
-              : phaseNumber > 1 
-                ? 'bg-emerald-500/5 border-emerald-500/30' 
-                : 'bg-muted/20 border-border/60 opacity-60'
-          }`}>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Phase 1</span>
-              {phaseNumber > 1 ? (
-                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-              ) : phaseNumber === 1 ? (
-                <Badge variant="outline" className="text-[9px] font-extrabold text-primary border-primary/30">CURRENT</Badge>
-              ) : (
-                <span className="text-xs text-muted-foreground">Locked</span>
-              )}
-            </div>
-            <h5 className="font-bold text-sm text-foreground">Foundation Mastery</h5>
-            <p className="text-xs text-muted-foreground mt-1">Arithmetic, Algebra basics, Reading & Logic drills.</p>
+        {/* Interactive Stages Grid */}
+        <div className="space-y-4 pt-2">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-bold flex items-center gap-1.5">
+              <Target className="w-4 h-4 text-primary" /> Roadmap Phases
+            </h4>
+            <span className="text-xs text-muted-foreground">Click a phase to view its goals</span>
           </div>
 
-          {/* Phase 2 */}
-          <div className={`p-4 rounded-2xl border transition-all ${
-            phaseNumber === 2 
-              ? 'bg-primary/5 border-primary/40 shadow-sm ring-1 ring-primary/20' 
-              : phaseNumber > 2 
-                ? 'bg-emerald-500/5 border-emerald-500/30' 
-                : 'bg-muted/20 border-border/60 opacity-60'
-          }`}>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Phase 2</span>
-              {phaseNumber > 2 ? (
-                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-              ) : phaseNumber === 2 ? (
-                <Badge variant="outline" className="text-[9px] font-extrabold text-primary border-primary/30">CURRENT</Badge>
-              ) : (
-                <span className="text-xs text-muted-foreground">Upcoming</span>
-              )}
-            </div>
-            <h5 className="font-bold text-sm text-foreground">Sectional Stamina</h5>
-            <p className="text-xs text-muted-foreground mt-1">Timed sectionals, 40-min sprints & mixed arena.</p>
-          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {phases.map((phase) => {
+              const isCurrent = phaseNumber === phase.num;
+              const isCompleted = phaseNumber > phase.num;
+              const isLocked = phaseNumber < phase.num;
+              const isExpanded = expandedPhase === phase.num;
 
-          {/* Phase 3 */}
-          <div className={`p-4 rounded-2xl border transition-all ${
-            phaseNumber === 3 
-              ? 'bg-primary/5 border-primary/40 shadow-sm ring-1 ring-primary/20' 
-              : 'bg-muted/20 border-border/60 opacity-60'
-          }`}>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Phase 3</span>
-              {phaseNumber === 3 ? (
-                <Badge variant="outline" className="text-[9px] font-extrabold text-primary border-primary/30">CURRENT</Badge>
-              ) : (
-                <span className="text-xs text-muted-foreground">Upcoming</span>
-              )}
-            </div>
-            <h5 className="font-bold text-sm text-foreground">PYQ Mocks & Calibrations</h5>
-            <p className="text-xs text-muted-foreground mt-1">Full CBT simulations, percentile optimization & strategy.</p>
-          </div>
+              return (
+                <div key={phase.num} className="flex flex-col">
+                  <div 
+                    onClick={() => setExpandedPhase(isExpanded ? null : phase.num)}
+                    className={`p-4 rounded-2xl border transition-all cursor-pointer hover:ring-1 hover:ring-primary/40 ${
+                      isCurrent ? 'bg-primary/5 border-primary/40 shadow-sm ring-1 ring-primary/20' 
+                      : isCompleted ? 'bg-emerald-500/5 border-emerald-500/30' 
+                      : 'bg-muted/20 border-border/60 opacity-80'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Phase {phase.num}</span>
+                      {isCompleted ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> 
+                      : isCurrent ? <Badge variant="outline" className="text-[9px] font-extrabold text-primary border-primary/30 bg-primary/5">CURRENT</Badge> 
+                      : <span className="text-xs text-muted-foreground flex items-center gap-1"><Lock className="w-3 h-3"/> Locked</span>}
+                    </div>
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h5 className="font-bold text-sm text-foreground leading-tight">{phase.title}</h5>
+                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{phase.desc}</p>
+                      </div>
+                      <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 mt-1">
+                        {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      </Button>
+                    </div>
+                  </div>
 
+                  {isExpanded && (
+                    <div className="mt-2 p-3 bg-background rounded-xl border border-border shadow-sm animate-in slide-in-from-top-2 duration-200">
+                      <ul className="space-y-2 text-xs text-muted-foreground">
+                        {phase.details.map((detail, idx) => (
+                          <li key={idx} className="flex items-start gap-1.5">
+                            <span className="text-primary mt-0.5">•</span>
+                            <span>{detail}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
 
       </CardContent>

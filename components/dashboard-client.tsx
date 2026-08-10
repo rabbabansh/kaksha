@@ -4,6 +4,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { HeroCommandCenter } from './hero-command-center';
 import { DynamicTimeline } from './dynamic-timeline';
+import { DashboardCharts } from './dashboard-charts';
+import { DailyTargetsWidget } from './daily-targets-widget';
 import { DiagnosticsHub } from './diagnostics-hub';
 import { MasterPathsProgression } from './master-paths-progression';
 import { UserProfileModal } from './user-profile-modal';
@@ -18,7 +20,10 @@ import {
   Lock, 
   Layers,
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  Flame,
+  Target,
+  BarChart3
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -138,71 +143,23 @@ export function DashboardClient() {
     );
   }
 
-  // Check today's 4 daily tasks status
-  const todayStr = new Date().toDateString();
-  const reviewTopic = data.weaknesses?.[0]?.split(' > ').pop() || 'Arithmetic';
-
-  const dailyTasks = [
-    {
-      id: 'daily_rc',
-      name: 'Daily RC Passage',
-      badge: 'VARC',
-      desc: 'CAT Reading Comprehension Set',
-      subtopic: 'Reading Comprehension',
-      action: 'Solve Passage',
-      link: '/practice/daily/rc',
-      attemptedToday: historyData?.attempts?.some((a: any) => {
-        return new Date(a.attemptedAt).toDateString() === todayStr && 
-          (a.source === 'daily_rc' || a.question?.subtopic?.toLowerCase().includes('reading comprehension'));
-      })
-    },
-    {
-      id: 'daily_dilr',
-      name: 'Daily DILR Caselet',
-      badge: 'DILR',
-      desc: 'CAT Logic & Data Puzzle Set',
-      subtopic: 'Logical Reasoning',
-      action: 'Solve Caselet',
-      link: '/practice/daily/dilr',
-      attemptedToday: historyData?.attempts?.some((a: any) => {
-        return new Date(a.attemptedAt).toDateString() === todayStr && 
-          (a.source === 'daily_dilr' || a.question?.topic?.toLowerCase().includes('lr') || a.question?.topic?.toLowerCase().includes('di'));
-      })
-    },
-    {
-      id: 'review',
-      name: 'Priority Concept Review',
-      badge: 'QA / FOCUS',
-      desc: `Target weak spot: ${reviewTopic}`,
-      subtopic: reviewTopic,
-      action: 'Start 10Q Sprint',
-      link: `/practice/modules/${encodeURIComponent(reviewTopic)}`,
-      attemptedToday: historyData?.attempts?.some((a: any) => {
-        return a.question?.subtopic?.toLowerCase() === reviewTopic.toLowerCase() && new Date(a.attemptedAt).toDateString() === todayStr;
-      })
-    },
-    {
-      id: 'challenge',
-      name: 'Daily Mixed Arena',
-      badge: 'SPEED DRILL',
-      desc: 'Mixed cross-topic speed sprint',
-      subtopic: 'Mixed Arena',
-      action: 'Enter Arena',
-      link: '/practice/mixed',
-      attemptedToday: historyData?.attempts?.some((a: any) => {
-        return new Date(a.attemptedAt).toDateString() === todayStr && a.source === 'mixed';
-      }) || historyData?.mockProgress?.some((s: any) => {
-        return s.type === 'MIXED_SESSION' && new Date(s.updatedAt).toDateString() === todayStr;
-      })
-    }
-  ];
-
-  const allDailiesCompleted = dailyTasks.every(t => t.attemptedToday);
+  // The logic for Daily Tasks is now encapsulated in DailyTargetsWidget.
 
   return (
     <div className="space-y-8 mb-12">
       
-      {/* 1. Diagnostic Alert Banner (if pending) */}
+      {/* 1. Overall Profile */}
+      <HeroCommandCenter
+        totalAttempts={data.totalRawAttempts}
+        totalCorrect={data.totalRawCorrect}
+        targetExamYear={data.targetExamYear}
+        targetExamSlot={data.targetExamSlot}
+        heatmapData={data.heatmapData}
+        heatmapMax={data.heatmapMax}
+        streak={data.streak}
+      />
+
+      {/* 2. Diagnostic Alert Banner (if pending) */}
       {!data.diagnosticCompleted && (
         <Card className="bg-gradient-to-r from-orange-500/10 to-red-500/10 border-orange-500/20 shadow-sm">
           <CardContent className="p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -217,144 +174,88 @@ export function DashboardClient() {
         </Card>
       )}
 
-      {/* 2. Granular Quick Stats Row */}
+      {/* 3. The 4 Stats Summary */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-indigo-500/10 to-transparent border-indigo-500/20 shadow-sm">
-          <CardContent className="p-4 flex flex-col justify-center">
-            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Total Attempted</span>
-            <span className="text-3xl font-black mt-1 text-indigo-700 dark:text-indigo-400">{data.totalRawAttempts}</span>
+        <Card className="shadow-sm border-border/80 bg-card">
+          <CardContent className="p-4 flex flex-col items-center justify-center text-center">
+            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Total Attempted</span>
+            <span className="text-2xl font-black text-foreground">{data.totalRawAttempts}</span>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-green-500/10 to-transparent border-green-500/20 shadow-sm">
-          <CardContent className="p-4 flex flex-col justify-center">
-            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Accuracy Rate</span>
-            <span className="text-3xl font-black mt-1 text-green-700 dark:text-green-400">{data.totalRawAttempts > 0 ? Math.round((data.totalRawCorrect / data.totalRawAttempts) * 100) : 0}%</span>
+        <Card className="shadow-sm border-border/80 bg-card">
+          <CardContent className="p-4 flex flex-col items-center justify-center text-center">
+            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Correct</span>
+            <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{data.totalRawCorrect}</span>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-yellow-500/10 to-transparent border-yellow-500/20 shadow-sm">
-          <CardContent className="p-4 flex flex-col justify-center">
-            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Total Correct</span>
-            <span className="text-3xl font-black mt-1 text-yellow-700 dark:text-yellow-400">{data.totalRawCorrect}</span>
+        <Card className="shadow-sm border-border/80 bg-card">
+          <CardContent className="p-4 flex flex-col items-center justify-center text-center">
+            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Incorrect</span>
+            <span className="text-2xl font-black text-red-600 dark:text-red-400">{data.totalRawWrong}</span>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-red-500/10 to-transparent border-red-500/20 shadow-sm">
-          <CardContent className="p-4 flex flex-col justify-center">
-            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Total Incorrect</span>
-            <span className="text-3xl font-black mt-1 text-red-700 dark:text-red-400">{data.totalRawWrong}</span>
+        <Card className="shadow-sm border-border/80 bg-card">
+          <CardContent className="p-4 flex flex-col items-center justify-center text-center">
+            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Overall Accuracy</span>
+            <span className="text-2xl font-black text-indigo-600 dark:text-indigo-400">
+              {data.totalRawAttempts > 0 ? Math.round((data.totalRawCorrect / data.totalRawAttempts) * 100) : 0}%
+            </span>
           </CardContent>
         </Card>
       </div>
 
-      {/* 3. Hero Command Center (Mastery Profile + Consistency Calendar Heatmap) */}
-      <HeroCommandCenter data={data} historyData={historyData} />
+      {/* 4. Quick Buttons Row */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Button variant="outline" className="h-16 flex flex-col gap-1 items-center justify-center shadow-sm font-bold bg-muted/20" onClick={() => document.getElementById('daily-tasks')?.scrollIntoView({ behavior: 'smooth' })}>
+          <Target className="h-5 w-5 text-indigo-500" />
+          <span className="text-[11px] uppercase tracking-wider">Daily Tasks</span>
+        </Button>
+        <Button variant="outline" className="h-16 flex flex-col gap-1 items-center justify-center shadow-sm font-bold bg-muted/20" onClick={() => document.getElementById('diagnostics-hub')?.scrollIntoView({ behavior: 'smooth' })}>
+          <BarChart3 className="h-5 w-5 text-emerald-500" />
+          <span className="text-[11px] uppercase tracking-wider">Diagnostics</span>
+        </Button>
+        <Button variant="outline" className="h-16 flex flex-col gap-1 items-center justify-center shadow-sm font-bold bg-muted/20" onClick={() => document.getElementById('master-paths')?.scrollIntoView({ behavior: 'smooth' })}>
+          <BookOpen className="h-5 w-5 text-orange-500" />
+          <span className="text-[11px] uppercase tracking-wider">Master Plans</span>
+        </Button>
+        <Button variant="outline" className="h-16 flex flex-col gap-1 items-center justify-center shadow-sm font-bold bg-muted/20" onClick={() => document.getElementById('history-hub')?.scrollIntoView({ behavior: 'smooth' })}>
+          <History className="h-5 w-5 text-blue-500" />
+          <span className="text-[11px] uppercase tracking-wider">History</span>
+        </Button>
+      </div>
 
-      {/* 4. Daily Kaksha Targets (4 Pillars: Daily RC, Daily DILR, QA Review, Mixed Challenge) */}
-      <Card className="border-indigo-200 dark:border-indigo-900 bg-indigo-50/20 dark:bg-indigo-950/15 shadow-sm overflow-hidden">
-        <CardHeader className="bg-muted/15 border-b border-border/40 pb-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div>
-              <CardTitle className="text-xl font-extrabold flex items-center gap-2 text-indigo-700 dark:text-indigo-400 tracking-tight">
-                <Zap className="h-5 w-5 fill-indigo-500 text-indigo-500" /> Daily Kaksha Targets
-              </CardTitle>
-              <CardDescription className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-                Complete all 4 daily pillars (RC passage, DILR caselet, QA review, and Mixed arena) to build unstoppable consistency.
-              </CardDescription>
-            </div>
-            {allDailiesCompleted && (
-              <Badge className="bg-emerald-600 text-white font-black text-xs px-3 py-1 self-start sm:self-auto shadow-sm">
-                ✨ ALL DAILIES COMPLETED
-              </Badge>
-            )}
-          </div>
-        </CardHeader>
+      {/* 5. Daily Targets */}
+      <div id="daily-tasks">
+        <DailyTargetsWidget />
+      </div>
 
-        <CardContent className="p-6">
-          {allDailiesCompleted ? (
-            <div className="rounded-2xl border-2 border-dashed border-emerald-500/50 bg-emerald-500/10 p-8 text-center flex flex-col items-center">
-              <Trophy className="h-12 w-12 text-emerald-500 mb-3" />
-              <h3 className="font-extrabold text-2xl mb-1 text-emerald-800 dark:text-emerald-300">
-                All 4 Daily Targets Conquered!
-              </h3>
-              <p className="text-muted-foreground max-w-md mx-auto mb-6 text-xs sm:text-sm">
-                You've completed today's RC passage, DILR caselet, Concept sprint, and Mixed challenge. Your streak is glowing!
-              </p>
-              <Button className="bg-emerald-600 hover:bg-emerald-700 font-bold text-xs h-10 shadow-md text-white" onClick={() => window.location.href = '/practice/modules'}>
-                Unlock Bonus Module Sprint
-              </Button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {dailyTasks.map((t, idx) => (
-                <div 
-                  key={t.id} 
-                  className={`p-4 rounded-2xl border-2 flex flex-col justify-between transition-all duration-200 ${
-                    t.attemptedToday 
-                      ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-900 dark:text-emerald-300' 
-                      : 'bg-card border-border/80 hover:border-primary/50 shadow-sm'
-                  }`}
-                >
-                  <div>
-                    <div className="flex items-center justify-between mb-2.5">
-                      <Badge variant="outline" className="text-[10px] font-black tracking-wider uppercase">
-                        {t.badge}
-                      </Badge>
-                      {t.attemptedToday ? (
-                        <Badge className="bg-emerald-600 text-white font-bold text-[10px] px-2 py-0.5">
-                          <CheckCircle2 className="h-3 w-3 mr-1" /> DONE
-                        </Badge>
-                      ) : (
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase">
-                          TARGET {idx + 1}
-                        </span>
-                      )}
-                    </div>
+      {/* 6. Unified Diagnostics & Competency Hub */}
+      <div id="diagnostics-hub">
+        <DiagnosticsHub
+          hierarchy={data.hierarchy}
+          totalRawAttempts={data.totalRawAttempts}
+          totalRawCorrect={data.totalRawCorrect}
+          totalRawWrong={data.totalRawWrong}
+        />
+      </div>
 
-                    <h4 className="font-extrabold text-base text-foreground leading-snug">{t.name}</h4>
-                    <p className="text-xs text-muted-foreground mt-0.5 mb-3">{t.desc}</p>
-                  </div>
-
-                  <Link href={t.link} className="w-full mt-2">
-                    <Button
-                      variant={t.attemptedToday ? 'outline' : 'default'}
-                      size="sm"
-                      className={`w-full font-bold text-xs h-9 ${
-                        t.attemptedToday 
-                          ? 'border-emerald-500/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/10' 
-                          : 'bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm'
-                      }`}
-                    >
-                      {t.attemptedToday ? 'Reattempt Target' : <><PlayCircle className="h-3.5 w-3.5 mr-1.5" /> {t.action}</>}
-                    </Button>
-                  </Link>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* 5. Adaptive Preparation Roadmap & Velocity Gauge */}
-      <DynamicTimeline
-        targetExamYear={data.targetExamYear || '2026'}
-        overallScore={data.overallScore || 0}
-        totalAttempts={data.totalRawAttempts || 0}
-        strengths={data.strengths || []}
-        weaknesses={data.weaknesses || []}
-      />
-
-      {/* 6. Unified Diagnostics & Competency Hub (Topic Hierarchy + Deep Dive Charts) */}
-      <DiagnosticsHub
-        hierarchy={data.hierarchy}
-        totalRawAttempts={data.totalRawAttempts}
-        totalRawCorrect={data.totalRawCorrect}
-        totalRawWrong={data.totalRawWrong}
-      />
-
-      {/* 7. Dynamic Master Paths Progression */}
-      <MasterPathsProgression hierarchy={data.hierarchy} />
+      {/* 7. Adaptive Preparation Roadmap & Master Paths */}
+      <div id="master-paths" className="space-y-4">
+        <h3 className="text-xl font-extrabold flex items-center gap-2 text-foreground tracking-tight px-1">
+          <BookOpen className="h-5 w-5 text-indigo-500 shrink-0" /> Interactive Roadmap & Master Paths
+        </h3>
+        <DynamicTimeline
+          targetExamYear={data.targetExamYear || '2026'}
+          overallScore={data.overallScore || 0}
+          totalAttempts={data.totalRawAttempts || 0}
+          strengths={data.strengths || []}
+          weaknesses={data.weaknesses || []}
+        />
+        <MasterPathsProgression hierarchy={data.hierarchy} />
+      </div>
 
       {/* 8. History & Review Hub */}
-      <Card className="shadow-sm border-border/80 bg-card overflow-hidden">
+      <Card id="history-hub" className="shadow-sm border-border/80 bg-card overflow-hidden">
         <CardHeader className="pb-4 bg-muted/20 border-b border-border/40">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>

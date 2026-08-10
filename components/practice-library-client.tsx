@@ -12,6 +12,7 @@ import {
   Map as MapIcon
 } from 'lucide-react';
 import { MasterPathsClient } from './master-paths-client';
+import { DailyTargetsWidget } from './daily-targets-widget';
 
 interface ProgressRecord {
   section: string;
@@ -281,6 +282,11 @@ export function PracticeLibraryClient({ progressRecords }: PracticeLibraryClient
         <p className="text-muted-foreground max-w-lg mx-auto">
           From targeted subtopic sprints to full section mock simulations, build your muscle memory for CAT.
         </p>
+
+        {/* Daily Targets Injection */}
+        <div className="py-4 text-left">
+          <DailyTargetsWidget />
+        </div>
 
         {/* Tab Switcher */}
         <div className="inline-flex p-1 bg-muted rounded-xl gap-1 overflow-x-auto max-w-full">

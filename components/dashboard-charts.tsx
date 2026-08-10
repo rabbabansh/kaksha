@@ -1,10 +1,11 @@
 /* eslint-disable */
 'use client';
 
-import { useState } from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceArea } from 'recharts';
+import { useState, useEffect } from 'react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceArea, LabelList } from 'recharts';
 import { ArrowLeft, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 interface DashboardChartsProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -18,6 +19,14 @@ export function DashboardCharts({ hierarchy, totalRawAttempts, totalRawCorrect, 
   const [level, setLevel] = useState<'section' | 'topic' | 'subtopic'>('section');
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [activeTopic, setActiveTopic] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Derive current data for the chart based on drill-down level
   let chartData: any[] = [];
@@ -157,13 +166,18 @@ export function DashboardCharts({ hierarchy, totalRawAttempts, totalRawCorrect, 
         </div>
       </div>
 
-      <div className="h-[400px] w-full relative">
-        <div className="absolute inset-0 pointer-events-none flex justify-between px-[15%] pt-4 z-10 opacity-60">
-          <div className="text-red-600 dark:text-red-400 text-2xl font-bold" style={{ transform: 'rotate(-4deg)' }}>Needs Attention</div>
-          <div className="text-indigo-600 dark:text-indigo-400 text-2xl font-bold" style={{ transform: 'rotate(-4deg)' }}>Proficient</div>
+      <div className="h-[400px] w-full relative flex flex-col">
+        <div className="flex justify-between px-[15%] pt-2 pb-4">
+          <Badge variant="outline" className="text-red-700 dark:text-red-400 bg-red-500/10 border-red-500/20 px-3 py-1 text-xs font-black uppercase tracking-widest shadow-sm">
+            Needs Attention
+          </Badge>
+          <Badge variant="outline" className="text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20 px-3 py-1 text-xs font-black uppercase tracking-widest shadow-sm">
+            Proficient
+          </Badge>
         </div>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart
+        <div className="flex-1 min-h-0">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
             data={chartData}
             layout="vertical"
             margin={{ top: 0, right: 30, left: 40, bottom: 0 }}
@@ -179,10 +193,10 @@ export function DashboardCharts({ hierarchy, totalRawAttempts, totalRawCorrect, 
             <YAxis
               type="category"
               dataKey="name"
-              width={150}
+              width={isMobile ? 10 : 150}
               axisLine={false}
               tickLine={false}
-              tick={{ fill: 'currentColor', fontSize: 12, fontWeight: 500 }}
+              tick={isMobile ? false : { fill: 'currentColor', fontSize: 12, fontWeight: 500 }}
             />
             <Tooltip
               cursor={{ fill: 'rgba(0,0,0,0.05)' }}
@@ -215,12 +229,22 @@ export function DashboardCharts({ hierarchy, totalRawAttempts, totalRawCorrect, 
               className="cursor-pointer transition-opacity hover:opacity-80 z-20"
               onClick={(data) => handleBarClick(data)}
             >
+              {isMobile && (
+                <LabelList 
+                  dataKey="name" 
+                  position="insideLeft" 
+                  fill="#ffffff"
+                  offset={10}
+                  className="font-bold text-[10px] tracking-wide mix-blend-difference pointer-events-none"
+                />
+              )}
               {chartData.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={getColor(entry.netScore)} />
               ))}
             </Bar>
           </BarChart>
         </ResponsiveContainer>
+        </div>
       </div>
       {level === 'section' && (
         <p className="text-xs text-muted-foreground text-center mt-4 italic">

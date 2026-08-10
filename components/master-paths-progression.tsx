@@ -186,11 +186,11 @@ export function MasterPathsProgression({ hierarchy, onOpenExplorer }: MasterPath
       </div>
 
       {/* 3 Section Journey Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="flex overflow-x-auto snap-x snap-mandatory md:grid md:grid-cols-2 lg:grid-cols-3 gap-6 pb-4 -mx-4 px-4 sm:mx-0 sm:px-0">
         {sections.map(sec => (
           <Card 
             key={sec.code} 
-            className="shadow-sm border-border/80 overflow-hidden flex flex-col justify-between hover:border-primary/50 transition-all duration-200 group bg-card"
+            className="w-[85vw] sm:w-auto shrink-0 snap-center shadow-sm border-border/80 overflow-hidden flex flex-col justify-between hover:border-primary/50 transition-all duration-200 group bg-card"
           >
             <div>
               {/* Card Banner Header */}

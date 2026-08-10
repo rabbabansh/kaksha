@@ -42,7 +42,8 @@ export function Navbar() {
   }
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <>
+      <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-8">
           <Link href="/" className="flex items-center gap-2">
@@ -130,6 +131,33 @@ export function Navbar() {
         )}
       </div>
     </nav>
+
+      {/* Mobile Bottom Navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:hidden pb-safe">
+        <div className="flex items-center justify-around h-16 px-1">
+          {[
+            { href: '/dashboard', label: 'Home', icon: TrendingUp },
+            { href: '/practice/bank', label: 'Practice', icon: Search },
+            { href: '/mocks', label: 'Test', icon: BookOpen },
+            { href: '/tutor', label: 'Tutor AI', icon: Sparkles },
+          ].map((item) => {
+            const Icon = item.icon;
+            const active = isActive(item.href);
+            return (
+              <Link key={item.href} href={item.href} className="flex-1">
+                <Button
+                  variant="ghost"
+                  className={`w-full flex-col h-full gap-1 rounded-none px-0 ${active ? 'text-primary' : 'text-muted-foreground'}`}
+                >
+                  <Icon className={`h-5 w-5 ${active ? 'fill-primary/20' : ''}`} />
+                  <span className="text-[10px] font-semibold">{item.label}</span>
+                </Button>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+    </>
   );
 }
 

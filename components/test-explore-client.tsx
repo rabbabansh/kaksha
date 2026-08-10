@@ -51,7 +51,7 @@ export function TestExploreClient({
             </h1>
             <p className="text-muted-foreground">Explore Mode - No timer, browse all questions</p>
           </div>
-          <Link href={`/test/${year}/${slot}`}>
+          <Link href={`/mocks/${year}/${slot}`}>
             <Button>
               <BookOpen className="mr-2 h-4 w-4" />
               Start Test

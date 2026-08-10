@@ -392,8 +392,25 @@ export function MixedSessionClient({ topic }: { topic?: string }) {
                  <div className="grid grid-cols-5 gap-2">
                     {state.questions.map((q, idx) => {
                        let stateClass = "bg-muted text-muted-foreground border-transparent";
-                       if (idx === state.currentIndex) stateClass = "bg-primary text-primary-foreground border-primary";
-                       else if (idx < state.currentIndex) stateClass = "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300";
+                       
+                       let isCorrect: boolean | null = null;
+                       if (idx < state.sessionAttempts.length) {
+                          isCorrect = state.sessionAttempts[idx].isCorrect;
+                       } else if (idx === state.currentIndex && state.selectedAnswer !== null) {
+                          isCorrect = state.isCorrect;
+                       }
+
+                       if (isCorrect === true) {
+                         stateClass = idx === state.currentIndex 
+                           ? "bg-green-600 text-white border-green-700 dark:bg-green-600 dark:border-green-700 shadow-[0_0_10px_rgba(22,163,74,0.4)]" 
+                           : "bg-green-100 text-green-700 border-green-300 dark:bg-green-900 dark:text-green-300";
+                       } else if (isCorrect === false) {
+                         stateClass = idx === state.currentIndex 
+                           ? "bg-red-600 text-white border-red-700 dark:bg-red-600 dark:border-red-700 shadow-[0_0_10px_rgba(220,38,38,0.4)]" 
+                           : "bg-red-100 text-red-700 border-red-300 dark:bg-red-900 dark:text-red-300";
+                       } else if (idx === state.currentIndex) {
+                         stateClass = "bg-primary text-primary-foreground border-primary";
+                       }
                        
                        return (
                           <div key={idx} className={`h-10 rounded-md border flex items-center justify-center text-xs font-bold ${stateClass}`}>

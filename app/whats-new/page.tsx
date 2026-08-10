@@ -66,28 +66,82 @@ export default function WhatsNewPage() {
 
       <div className="max-w-4xl mx-auto px-6 mt-8 space-y-16">
         
-        {/* Kaksha v1.4.1 */}
+        {/* Kaksha v1.4.2 */}
         <div className="relative animate-in slide-in-from-bottom-12 fade-in duration-1000 delay-300">
           <div className="absolute top-0 bottom-0 left-8 md:left-1/2 w-0.5 bg-border -translate-x-1/2 hidden md:block" />
           
           <div className="flex items-center justify-center mb-12 relative z-10 hidden md:flex">
              <div className="bg-primary text-primary-foreground font-black px-6 py-2 rounded-full border-4 border-background shadow-sm">
-                Kaksha v1.4.1 (Latest)
+                Kaksha v1.4.2 (Latest)
              </div>
           </div>
           <div className="md:hidden mb-8">
-             <h2 className="text-2xl font-black text-primary">Kaksha v1.4.1 <span className="text-sm font-medium text-muted-foreground">(Latest)</span></h2>
+             <h2 className="text-2xl font-black text-primary">Kaksha v1.4.2 <span className="text-sm font-medium text-muted-foreground">(Latest)</span></h2>
           </div>
 
           <div className="space-y-6">
             <Card className="border-primary/40 bg-gradient-to-br from-primary/10 to-transparent shadow-md transform transition-all hover:-translate-y-1 hover:shadow-xl">
               <CardContent className="p-6 md:p-8 flex flex-col md:flex-row gap-6 items-center md:items-start">
                 <div className="bg-primary/20 p-4 rounded-2xl shrink-0">
-                  <BookOpen className="w-8 h-8 text-primary" />
+                  <Monitor className="w-8 h-8 text-primary" />
                 </div>
                 <div>
                   <h3 className="text-2xl font-black mb-2 flex items-center gap-2">
-                    Daily RC Passage & Daily DILR Caselet Pillars <span className="bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded uppercase font-bold tracking-wider">New</span>
+                    Mobile First Overhaul & Responsive App <span className="bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded uppercase font-bold tracking-wider">New</span>
+                  </h3>
+                  <p className="text-muted-foreground text-lg">
+                    Kaksha is now 100% optimized for mobile. Featuring a highly responsive bottom navigation bar, swipable master paths, responsive charts, and an overhauled dashboard layout designed perfectly for your phone screen.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card className="hover:shadow-md transition-shadow">
+                <CardHeader>
+                  <div className="bg-blue-500/10 w-12 h-12 rounded-xl flex items-center justify-center mb-4">
+                    <Target className="w-6 h-6 text-blue-500" />
+                  </div>
+                  <CardTitle>Daily Targets Widget</CardTitle>
+                  <CardDescription className="text-base mt-2">Dailies are now completely decoupled and instantly accessible right inside the Practice Bank, making consistency easier than ever.</CardDescription>
+                </CardHeader>
+              </Card>
+
+              <Card className="hover:shadow-md transition-shadow">
+                <CardHeader>
+                  <div className="bg-green-500/10 w-12 h-12 rounded-xl flex items-center justify-center mb-4">
+                    <CheckCircle2 className="w-6 h-6 text-green-500" />
+                  </div>
+                  <CardTitle>Smart Evaluator Feedback</CardTitle>
+                  <CardDescription className="text-base mt-2">Progress question boxes in CBT practice and mixed sessions now visually highlight instantly with green and red states to denote accuracy on-the-fly.</CardDescription>
+                </CardHeader>
+              </Card>
+            </div>
+          </div>
+        </div>
+
+        {/* Kaksha v1.4.1 */}
+        <div className="relative pt-12 opacity-90">
+          <div className="absolute top-0 bottom-0 left-8 md:left-1/2 w-0.5 bg-border -translate-x-1/2 hidden md:block" />
+          
+          <div className="flex items-center justify-center mb-12 relative z-10 hidden md:flex">
+             <div className="bg-muted text-muted-foreground font-black px-6 py-2 rounded-full border-4 border-background shadow-sm">
+                Kaksha v1.4.1
+             </div>
+          </div>
+          <div className="md:hidden mb-8">
+             <h2 className="text-2xl font-black text-muted-foreground">Kaksha v1.4.1</h2>
+          </div>
+
+          <div className="space-y-6">
+            <Card className="border-border/80 bg-card hover:shadow-md transition-shadow">
+              <CardContent className="p-6 md:p-8 flex flex-col md:flex-row gap-6 items-center md:items-start">
+                <div className="bg-primary/10 p-4 rounded-2xl shrink-0">
+                  <BookOpen className="w-8 h-8 text-primary/70" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-black mb-2 flex items-center gap-2">
+                    Daily RC Passage & Daily DILR Caselet Pillars
                   </h3>
                   <p className="text-muted-foreground text-lg">
                     Every single day, Kaksha serves a fresh, deterministic CAT Reading Comprehension passage and DILR multi-question caselet. Built with authentic 2-pane CBT split-screens, real-time feedback, and streak tracking!

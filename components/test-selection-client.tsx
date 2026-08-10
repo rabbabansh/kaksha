@@ -38,11 +38,12 @@ export function TestSelectionClient({ byYearSlot, progressMap }: TestSelectionCl
         </p>
       </div>
 
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Select Test</CardTitle>
-          <CardDescription>Choose the year and slot you want to practice</CardDescription>
-        </CardHeader>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Select Test</CardTitle>
+            <CardDescription>Choose the year and slot you want to practice</CardDescription>
+          </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -135,6 +136,33 @@ export function TestSelectionClient({ byYearSlot, progressMap }: TestSelectionCl
           )}
         </CardContent>
       </Card>
+
+      <Card className="bg-indigo-50/20 dark:bg-indigo-950/20 border-indigo-200 dark:border-indigo-900 shadow-sm flex flex-col justify-between">
+        <CardHeader>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="bg-indigo-500 text-white text-[10px] font-black tracking-widest uppercase px-2 py-0.5 rounded-full">Recommended</span>
+          </div>
+          <CardTitle className="text-2xl text-indigo-700 dark:text-indigo-400">Weekly Mock Test</CardTitle>
+          <CardDescription>
+            Take a full-length mock test this week to build your endurance and evaluate your overall standing.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="bg-card p-4 rounded-xl border border-border/60 mb-4">
+            <h4 className="font-bold text-lg mb-1">CAT {years[0]} - Slot {Object.keys(byYearSlot[years[0]] || {})[0]}</h4>
+            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1"><FileText className="h-3 w-3" /> 66 Qs</div>
+              <div className="flex items-center gap-1"><Clock className="h-3 w-3" /> 120 min</div>
+            </div>
+          </div>
+          <Link href={`/mocks/${years[0]}/${Object.keys(byYearSlot[years[0]] || {})[0]}`} className="block w-full">
+            <Button className="w-full font-bold bg-indigo-600 hover:bg-indigo-700 text-white h-12 shadow-sm">
+              <Play className="mr-2 h-5 w-5" /> Enter Arena
+            </Button>
+          </Link>
+        </CardContent>
+      </Card>
+    </div>
 
       {/* Quick access to all tests */}
       <div>
