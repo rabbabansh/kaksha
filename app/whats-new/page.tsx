@@ -23,7 +23,8 @@ import {
   RotateCcw,
   CheckCircle2,
   SlidersHorizontal,
-  BookOpen
+  BookOpen,
+  Layers
 } from 'lucide-react';
 
 export default function WhatsNewPage() {
