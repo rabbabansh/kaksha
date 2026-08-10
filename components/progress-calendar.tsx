@@ -430,12 +430,12 @@ export function ProgressCalendar({ historyData, weaknesses = [] }: ProgressCalen
         </div>
       </CardHeader>
 
-      <CardContent className="p-6">
+      <CardContent className="p-4 sm:p-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           
           {/* Left Column: Heatmap Grid */}
           <div className="lg:col-span-7 flex flex-col justify-between">
-            <div className="overflow-x-auto pb-3">
+            <div className="overflow-x-auto pb-3 touch-pan-x">
               <div className="flex gap-1.5 min-w-max">
                 {calendarWeeks.map((week, wIdx) => (
                   <div key={`week-${wIdx}`} className="flex flex-col gap-1.5">

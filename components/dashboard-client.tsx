@@ -12,6 +12,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ProgressCalendar } from './progress-calendar';
+import { CompetencyMatrix } from './competency-matrix';
+import { MasterPathsProgression } from './master-paths-progression';
 import { SubtopicsExplorerModal } from './subtopics-explorer-modal';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -230,7 +232,7 @@ export function DashboardClient() {
 
       {/* Overview Metric & Gamification */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="col-span-1 md:col-span-2 border-primary/20 bg-primary/5 shadow-sm">
+        <Card className="col-span-1 md:col-span-4 border-primary/20 bg-primary/5 shadow-sm">
           <CardHeader className="pb-2">
             <div className="flex items-start justify-between">
               <div>
@@ -346,83 +348,14 @@ export function DashboardClient() {
           </CardContent>
         </Card>
 
-        {/* SWOT */}
-        <Card className="col-span-1 md:col-span-2 shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Competency Matrix</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <div className="flex items-center gap-2 text-green-600 dark:text-green-400 font-bold text-sm uppercase tracking-wider mb-3">
-                <TrendingUp className="h-4 w-4" /> Top Strengths
-              </div>
-              <div className="flex flex-col gap-2">
-                {data.strengths.length > 0 ? data.strengths.slice(0, 3).map((s: string) => (
-                  <Link href={`/practice/modules/${encodeURIComponent(s.split(' > ').pop() || '')}`} key={s} className="px-3 py-2 rounded-lg bg-green-50 dark:bg-green-900/10 border border-green-200 text-sm font-semibold flex items-center justify-between hover:border-green-400 hover:bg-green-100 dark:hover:bg-green-900/20 transition-all cursor-pointer group">
-                    <span className="truncate">{s.split(' > ').pop()}</span>
-                    <span className="text-xs text-green-600 opacity-60 group-hover:opacity-100 flex items-center">Mastered <PlayCircle className="h-3 w-3 ml-1" /></span>
-                  </Link>
-                )) : <span className="text-sm text-muted-foreground">Keep practicing to find your strengths!</span>}
-              </div>
-            </div>
-            <div>
-              <div className="flex items-center gap-2 text-red-600 dark:text-red-400 font-bold text-sm uppercase tracking-wider mb-3">
-                <TrendingDown className="h-4 w-4" /> Key Weaknesses
-              </div>
-              <div className="flex flex-col gap-2">
-                {data.weaknesses.length > 0 ? data.weaknesses.slice(0, 3).map((s: string) => (
-                  <Link href={`/practice/modules/${encodeURIComponent(s.split(' > ').pop() || '')}`} key={s} className="px-3 py-2 rounded-lg bg-red-50 dark:bg-red-900/10 border border-red-200 text-sm font-semibold flex items-center justify-between hover:border-red-400 hover:bg-red-100 dark:hover:bg-red-900/20 transition-all cursor-pointer group">
-                    <span className="truncate">{s.split(' > ').pop()}</span>
-                    <span className="text-xs text-red-600 opacity-60 group-hover:opacity-100 flex items-center">Needs Work <PlayCircle className="h-3 w-3 ml-1" /></span>
-                  </Link>
-                )) : <span className="text-sm text-muted-foreground">No weaknesses detected yet.</span>}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Mastery Overview End */}
       </div>
 
-      {/* Master Paths Progression Showcase */}
-      <div className="mt-8 space-y-4">
-        <div className="flex items-center justify-between px-2">
-          <div>
-            <h3 className="text-xl font-bold flex items-center gap-2 text-foreground"><MapIcon className="h-5 w-5 text-primary" /> Master Paths</h3>
-            <p className="text-sm text-muted-foreground">Continue your personalized progression journey.</p>
-          </div>
-          <SubtopicsExplorerModal hierarchy={data.hierarchy}>
-            <Button variant="outline" size="sm" className="font-bold cursor-pointer">
-              View All Paths <ChevronRight className="h-4 w-4 ml-1" />
-            </Button>
-          </SubtopicsExplorerModal>
-        </div>
-        <div className="flex gap-4 overflow-x-auto pb-4 snap-x px-2">
-          {['QA', 'VARC', 'DILR'].map(sec => {
-            // Approximate progress based on practice history
-            const secCount = practiceHistory.filter((h: any) => h.topic?.toLowerCase().includes(sec === 'VARC' ? 'verbal' : sec === 'DILR' ? 'logical' : 'arithmetic')).length;
-            const totalSec = 20; // dummy total
-            const pct = Math.min(100, Math.round((secCount / totalSec) * 100)) || 0;
-            return (
-              <SubtopicsExplorerModal key={sec} hierarchy={data.hierarchy} defaultSection={sec}>
-                <Card className="min-w-[280px] snap-center cursor-pointer hover:border-primary/50 transition-colors shadow-sm bg-gradient-to-br from-background to-muted/20">
-                  <CardContent className="p-5">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-inner ${sec === 'QA' ? 'bg-gradient-to-br from-blue-500 to-indigo-600' : sec === 'VARC' ? 'bg-gradient-to-br from-green-500 to-emerald-600' : 'bg-gradient-to-br from-orange-500 to-red-600'}`}>
-                        {sec}
-                      </div>
-                      <Badge variant="secondary" className="font-bold">{pct}% Mastered</Badge>
-                    </div>
-                    <h4 className="font-extrabold text-lg mb-1">{sec} Path</h4>
-                    <p className="text-xs text-muted-foreground mb-4">Complete subtopics to unlock Sectional Checkpoints.</p>
-                    <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
-                      <div className={`h-full ${sec === 'QA' ? 'bg-indigo-500' : sec === 'VARC' ? 'bg-emerald-500' : 'bg-orange-500'}`} style={{ width: `${pct}%` }} />
-                    </div>
-                  </CardContent>
-                </Card>
-              </SubtopicsExplorerModal>
-            );
-          })}
-        </div>
-      </div>
+      {/* Sectional Competency Matrix & Topic Hierarchy */}
+      <CompetencyMatrix hierarchy={data.hierarchy} />
+
+      {/* Dynamic Master Paths Progression */}
+      <MasterPathsProgression hierarchy={data.hierarchy} />
 
       {/* Dynamic Task Engine */}
       <Card className="col-span-1 md:col-span-4 border-indigo-200 dark:border-indigo-900 bg-indigo-50/30 dark:bg-indigo-950/20 shadow-sm mt-2">
