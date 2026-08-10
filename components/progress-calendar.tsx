@@ -136,21 +136,30 @@ export function ProgressCalendar({ historyData, weaknesses = [] }: ProgressCalen
 
       const dailyTasks = [
         {
+          id: 'daily_rc',
+          name: 'Daily RC Passage',
+          desc: 'CAT Reading Comprehension',
+          subtopic: 'Reading Comprehension',
+          action: 'Solve Passage',
+          link: '/practice/daily/rc',
+          completed: false
+        },
+        {
+          id: 'daily_dilr',
+          name: 'Daily DILR Set',
+          desc: 'Logic & Data Caselet',
+          subtopic: 'Logical Reasoning',
+          action: 'Solve Set',
+          link: '/practice/daily/dilr',
+          completed: false
+        },
+        {
           id: 'review',
           name: 'Review Weakness',
           desc: 'Strengthen weak areas',
           subtopic: reviewTopic,
           action: 'Practice Sprint',
           link: `/practice/modules/${encodeURIComponent(reviewTopic)}`,
-          completed: false
-        },
-        {
-          id: 'new',
-          name: 'Learn Concept',
-          desc: 'Advance your Master Path',
-          subtopic: newTopic,
-          action: 'Learn Module',
-          link: `/practice/modules/${encodeURIComponent(newTopic)}`,
           completed: false
         },
         {
@@ -279,7 +288,13 @@ export function ProgressCalendar({ historyData, weaknesses = [] }: ProgressCalen
 
       // Check daily task statuses
       day.dailyTasks.forEach(task => {
-        if (task.id === 'challenge') {
+        if (task.id === 'daily_rc') {
+          task.completed = day.practiceSprints.some(s => s.source === 'daily_rc' || s.subtopic.toLowerCase().includes('reading comprehension')) ||
+                           day.topics.some(t => t.toLowerCase().includes('reading comprehension'));
+        } else if (task.id === 'daily_dilr') {
+          task.completed = day.practiceSprints.some(s => s.source === 'daily_dilr' || s.topic.toLowerCase().includes('lr') || s.topic.toLowerCase().includes('di') || s.subtopic.toLowerCase().includes('puzzle') || s.subtopic.toLowerCase().includes('arrangement')) ||
+                           day.topics.some(t => t.toLowerCase().includes('data interpretation') || t.toLowerCase().includes('logical reasoning') || t.toLowerCase().includes('puzzle'));
+        } else if (task.id === 'challenge') {
           task.completed = day.mixedSessions.length > 0 || day.practiceSprints.some(s => s.source === 'mixed');
         } else {
           task.completed = day.practiceSprints.some(s => s.subtopic.toLowerCase() === task.subtopic.toLowerCase()) ||
@@ -363,21 +378,30 @@ export function ProgressCalendar({ historyData, weaknesses = [] }: ProgressCalen
       mixedSessions: [],
       dailyTasks: [
         {
+          id: 'daily_rc',
+          name: 'Daily RC Passage',
+          desc: 'CAT Reading Comprehension',
+          subtopic: 'Reading Comprehension',
+          action: 'Solve Passage',
+          link: '/practice/daily/rc',
+          completed: false
+        },
+        {
+          id: 'daily_dilr',
+          name: 'Daily DILR Set',
+          desc: 'Logic & Data Caselet',
+          subtopic: 'Logical Reasoning',
+          action: 'Solve Set',
+          link: '/practice/daily/dilr',
+          completed: false
+        },
+        {
           id: 'review',
           name: 'Review Weakness',
           desc: 'Strengthen weak areas',
           subtopic: reviewTopic,
           action: 'Practice Sprint',
           link: `/practice/modules/${encodeURIComponent(reviewTopic)}`,
-          completed: false
-        },
-        {
-          id: 'new',
-          name: 'Learn Concept',
-          desc: 'Advance your Master Path',
-          subtopic: newTopic,
-          action: 'Learn Module',
-          link: `/practice/modules/${encodeURIComponent(newTopic)}`,
           completed: false
         },
         {

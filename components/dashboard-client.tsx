@@ -1,25 +1,31 @@
-/* eslint-disable */
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { DashboardCharts } from './dashboard-charts';
-import { DashboardTimeline } from './dashboard-timeline';
+import { HeroCommandCenter } from './hero-command-center';
+import { DynamicTimeline } from './dynamic-timeline';
+import { DiagnosticsHub } from './diagnostics-hub';
+import { MasterPathsProgression } from './master-paths-progression';
 import { UserProfileModal } from './user-profile-modal';
-import { Loader2, TrendingUp, TrendingDown, Award, Star, Medal, Zap, PlayCircle, History, BookOpen, Trophy, CheckCircle2, Lock, Info, Map as MapIcon, ChevronRight, Layers } from 'lucide-react';
+import { 
+  Loader2, 
+  Zap, 
+  PlayCircle, 
+  History, 
+  BookOpen, 
+  Trophy, 
+  CheckCircle2, 
+  Lock, 
+  Layers,
+  Sparkles,
+  ArrowRight
+} from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ProgressCalendar } from './progress-calendar';
-import { CompetencyMatrix } from './competency-matrix';
-import { MasterPathsProgression } from './master-paths-progression';
-import { SubtopicsExplorerModal } from './subtopics-explorer-modal';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { LineChart, Line, XAxis as RXAxis, YAxis as RYAxis, Tooltip as RTooltip, ResponsiveContainer as RContainer, ReferenceDot, CartesianGrid } from 'recharts';
 
 export function DashboardClient() {
   const [data, setData] = useState<any>(null);
@@ -37,157 +43,166 @@ export function DashboardClient() {
         fetch('/api/progress/history', { cache: 'no-store' })
       ]);
       const json = await res.json();
-      console.log('Dashboard API Response:', json);
       if (json.success) {
         setData(json.data);
       } else {
         console.error('Dashboard API failed:', json.error);
-        alert('Dashboard failed to load: ' + json.error);
       }
 
       const histJson = await histRes.json();
-      console.log('History API Response:', histJson);
       if (histJson.success) {
         setHistoryData(histJson.data);
       }
     } catch (error) {
       console.error('Failed to load dashboard:', error);
-      alert('Dashboard request crashed: ' + error);
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-    const hasSeenWhatsNew = localStorage.getItem('kaksha_whats_new_v1.4');
-    console.log('DashboardClient useEffect running', { hasSeenWhatsNew });
-    if (!hasSeenWhatsNew) {
-      console.log('Redirecting to whats-new');
-      window.location.href = '/whats-new';
-    } else {
-      console.log('Calling loadData()');
-      loadData();
-    }
+    loadData();
   }, []);
 
-  const practiceHistory = useMemo(() => {
-    if (!historyData?.attempts) return [];
-    const grouped = historyData.attempts.reduce((acc: any, curr: any) => {
-      const key = curr.question?.subtopic;
-      if (!key) return acc;
-
-      const localDateStr = new Date(curr.attemptedAt).toLocaleDateString();
-      const groupKey = `${key}_${localDateStr}`;
-
-      if (!acc[groupKey]) {
-        acc[groupKey] = { subtopic: key, count: 0, date: localDateStr, timestamp: new Date(curr.attemptedAt).getTime(), topic: curr.question.topic, source: curr.source };
-      }
-      acc[groupKey].count++;
-      return acc;
-    }, {});
-    return Object.values(grouped);
-  }, [historyData]);
-
+  // Filter and format history
   const combinedHistory = useMemo(() => {
-    const combined: any[] = [];
-
-    // Add practice history from QuestionAttempts
-    if (historyFilter === 'All' || historyFilter === 'Practice') {
-      const filteredPractice = practiceHistory.filter((g: any) => g.subtopic.toLowerCase().includes(historySearch.toLowerCase()));
-      filteredPractice.forEach((group: any) => {
-        combined.push({
-          type: 'practice',
-          data: group,
-          timestamp: group.timestamp // We added timestamp in practiceHistory
-        });
-      });
+    if (!historyData) return [];
+    const mocks = (historyData.mockProgress || []).map((m: any) => ({
+      type: 'mock',
+      date: new Date(m.updatedAt || m.createdAt),
+      data: m,
+    }));
+    
+    // Group attempts by subtopic and date
+    const attemptsBySession: Record<string, any> = {};
+    (historyData.attempts || []).forEach((a: any) => {
+      const dateStr = new Date(a.attemptedAt).toLocaleDateString();
+      const subtopic = a.question?.subtopic || a.source || 'General Practice';
+      const key = `${dateStr}_${subtopic}_${a.source}`;
       
-      // Add practice history from Sessions (migrated data)
-      if (historyData?.mockProgress) {
-        const oldPracticeSessions = historyData.mockProgress.filter((s: any) => s.type === 'PRACTICE_MODULE' && s.subtopic?.toLowerCase().includes(historySearch.toLowerCase()));
-        oldPracticeSessions.forEach((s: any) => {
-          // Check if this session is already covered by question attempts (same day, same subtopic) to avoid duplicates
-          const dateStr = new Date(s.updatedAt).toLocaleDateString();
-          const isDuplicate = combined.some((item: any) => item.type === 'practice' && item.data.subtopic === s.subtopic && item.data.date === dateStr);
-          if (!isDuplicate) {
-            let count = 0;
-            try {
-              const answers = JSON.parse(s.answers || '{}');
-              count = Object.keys(answers).length;
-            } catch (e) {}
-            
-            combined.push({
-              type: 'practice',
-              data: {
-                subtopic: s.subtopic,
-                count: count,
-                date: dateStr,
-                timestamp: new Date(s.updatedAt).getTime(),
-                topic: s.topic || 'Practice Module'
-              },
-              timestamp: new Date(s.updatedAt).getTime()
-            });
-          }
-        });
+      if (!attemptsBySession[key]) {
+        attemptsBySession[key] = {
+          type: 'practice',
+          date: new Date(a.attemptedAt),
+          subtopic,
+          source: a.source,
+          total: 0,
+          correct: 0,
+          questionId: a.questionId
+        };
       }
-    }
+      attemptsBySession[key].total += 1;
+      if (a.isCorrect) attemptsBySession[key].correct += 1;
+    });
 
-    // Add mock history
-    if (historyData?.mockProgress && (historyFilter === 'All' || historyFilter === 'Mock Test')) {
-      const filteredMocks = historyData.mockProgress.filter((mock: any) => mock.type === 'MOCK' && `CAT ${mock.year}`.toLowerCase().includes(historySearch.toLowerCase()));
-      filteredMocks.forEach((mock: any) => {
-        combined.push({
-          type: 'mock',
-          data: mock,
-          timestamp: new Date(mock.updatedAt).getTime()
-        });
+    const practice = Object.values(attemptsBySession);
+
+    return [...mocks, ...practice]
+      .sort((a, b) => b.date.getTime() - a.date.getTime())
+      .filter(item => {
+        if (historyFilter === 'Mock Test' && item.type !== 'mock') return false;
+        if (historyFilter === 'Practice' && item.type !== 'practice') return false;
+        
+        if (historySearch) {
+          const query = historySearch.toLowerCase();
+          if (item.type === 'mock') {
+            return `cat ${item.data.year} slot ${item.data.slot}`.toLowerCase().includes(query);
+          } else {
+            return item.subtopic.toLowerCase().includes(query) || (item.source && item.source.toLowerCase().includes(query));
+          }
+        }
+        return true;
       });
-    }
-
-    // Sort by timestamp descending
-    return combined.sort((a, b) => b.timestamp - a.timestamp);
-  }, [practiceHistory, historyData, historyFilter, historySearch]);
-
+  }, [historyData, historyFilter, historySearch]);
 
   if (loading) {
-    console.log('DashboardClient: rendering skeleton loaders');
     return (
-      <div className="space-y-6 mb-12 animate-pulse">
+      <div className="space-y-6">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Skeleton className="h-24 w-full rounded-xl" />
-          <Skeleton className="h-24 w-full rounded-xl" />
-          <Skeleton className="h-24 w-full rounded-xl" />
-          <Skeleton className="h-24 w-full rounded-xl" />
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-24 rounded-xl" />
+          ))}
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Skeleton className="col-span-1 md:col-span-2 h-64 rounded-xl" />
-          <Skeleton className="col-span-1 md:col-span-2 h-64 rounded-xl" />
-          <Skeleton className="col-span-1 md:col-span-4 h-48 rounded-xl" />
-          <Skeleton className="col-span-1 md:col-span-4 h-64 rounded-xl" />
-        </div>
+        <Skeleton className="h-72 rounded-2xl" />
+        <Skeleton className="h-96 rounded-2xl" />
       </div>
     );
   }
 
-  console.log('DashboardClient: loading finished', { data: !!data });
-  if (!data) return null;
+  if (!data) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-muted-foreground">Failed to load dashboard data. Please refresh.</p>
+        <Button onClick={loadData} className="mt-4">Retry</Button>
+      </div>
+    );
+  }
 
-  console.log('DashboardClient: rendering main content');
+  // Check today's 4 daily tasks status
+  const todayStr = new Date().toDateString();
+  const reviewTopic = data.weaknesses?.[0]?.split(' > ').pop() || 'Arithmetic';
 
-  const getEstimatedPercentile = (score: number) => {
-    if (score >= 90) return '99.5+';
-    if (score >= 80) return (95 + (score - 80) * 0.45).toFixed(1); // 80=95, 90=99.5
-    if (score >= 70) return (90 + (score - 70) * 0.5).toFixed(1);  // 70=90, 80=95
-    if (score >= 60) return (80 + (score - 60) * 1.0).toFixed(1);  // 60=80, 70=90
-    if (score >= 50) return (70 + (score - 50) * 1.0).toFixed(1);  // 50=70, 60=80
-    if (score >= 30) return (40 + (score - 30) * 1.5).toFixed(1);  // 30=40, 50=70
-    return Math.max(0, score).toFixed(1);
-  };
+  const dailyTasks = [
+    {
+      id: 'daily_rc',
+      name: 'Daily RC Passage',
+      badge: 'VARC',
+      desc: 'CAT Reading Comprehension Set',
+      subtopic: 'Reading Comprehension',
+      action: 'Solve Passage',
+      link: '/practice/daily/rc',
+      attemptedToday: historyData?.attempts?.some((a: any) => {
+        return new Date(a.attemptedAt).toDateString() === todayStr && 
+          (a.source === 'daily_rc' || a.question?.subtopic?.toLowerCase().includes('reading comprehension'));
+      })
+    },
+    {
+      id: 'daily_dilr',
+      name: 'Daily DILR Caselet',
+      badge: 'DILR',
+      desc: 'CAT Logic & Data Puzzle Set',
+      subtopic: 'Logical Reasoning',
+      action: 'Solve Caselet',
+      link: '/practice/daily/dilr',
+      attemptedToday: historyData?.attempts?.some((a: any) => {
+        return new Date(a.attemptedAt).toDateString() === todayStr && 
+          (a.source === 'daily_dilr' || a.question?.topic?.toLowerCase().includes('lr') || a.question?.topic?.toLowerCase().includes('di'));
+      })
+    },
+    {
+      id: 'review',
+      name: 'Priority Concept Review',
+      badge: 'QA / FOCUS',
+      desc: `Target weak spot: ${reviewTopic}`,
+      subtopic: reviewTopic,
+      action: 'Start 10Q Sprint',
+      link: `/practice/modules/${encodeURIComponent(reviewTopic)}`,
+      attemptedToday: historyData?.attempts?.some((a: any) => {
+        return a.question?.subtopic?.toLowerCase() === reviewTopic.toLowerCase() && new Date(a.attemptedAt).toDateString() === todayStr;
+      })
+    },
+    {
+      id: 'challenge',
+      name: 'Daily Mixed Arena',
+      badge: 'SPEED DRILL',
+      desc: 'Mixed cross-topic speed sprint',
+      subtopic: 'Mixed Arena',
+      action: 'Enter Arena',
+      link: '/practice/mixed',
+      attemptedToday: historyData?.attempts?.some((a: any) => {
+        return new Date(a.attemptedAt).toDateString() === todayStr && a.source === 'mixed';
+      }) || historyData?.mockProgress?.some((s: any) => {
+        return s.type === 'MIXED_SESSION' && new Date(s.updatedAt).toDateString() === todayStr;
+      })
+    }
+  ];
 
-
+  const allDailiesCompleted = dailyTasks.every(t => t.attemptedToday);
 
   return (
-    <div className="space-y-6 mb-12">
+    <div className="space-y-8 mb-12">
+      
+      {/* 1. Diagnostic Alert Banner (if pending) */}
       {!data.diagnosticCompleted && (
         <Card className="bg-gradient-to-r from-orange-500/10 to-red-500/10 border-orange-500/20 shadow-sm">
           <CardContent className="p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -202,7 +217,7 @@ export function DashboardClient() {
         </Card>
       )}
 
-      {/* 3.2 Granular Stats row */}
+      {/* 2. Granular Quick Stats Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="bg-gradient-to-br from-indigo-500/10 to-transparent border-indigo-500/20 shadow-sm">
           <CardContent className="p-4 flex flex-col justify-center">
@@ -230,262 +245,135 @@ export function DashboardClient() {
         </Card>
       </div>
 
-      {/* Overview Metric & Gamification */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="col-span-1 md:col-span-4 border-primary/20 bg-primary/5 shadow-sm">
-          <CardHeader className="pb-2">
-            <div className="flex items-start justify-between">
-              <div>
-                <CardDescription className="text-primary font-medium flex items-center gap-2 tracking-wider uppercase text-xs">
-                  <Award className="h-4 w-4" /> Overall Mastery Profile
-                </CardDescription>
-                <CardTitle className="text-6xl font-black flex items-center gap-3 tracking-tighter mt-1">
-                  {data.overallScore}
-                  <div className="flex flex-col">
-                    <span className="text-xl text-muted-foreground font-semibold leading-none">/ 100</span>
-                    <span className="text-sm text-primary font-bold leading-none mt-1">Grade {data.overallScore >= 90 ? 'A+' : data.overallScore >= 75 ? 'A' : data.overallScore >= 60 ? 'B' : data.overallScore >= 40 ? 'C' : 'D'}</span>
-                  </div>
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full ml-2 text-muted-foreground hover:text-primary">
-                        <Info className="h-5 w-5" />
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>How Kaksha Scoring Works</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4 text-sm mt-4">
-                        <p><strong>Overall Kaksha Score (0-100):</strong> This is your global mastery level. We use a sophisticated algorithm that analyzes the difficulty of questions you answer, how recently you practiced them, and the breadth of topics you cover. A score of 80+ indicates you are highly proficient and ready for advanced mocks!</p>
-                        <p><strong>Sectional Score:</strong> This aggregates your performance across all topics within a major section (like Quantitative Ability or Verbal Ability). Mastering sections unlocks advanced tiers in your Master Path.</p>
-                        <p><strong>Topic Score (0-10):</strong> A more granular, accuracy-based metric for specific topics (e.g., Arithmetic or Algebra). It helps you quickly identify which areas need a quick review.</p>
-                        <p><strong>Subtopic Grades (A-F):</strong> The finest level of detail. Grades are assigned based on your raw accuracy and the number of questions you've attempted in a subtopic. You need an 'A' grade to consider a subtopic fully Mastered.</p>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                </CardTitle>
-              </div>
-              <div className="text-right flex flex-col items-end">
-                <Badge className="bg-indigo-600 text-white border-0 font-black text-sm px-3 py-1 shadow-md">
-                  {getEstimatedPercentile(data.overallScore)} %ile
-                </Badge>
-                <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold mt-1">Est. CAT Percentile</span>
-              </div>
+      {/* 3. Hero Command Center (Mastery Profile + Consistency Calendar Heatmap) */}
+      <HeroCommandCenter data={data} historyData={historyData} />
+
+      {/* 4. Daily Kaksha Targets (4 Pillars: Daily RC, Daily DILR, QA Review, Mixed Challenge) */}
+      <Card className="border-indigo-200 dark:border-indigo-900 bg-indigo-50/20 dark:bg-indigo-950/15 shadow-sm overflow-hidden">
+        <CardHeader className="bg-muted/15 border-b border-border/40 pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <CardTitle className="text-xl font-extrabold flex items-center gap-2 text-indigo-700 dark:text-indigo-400 tracking-tight">
+                <Zap className="h-5 w-5 fill-indigo-500 text-indigo-500" /> Daily Kaksha Targets
+              </CardTitle>
+              <CardDescription className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+                Complete all 4 daily pillars (RC passage, DILR caselet, QA review, and Mixed arena) to build unstoppable consistency.
+              </CardDescription>
             </div>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">
-              Your Kaksha Score dynamically adjusts based on Item Response Theory and daily consistency.
-            </p>
-            <SubtopicsExplorerModal hierarchy={data.hierarchy}>
-              <Button variant="secondary" size="sm" className="w-full sm:w-auto font-bold cursor-pointer text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 shadow-sm mb-4">
-                <Layers className="w-4 h-4 mr-2" /> Explore Full Hierarchy & Scores
-              </Button>
-            </SubtopicsExplorerModal>
-            <div className="flex gap-6 border-t pt-4 border-primary/10 flex-wrap">
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wider font-bold mb-1">XP Earned</p>
-                <p className="text-xl font-black text-yellow-500 flex items-center gap-1"><Star className="h-5 w-5 fill-yellow-500" /> {data.xp}</p>
-              </div>
-              
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wider font-bold mb-1">Current Streak</p>
-                <p className="text-xl font-black text-orange-500 flex items-center gap-1">🔥 {data.currentStreak || 0} Days</p>
-              </div>
-
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wider font-bold mb-1">Longest Streak</p>
-                <p className="text-xl font-black text-orange-700 dark:text-orange-400 flex items-center gap-1">🏆 {data.longestStreak || 0} Days</p>
-              </div>
-
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wider font-bold mb-1">Badges</p>
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <div className="flex flex-wrap gap-2 mt-1 cursor-pointer">
-                      {data.badges?.length > 0 ? data.badges.map((b: string) => (
-                        <TooltipProvider key={b}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Badge variant="secondary" className="text-xs font-bold shadow-sm border-primary/10 hover:bg-primary/20 transition-colors"><Medal className="h-3 w-3 mr-1 text-primary" />{b}</Badge>
-                            </TooltipTrigger>
-                            <TooltipContent>Earned for excellence in {b}</TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      )) : <span className="text-sm text-muted-foreground font-medium hover:underline">Complete tasks to unlock!</span>}
-                    </div>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Kaksha Badges</DialogTitle>
-                    </DialogHeader>
-                    <div className="grid grid-cols-3 gap-6 py-8">
-                      {data.badges?.map((b: string) => (
-                        <div key={b} className="text-center flex flex-col items-center">
-                          <div className="h-16 w-16 rounded-full bg-yellow-500/20 flex items-center justify-center mb-3 border-2 border-yellow-500">
-                            <Medal className="h-8 w-8 text-yellow-600 dark:text-yellow-400" />
-                          </div>
-                          <span className="text-sm font-bold leading-tight">{b}</span>
-                        </div>
-                      ))}
-                      <div className="text-center flex flex-col items-center opacity-40 grayscale">
-                        <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-3 border-2 border-muted-foreground">
-                          <Medal className="h-8 w-8 text-muted-foreground" />
-                        </div>
-                        <span className="text-sm font-bold leading-tight">QA Master</span>
-                      </div>
-                      <div className="text-center flex flex-col items-center opacity-40 grayscale">
-                        <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-3 border-2 border-muted-foreground">
-                          <Medal className="h-8 w-8 text-muted-foreground" />
-                        </div>
-                        <span className="text-sm font-bold leading-tight">Speed Demon</span>
-                      </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Mastery Overview End */}
-      </div>
-
-      {/* Sectional Competency Matrix & Topic Hierarchy */}
-      <CompetencyMatrix hierarchy={data.hierarchy} />
-
-      {/* Dynamic Master Paths Progression */}
-      <MasterPathsProgression hierarchy={data.hierarchy} />
-
-      {/* Dynamic Task Engine */}
-      <Card className="col-span-1 md:col-span-4 border-indigo-200 dark:border-indigo-900 bg-indigo-50/30 dark:bg-indigo-950/20 shadow-sm mt-2">
-        <CardHeader>
-          <CardTitle className="text-xl flex items-center gap-2 text-indigo-700 dark:text-indigo-400">
-            <Zap className="h-5 w-5 fill-indigo-500" /> Daily Kaksha Targets
-          </CardTitle>
-          <CardDescription className="text-indigo-900/70 dark:text-indigo-300/70 font-medium">Actionable practice modules dynamically generated to target your weakest subtopics today.</CardDescription>
+            {allDailiesCompleted && (
+              <Badge className="bg-emerald-600 text-white font-black text-xs px-3 py-1 self-start sm:self-auto shadow-sm">
+                ✨ ALL DAILIES COMPLETED
+              </Badge>
+            )}
+          </div>
         </CardHeader>
-        <CardContent>
-          {data.weaknesses.length > 0 ? (() => {
-            const reviewTopic = data.weaknesses[0]?.split(' > ').pop() || 'Percentage';
-            const newTopic = data.weaknesses[1]?.split(' > ').pop() || 'Average';
 
-            const tasks = [
-              { id: 'review', name: 'Review', desc: 'Strengthen weak areas', subtopic: reviewTopic, action: 'Solve 10 Questions' },
-              { id: 'new', name: 'Learn New', desc: 'Advance your Master Path', subtopic: newTopic, action: 'Complete Module' },
-              { id: 'challenge', name: 'Daily Challenge', desc: 'Mixed concepts sprint', subtopic: 'Mixed Arena', action: 'Enter Arena', link: '/practice/mixed' }
-            ];
-
-            const taskStatuses = tasks.map((t) => {
-              let attemptedToday = false;
-              if (t.id === 'challenge') {
-                attemptedToday = historyData?.attempts?.some((a: any) => {
-                  return new Date(a.attemptedAt).toDateString() === new Date().toDateString() && a.source === 'mixed';
-                }) || historyData?.mockProgress?.some((s: any) => {
-                  return s.type === 'MIXED_SESSION' && new Date(s.updatedAt).toDateString() === new Date().toDateString();
-                });
-              } else {
-                attemptedToday = historyData?.attempts?.some((a: any) => {
-                  return a.question?.subtopic === t.subtopic && new Date(a.attemptedAt).toDateString() === new Date().toDateString();
-                }) || historyData?.mockProgress?.some((s: any) => {
-                  return (s.type === 'PRACTICE_MODULE' || s.type === 'MOCK') && s.subtopic === t.subtopic && new Date(s.updatedAt).toDateString() === new Date().toDateString();
-                });
-              }
-              return { ...t, attemptedToday };
-            });
-
-            const allCompleted = taskStatuses.every((t) => t.attemptedToday);
-
-            if (allCompleted) {
-              return (
-                <div className="rounded-xl border-2 border-dashed border-green-500/50 bg-green-500/10 p-8 text-center flex flex-col items-center">
-                  <Trophy className="h-12 w-12 text-green-500 mb-4" />
-                  <h3 className="font-bold text-2xl mb-2 text-green-700 dark:text-green-400">All Daily Targets Completed!</h3>
-                  <p className="text-muted-foreground max-w-md mx-auto mb-6 text-sm">You've successfully finished your personalized Kaksha tasks for today. Keep up the streak!</p>
-                  <Button className="bg-green-600 hover:bg-green-700 font-bold shadow-md" onClick={() => window.location.href = '/practice/modules'}>
-                    Unlock Bonus Sprint
-                  </Button>
-                </div>
-              );
-            }
-
-            return (
-              <div className="flex flex-col md:flex-row gap-4 items-center justify-between w-full relative">
-                {/* Background connecting line (desktop) */}
-                <div className="hidden md:block absolute top-1/2 left-0 right-0 h-1 bg-indigo-500/20 -translate-y-1/2 z-0 rounded-full" />
-
-                {taskStatuses.map((t, idx) => (
-                  <div key={t.id} className={`w-full md:w-1/3 p-5 rounded-2xl border-2 flex flex-col justify-between transition-transform duration-300 z-10 ${t.attemptedToday ? 'bg-green-500/10 border-green-500/30' : idx === 0 || taskStatuses[idx - 1].attemptedToday ? 'bg-background border-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.2)] scale-105' : 'bg-muted/50 border-muted opacity-60 grayscale'}`}>
-                    <div>
-                      <div className="flex items-center justify-between mb-3">
-                        {t.attemptedToday ? (
-                          <Badge className="bg-green-500 text-white border-0 font-bold px-2 py-1"><CheckCircle2 className="h-3 w-3 mr-1" /> DONE</Badge>
-                        ) : idx === 0 || taskStatuses[idx - 1].attemptedToday ? (
-                          <Badge variant="outline" className="bg-indigo-500/10 text-indigo-700 border-indigo-200 font-bold uppercase tracking-wider text-[10px] animate-pulse">Up Next</Badge>
-                        ) : (
-                          <Badge variant="outline" className="bg-transparent border-muted-foreground/30 text-muted-foreground font-bold uppercase tracking-wider text-[10px]"><Lock className="h-3 w-3 mr-1" /> Locked</Badge>
-                        )}
-                        <span className="text-xs font-black text-muted-foreground/50">STEP {idx + 1}</span>
-                      </div>
-                      <h4 className={`font-black text-lg leading-tight mb-1 ${t.attemptedToday ? 'text-green-700 dark:text-green-400' : ''}`}>{t.name}</h4>
-                      <p className="text-sm font-semibold text-muted-foreground mb-4">{t.desc}</p>
-
-                      <div className="bg-muted/50 rounded-lg p-3 mb-4">
-                        <p className="text-xs text-muted-foreground uppercase tracking-wider font-bold mb-1">Focus Area</p>
-                        <p className="font-semibold text-sm leading-tight">{t.subtopic}</p>
-                      </div>
+        <CardContent className="p-6">
+          {allDailiesCompleted ? (
+            <div className="rounded-2xl border-2 border-dashed border-emerald-500/50 bg-emerald-500/10 p-8 text-center flex flex-col items-center">
+              <Trophy className="h-12 w-12 text-emerald-500 mb-3" />
+              <h3 className="font-extrabold text-2xl mb-1 text-emerald-800 dark:text-emerald-300">
+                All 4 Daily Targets Conquered!
+              </h3>
+              <p className="text-muted-foreground max-w-md mx-auto mb-6 text-xs sm:text-sm">
+                You've completed today's RC passage, DILR caselet, Concept sprint, and Mixed challenge. Your streak is glowing!
+              </p>
+              <Button className="bg-emerald-600 hover:bg-emerald-700 font-bold text-xs h-10 shadow-md text-white" onClick={() => window.location.href = '/practice/modules'}>
+                Unlock Bonus Module Sprint
+              </Button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {dailyTasks.map((t, idx) => (
+                <div 
+                  key={t.id} 
+                  className={`p-4 rounded-2xl border-2 flex flex-col justify-between transition-all duration-200 ${
+                    t.attemptedToday 
+                      ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-900 dark:text-emerald-300' 
+                      : 'bg-card border-border/80 hover:border-primary/50 shadow-sm'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-2.5">
+                      <Badge variant="outline" className="text-[10px] font-black tracking-wider uppercase">
+                        {t.badge}
+                      </Badge>
+                      {t.attemptedToday ? (
+                        <Badge className="bg-emerald-600 text-white font-bold text-[10px] px-2 py-0.5">
+                          <CheckCircle2 className="h-3 w-3 mr-1" /> DONE
+                        </Badge>
+                      ) : (
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase">
+                          TARGET {idx + 1}
+                        </span>
+                      )}
                     </div>
 
+                    <h4 className="font-extrabold text-base text-foreground leading-snug">{t.name}</h4>
+                    <p className="text-xs text-muted-foreground mt-0.5 mb-3">{t.desc}</p>
+                  </div>
+
+                  <Link href={t.link} className="w-full mt-2">
                     <Button
                       variant={t.attemptedToday ? 'outline' : 'default'}
                       size="sm"
-                      className={`mt-auto w-full font-bold h-10 ${!t.attemptedToday && (idx === 0 || taskStatuses[idx - 1].attemptedToday) ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md' : ''}`}
-                      disabled={!t.attemptedToday && idx > 0 && !taskStatuses[idx - 1].attemptedToday}
-                      onClick={() => {
-                        if (t.attemptedToday) return;
-                        window.location.href = t.link ? t.link : `/practice/modules/${encodeURIComponent(t.subtopic)}`;
-                      }}
+                      className={`w-full font-bold text-xs h-9 ${
+                        t.attemptedToday 
+                          ? 'border-emerald-500/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/10' 
+                          : 'bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm'
+                      }`}
                     >
-                      {t.attemptedToday ? 'Task Finished' : <><PlayCircle className="h-4 w-4 mr-2" /> {t.action}</>}
+                      {t.attemptedToday ? 'Reattempt Target' : <><PlayCircle className="h-3.5 w-3.5 mr-1.5" /> {t.action}</>}
                     </Button>
-                  </div>
-                ))}
-              </div>
-            );
-          })() : (
-            <div className="text-center py-8 text-muted-foreground font-medium bg-muted/20 rounded-xl border border-dashed border-border">
-              <h3 className="font-bold text-lg mb-2 text-foreground">Diagnostic Required</h3>
-              <p className="max-w-md mx-auto mb-4 text-sm">Complete your Diagnostic test to unlock personalized daily targets.</p>
-              <Button onClick={() => window.location.href = '/diagnostic'} variant="outline" className="font-bold">Take Diagnostic</Button>
+                  </Link>
+                </div>
+              ))}
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Calendar Heatmap */}
-      <div className="mt-8 mb-2">
-        <ProgressCalendar historyData={historyData} weaknesses={data?.weaknesses || []} />
-      </div>
+      {/* 5. Adaptive Preparation Roadmap & Velocity Gauge */}
+      <DynamicTimeline
+        targetExamYear={data.targetExamYear || '2026'}
+        overallScore={data.overallScore || 0}
+        totalAttempts={data.totalRawAttempts || 0}
+        strengths={data.strengths || []}
+        weaknesses={data.weaknesses || []}
+      />
 
-      {/* History & Review Hub */}
-      <Card className="col-span-1 md:col-span-4 mt-2 shadow-sm">
-        <CardHeader>
+      {/* 6. Unified Diagnostics & Competency Hub (Topic Hierarchy + Deep Dive Charts) */}
+      <DiagnosticsHub
+        hierarchy={data.hierarchy}
+        totalRawAttempts={data.totalRawAttempts}
+        totalRawCorrect={data.totalRawCorrect}
+        totalRawWrong={data.totalRawWrong}
+      />
+
+      {/* 7. Dynamic Master Paths Progression */}
+      <MasterPathsProgression hierarchy={data.hierarchy} />
+
+      {/* 8. History & Review Hub */}
+      <Card className="shadow-sm border-border/80 bg-card overflow-hidden">
+        <CardHeader className="pb-4 bg-muted/20 border-b border-border/40">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <CardTitle className="text-xl flex items-center gap-2">
-                <History className="h-5 w-5 text-primary" /> History & Review Hub
+              <CardTitle className="text-xl font-extrabold flex items-center gap-2 text-foreground tracking-tight">
+                <History className="h-5 w-5 text-primary shrink-0" /> History & Review Hub
               </CardTitle>
-              <CardDescription>Revisit your recent modules and learn from your mistakes.</CardDescription>
+              <CardDescription className="text-xs sm:text-sm mt-0.5">
+                Revisit past sessions, inspect detailed performance reports, and learn from mistakes.
+              </CardDescription>
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto">
               <Input
-                placeholder="Search subtopics..."
-                className="w-full sm:w-48 h-9"
+                placeholder="Search history..."
+                className="w-full sm:w-48 h-8 text-xs rounded-lg"
                 value={historySearch}
                 onChange={e => setHistorySearch(e.target.value)}
               />
               <Select value={historyFilter} onValueChange={setHistoryFilter}>
-                <SelectTrigger className="w-[120px] h-9">
+                <SelectTrigger className="w-[120px] h-8 text-xs rounded-lg">
                   <SelectValue placeholder="Filter" />
                 </SelectTrigger>
                 <SelectContent>
@@ -497,207 +385,71 @@ export function DashboardClient() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          {historyData && (historyData.mockProgress.length > 0 || historyData.attempts.length > 0) ? (
-            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+        <CardContent className="p-6">
+          {historyData && (historyData.mockProgress?.length > 0 || historyData.attempts?.length > 0) ? (
+            <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
               {combinedHistory.map((item, idx) => {
                 if (item.type === 'mock') {
                   const mock = item.data;
                   return (
-                    <div key={`hist-${idx}`} className="p-4 border rounded-xl flex items-center justify-between hover:bg-muted/30 transition-colors">
+                    <div key={`hist-${idx}`} className="p-4 border rounded-xl flex items-center justify-between hover:bg-muted/30 transition-colors bg-background">
                       <div>
                         <div className="flex items-center gap-2 mb-1">
-                          <Badge variant="outline" className="bg-primary/5 border-primary/20 text-primary">Mock Test</Badge>
+                          <Badge variant="outline" className="bg-primary/5 border-primary/20 text-primary text-[10px] font-bold">Mock Test</Badge>
                           <span className="text-xs text-muted-foreground font-medium">{new Date(mock.updatedAt).toLocaleDateString()}</span>
                         </div>
-                        <h4 className="font-bold">CAT {mock.year} - Slot {mock.slot}</h4>
-                        <p className="text-sm text-muted-foreground">Score: {mock.score || 'In Progress'}</p>
+                        <h4 className="font-bold text-sm">CAT {mock.year} - Slot {mock.slot}</h4>
+                        <p className="text-xs text-muted-foreground">Score: {mock.score || 'In Progress'}</p>
                       </div>
-                      <Button variant="outline" size="sm" onClick={() => window.location.href = `/mocks/${mock.year}/${mock.slot}/report`}>
-                        Review
-                      </Button>
-                    </div>
-                  );
-                } else {
-                  const group = item.data;
-                  return (
-                    <div key={`hist-${idx}`} className="p-4 border rounded-xl flex items-center justify-between hover:bg-muted/30 transition-colors">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <Badge variant="outline" className="bg-secondary/10 border-secondary/20">Practice</Badge>
-                          <span className="text-xs text-muted-foreground font-medium">{group.date}</span>
-                        </div>
-                        <h4 className="font-bold">{group.subtopic}</h4>
-                        <p className="text-sm text-muted-foreground">{group.count} questions attempted in {group.topic}</p>
-                      </div>
-                      <Button variant="outline" size="sm" onClick={() => window.location.href = `/practice/review/${encodeURIComponent(group.subtopic)}`}>
-                        Review Sprint
-                      </Button>
+                      <Link href={`/mocks/${mock.year}/${mock.slot}/report`}>
+                        <Button variant="outline" size="sm" className="font-bold text-xs h-8">
+                          Review
+                        </Button>
+                      </Link>
                     </div>
                   );
                 }
+
+                return (
+                  <div key={`hist-${idx}`} className="p-4 border rounded-xl flex items-center justify-between hover:bg-muted/30 transition-colors bg-background">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge variant="secondary" className="text-[10px] font-bold">
+                          {item.source === 'daily_rc' ? 'Daily RC' : item.source === 'daily_dilr' ? 'Daily DILR' : item.source === 'mixed' ? 'Mixed Arena' : 'Practice Sprint'}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground font-medium">{item.date.toLocaleDateString()}</span>
+                      </div>
+                      <h4 className="font-bold text-sm">{item.subtopic}</h4>
+                      <p className="text-xs text-muted-foreground">
+                        {item.correct} / {item.total} Correct ({Math.round((item.correct / item.total) * 100)}% Accuracy)
+                      </p>
+                    </div>
+                    <Link href={`/practice/modules/${encodeURIComponent(item.subtopic)}`}>
+                      <Button variant="outline" size="sm" className="font-bold text-xs h-8">
+                        Re-practice
+                      </Button>
+                    </Link>
+                  </div>
+                );
               })}
             </div>
           ) : (
-            <div className="rounded-xl border-2 border-dashed border-border p-8 text-center bg-muted/20">
-              <BookOpen className="h-10 w-10 mx-auto text-muted-foreground mb-3 opacity-50" />
-              <h3 className="font-bold text-lg mb-1">Your review hub is empty</h3>
-              <p className="text-sm text-muted-foreground max-w-md mx-auto mb-6">
-                As you complete Diagnostic tests and Daily Kaksha modules, they will automatically appear here. Jump back in to review incorrectly answered questions.
-              </p>
-              <Button onClick={() => window.location.href = '/practice/modules'} className="font-bold shadow-sm">
-                Browse All Modules
-              </Button>
+            <div className="text-center py-8 text-muted-foreground text-xs font-medium">
+              No practice attempts recorded yet. Start your first sprint above!
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Preparation Timeline */}
-      <div className="mt-8">
-        <DashboardTimeline
-          targetExamYear={data.targetExamYear}
-          strengths={data.strengths}
-          weaknesses={data.weaknesses}
+      {/* User Profile Modal */}
+      {selectedProfileId && (
+        <UserProfileModal
+          userId={selectedProfileId}
+          open={profileModalOpen}
+          onOpenChange={setProfileModalOpen}
         />
-      </div>
+      )}
 
-      {/* Global Leaderboard & Bell Curve */}
-      <Card className="shadow-sm mt-8 border-indigo-200 dark:border-indigo-900 overflow-hidden">
-        <div className="bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-indigo-500/10 p-6 border-b border-indigo-100 dark:border-indigo-900">
-          <CardTitle className="text-2xl flex items-center gap-2 text-indigo-700 dark:text-indigo-400">
-            <Medal className="h-6 w-6" /> Kaksha Global Leaderboard
-          </CardTitle>
-          <CardDescription className="text-indigo-900/70 dark:text-indigo-300/70 font-medium mt-1">See where you stand against the competition on the bell curve.</CardDescription>
-        </div>
-        <CardContent className="p-0 flex flex-col lg:flex-row">
-          <div className="w-full lg:w-1/2 p-6 border-b lg:border-b-0 lg:border-r border-border">
-            <h4 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-6">Percentile Distribution</h4>
-            <div className="h-[300px] w-full relative">
-              <RContainer width="100%" height="100%">
-                <LineChart data={[
-                  { p: 0, v: 2 }, { p: 10, v: 10 }, { p: 20, v: 35 }, { p: 30, v: 80 }, { p: 40, v: 150 },
-                  { p: 50, v: 200 }, { p: 60, v: 150 }, { p: 70, v: 80 }, { p: 80, v: 35 }, { p: 90, v: 10 }, { p: 100, v: 2 }
-                ]} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.05)" />
-                  <RXAxis dataKey="p" type="number" domain={[0, 100]} tick={{ fontSize: 12 }} stroke="rgba(0,0,0,0.2)" />
-                  <Line type="monotone" dataKey="v" stroke="#6366f1" strokeWidth={3} dot={false} fill="url(#colorV)" />
-                  {/* Plot all users from DB */}
-                  {data.allUsersDistribution?.map((u: any, idx: number) => {
-                    const p = parseFloat(getEstimatedPercentile(u.score));
-                    // Calculate y on the bell curve (max height is 200 at p=50)
-                    const y = 200 * Math.exp(-Math.pow(p - 50, 2) / 400);
-                    return (
-                      <ReferenceDot
-                        key={`dot-${idx}`}
-                        x={p}
-                        y={y}
-                        r={u.isUser ? 6 : 4}
-                        fill={u.isUser ? "#10b981" : "#6366f1"}
-                        stroke={u.isUser ? "#fff" : "none"}
-                        strokeWidth={u.isUser ? 2 : 0}
-                      />
-                    );
-                  })}
-
-                  <RTooltip content={({ active, payload }) => {
-                    if (active && payload && payload.length) {
-                      const p = payload[0].payload.p;
-                      // Find users who are close to this percentile
-                      const closeUsers = data.allUsersDistribution?.filter((u: any) => {
-                        const up = parseFloat(getEstimatedPercentile(u.score));
-                        return Math.abs(up - p) <= 5;
-                      }).sort((a: any, b: any) => b.score - a.score);
-
-                      return (
-                        <div className="bg-background border shadow-xl rounded-xl p-4 min-w-[200px]">
-                          <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 border-b pb-2">{p}th Percentile</div>
-                          {closeUsers && closeUsers.length > 0 ? closeUsers.slice(0, 4).map((u: any, idx: number) => (
-                            <div key={idx} className={`flex items-center gap-3 py-1 ${!u.isUser ? 'opacity-70' : ''}`}>
-                              <div className={`h-8 w-8 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-sm ${u.isUser ? 'bg-green-500 ring-2 ring-green-200' : 'bg-indigo-400'}`}>
-                                {u.isUser ? 'YOU' : u.name.substring(0, 2).toUpperCase()}
-                              </div>
-                              <div>
-                                <p className={`font-bold text-sm leading-tight ${u.isUser ? 'text-green-600' : ''}`}>{u.isUser ? 'You' : u.name}</p>
-                                <p className="text-xs text-muted-foreground leading-tight">Score: {u.score}</p>
-                              </div>
-                            </div>
-                          )) : (
-                            <p className="text-sm text-muted-foreground py-2 italic">No users in this bracket yet.</p>
-                          )}
-                        </div>
-                      )
-                    }
-                    return null;
-                  }} cursor={{ stroke: 'rgba(99, 102, 241, 0.2)', strokeWidth: 2, strokeDasharray: '4 4' }} />
-                </LineChart>
-              </RContainer>
-            </div>
-          </div>
-          <div className="w-full lg:w-1/2 p-0">
-            <div className="flex justify-between items-center p-6 pb-2">
-              <h4 className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Top Performers</h4>
-            </div>
-            <div className="px-6 pb-6">
-              <div className="space-y-1">
-                {data.leaderboard?.length > 0 ? data.leaderboard.map((u: any) => {
-                  const rankStyle = u.rank === 1 ? "bg-yellow-500/10 text-yellow-600 border-yellow-200"
-                    : u.rank === 2 ? "bg-slate-200 text-slate-600 border-slate-300"
-                      : u.rank === 3 ? "bg-orange-500/10 text-orange-600 border-orange-200"
-                        : u.isUser ? "bg-green-500 border-green-600 text-white shadow-md"
-                          : "bg-muted text-muted-foreground border-transparent";
-                  return (
-                    <div
-                      key={u.rank}
-                      onClick={() => { setSelectedProfileId(u.userId); setProfileModalOpen(true); }}
-                      className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer hover:shadow-md ${u.isUser ? 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900' : 'bg-transparent border-transparent hover:bg-muted/50'} transition-all`}
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className={`h-8 w-8 rounded-full flex items-center justify-center font-bold text-xs border ${rankStyle}`}>{u.avatar}</div>
-                        <div>
-                          <p className={`font-bold text-sm flex items-center gap-2 ${u.isUser ? 'text-green-700 dark:text-green-400' : ''}`}>
-                            {u.name}
-                            {u.rank <= 3 && <Trophy className={`h-3 w-3 ${u.rank === 1 ? 'text-yellow-500' : u.rank === 2 ? 'text-slate-400' : 'text-orange-500'}`} />}
-                          </p>
-                          <p className="text-xs text-muted-foreground truncate max-w-[150px]">Mastery: {u.strength}</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-black text-sm">{u.score}</p>
-                        <p className="text-xs text-muted-foreground">{u.acc} acc</p>
-                      </div>
-                    </div>
-                  );
-                }) : (
-                  <p className="text-sm text-muted-foreground p-4 text-center">No one is on the leaderboard yet. Start practicing to claim the top spot!</p>
-                )}
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <UserProfileModal
-        userId={selectedProfileId || ''}
-        open={profileModalOpen}
-        onOpenChange={setProfileModalOpen}
-      />
-
-      {/* Interactive Charts with Raw Stats */}
-      <Card className="shadow-sm mt-8">
-        <CardHeader>
-          <CardTitle>Deep Dive Analytics</CardTitle>
-          <CardDescription>Click on any bar to drill down into specific topic mastery.</CardDescription>
-        </CardHeader>
-        <CardContent className="pt-2">
-          <DashboardCharts
-            hierarchy={data.hierarchy}
-            totalRawAttempts={data.totalRawAttempts}
-            totalRawCorrect={data.totalRawCorrect}
-            totalRawWrong={data.totalRawWrong}
-          />
-        </CardContent>
-      </Card>
     </div>
   );
 }
