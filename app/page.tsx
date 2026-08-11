@@ -22,8 +22,8 @@ export default async function LandingPage() {
       {/* Top Navbar specifically for Landing Page */}
       <header className="absolute top-0 inset-x-0 z-50 flex items-center justify-between px-6 py-4 md:px-12">
         <div className="flex items-center gap-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-blue-600 text-white font-bold text-lg shadow-lg">
-            K
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 text-2xl shadow-lg">
+            📕
           </div>
           <span className="text-2xl font-bold tracking-tight">Kaksha</span>
         </div>
@@ -202,10 +202,10 @@ export default async function LandingPage() {
       
       <footer className="border-t py-12 text-center text-muted-foreground">
         <div className="flex items-center justify-center gap-2 mb-4">
-          <div className="flex h-6 w-6 items-center justify-center rounded-md bg-muted text-muted-foreground font-bold text-xs">
-            K
+          <div className="flex h-6 w-6 items-center justify-center rounded-md bg-blue-100 shadow-sm text-xs">
+            📕
           </div>
-          <span className="font-semibold">Kaksha Prep</span>
+          <span className="font-semibold text-foreground">Kaksha</span>
         </div>
         <p className="text-sm">© {new Date().getFullYear()} Kaksha Prep. Built by engineers and top percentilers.</p>
       </footer>

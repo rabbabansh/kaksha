@@ -38,11 +38,36 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'subtopics array is required', code: ErrorCode.VALIDATION_ERROR, correlationId }, { status: 400 });
     }
 
+    // Fetch profile before
+    const profileBefore = await prisma.userProfile.findUnique({
+      where: { userId },
+      select: { xp: true, badges: true }
+    });
+
     await processSessionCompletion(userId, subtopics);
 
-    logger.info(`${operation} completed successfully`, { correlationId, userId, processedCount: subtopics.length });
+    // Fetch profile after
+    const profileAfter = await prisma.userProfile.findUnique({
+      where: { userId },
+      select: { xp: true, badges: true }
+    });
+
+    const xpBefore = profileBefore?.xp || 0;
+    const xpAfter = profileAfter?.xp || 0;
+    const xpGained = Math.max(0, xpAfter - xpBefore);
+
+    const badgesBefore = profileBefore?.badges ? JSON.parse(profileBefore.badges) : [];
+    const badgesAfter = profileAfter?.badges ? JSON.parse(profileAfter.badges) : [];
+    const newBadges = badgesAfter.filter((b: string) => !badgesBefore.includes(b));
+
+    logger.info(`${operation} completed successfully`, { correlationId, userId, processedCount: subtopics.length, xpGained, newBadgesCount: newBadges.length });
     
-    return NextResponse.json({ success: true, correlationId });
+    return NextResponse.json({ 
+      success: true, 
+      xpGained,
+      newBadges,
+      correlationId 
+    });
   } catch (error) {
     logger.error(`${operation} failed`, { correlationId, error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ success: false, error: 'Internal server error', code: ErrorCode.INTERNAL_ERROR, correlationId }, { status: 500 });

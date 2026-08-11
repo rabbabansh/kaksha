@@ -232,10 +232,13 @@ export function DashboardCharts({ hierarchy, totalRawAttempts, totalRawCorrect, 
               {isMobile && (
                 <LabelList 
                   dataKey="name" 
-                  position="insideLeft" 
+                  position="center" 
                   fill="#ffffff"
-                  offset={10}
                   className="font-bold text-[10px] tracking-wide mix-blend-difference pointer-events-none"
+                  formatter={(val: unknown) => {
+                    const str = String(val ?? '');
+                    return str.length > 15 ? str.substring(0, 15) + '...' : str;
+                  }}
                 />
               )}
               {chartData.map((entry, index) => (

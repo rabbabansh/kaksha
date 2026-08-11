@@ -170,6 +170,8 @@ MemoizedQuestionBody.displayName = 'MemoizedQuestionBody';
 
 export function MixedSessionClient({ topic }: { topic?: string }) {
   const [state, dispatch] = useReducer(reducer, initialState);
+  const [xpGained, setXpGained] = React.useState<number>(0);
+  const [newBadges, setNewBadges] = React.useState<string[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -228,18 +230,27 @@ export function MixedSessionClient({ topic }: { topic?: string }) {
     }, 100);
   };
 
-  const moveToNextQuestion = () => {
+  const moveToNextQuestion = async () => {
     if (scrollRef.current) scrollRef.current.scrollTo({ top: 0 });
 
     if (state.currentIndex + 1 >= state.questions.length) {
       // Calculate touched subtopics and call session/complete for batch scoring
       const touchedSubtopics = Array.from(new Set(state.sessionAttempts.map(a => a.question.subtopic).filter(Boolean)));
       
-      fetch('/api/progress/session/complete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subtopics: touchedSubtopics })
-      }).catch(console.error);
+      try {
+        const res = await fetch('/api/progress/session/complete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ subtopics: touchedSubtopics })
+        });
+        const json = await res.json();
+        if (json.success) {
+          setXpGained(json.xpGained || 0);
+          setNewBadges(json.newBadges || []);
+        }
+      } catch (err) {
+        console.error(err);
+      }
 
       dispatch({ type: 'FINISH_SESSION' });
     } else {
@@ -300,6 +311,8 @@ export function MixedSessionClient({ topic }: { topic?: string }) {
         questions={state.questions}
         sessionAttempts={state.sessionAttempts}
         onReviewQuestion={(idx) => dispatch({ type: 'SET_REVIEW_INDEX', payload: idx })}
+        xpGained={xpGained}
+        newBadges={newBadges}
       />
     );
   }
@@ -313,8 +326,8 @@ export function MixedSessionClient({ topic }: { topic?: string }) {
     <div className="h-screen max-h-screen overflow-hidden bg-background text-foreground flex flex-col font-sans">
       <header className="bg-zinc-900 text-white px-6 py-2 flex items-center justify-between border-b-4 border-primary">
         <div className="flex items-center gap-4">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-black">
-            K
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-xl shadow-sm">
+            📕
           </div>
           <div>
             <div className="flex items-center gap-2">
@@ -384,7 +397,7 @@ export function MixedSessionClient({ topic }: { topic?: string }) {
           )}
         </div>
 
-        <aside className="w-full md:w-80 border-t md:border-t-0 md:border-l border-border/80 bg-muted/10 p-6 flex flex-col justify-between shrink-0 overflow-y-auto">
+        <aside className="hidden md:flex w-80 border-l border-border/80 bg-muted/10 p-6 flex-col justify-between shrink-0 overflow-y-auto">
           <div className="space-y-6">
             <Card className="border bg-card shadow-sm">
               <CardContent className="p-4">
@@ -434,6 +447,51 @@ export function MixedSessionClient({ topic }: { topic?: string }) {
              </Button>
           </div>
         </aside>
+      </div>
+
+      {/* Mobile Bottom Action Bar */}
+      <div className="md:hidden border-t bg-background p-4 pb-safe flex flex-col gap-3 shrink-0 relative z-10 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.2)]">
+        <div className="flex overflow-x-auto gap-2 pb-1 snap-x no-scrollbar">
+          {state.questions.map((q, idx) => {
+            let stateClass = "bg-muted text-muted-foreground border-transparent";
+            
+            let isCorrect: boolean | null = null;
+            if (idx < state.sessionAttempts.length) {
+              isCorrect = state.sessionAttempts[idx].isCorrect;
+            } else if (idx === state.currentIndex && state.selectedAnswer !== null) {
+              isCorrect = state.isCorrect;
+            }
+
+            if (isCorrect === true) {
+              stateClass = idx === state.currentIndex 
+                ? "bg-green-600 text-white border-green-700 shadow-sm" 
+                : "bg-green-100 text-green-700 border-green-300 dark:bg-green-900 dark:text-green-300";
+            } else if (isCorrect === false) {
+              stateClass = idx === state.currentIndex 
+                ? "bg-red-600 text-white border-red-700 shadow-sm" 
+                : "bg-red-100 text-red-700 border-red-300 dark:bg-red-900 dark:text-red-300";
+            } else if (idx === state.currentIndex) {
+              stateClass = "bg-primary text-primary-foreground border-primary";
+            }
+            
+            return (
+              <div 
+                key={idx} 
+                className={`h-8 w-8 shrink-0 rounded-full border flex items-center justify-center text-xs font-bold snap-center ${stateClass}`}
+              >
+                {idx + 1}
+              </div>
+            );
+          })}
+        </div>
+        <Button
+          size="lg"
+          className="w-full font-bold text-base h-12 shadow-md rounded-xl"
+          onClick={moveToNextQuestion}
+          disabled={state.selectedAnswer === null}
+        >
+          {state.currentIndex + 1 >= state.questions.length ? 'Finish Module' : 'Next Question'} &rarr;
+        </Button>
       </div>
     </div>
   );

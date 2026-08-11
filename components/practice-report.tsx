@@ -8,12 +8,16 @@ import { CheckCircle2, XCircle, ArrowRight, BookOpen, BarChart3, HelpCircle, Clo
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { PracticeReportCard } from './practice-report-card';
+import { Badge } from '@/components/ui/badge';
+import { XPToast } from '@/components/xp-toast';
 
 interface PracticeReportProps {
   topic?: string;
   questions: any[];
   sessionAttempts: any[];
   onReviewQuestion: (index: number) => void;
+  xpGained?: number;
+  newBadges?: string[];
 }
 
 export function PracticeReport({
@@ -21,6 +25,8 @@ export function PracticeReport({
   questions,
   sessionAttempts,
   onReviewQuestion,
+  xpGained = 0,
+  newBadges = [],
 }: PracticeReportProps) {
   const router = useRouter();
   const [aiInsights, setAiInsights] = useState<string | null>(null);
@@ -86,6 +92,9 @@ export function PracticeReport({
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-5xl space-y-8 overflow-y-auto h-screen pb-32">
+      {/* XP Toast Animation */}
+      <XPToast xpGained={xpGained} newBadges={newBadges} />
+
       {/* Header */}
       <div className="text-center space-y-3 mt-8">
         <h1 className="text-4xl font-extrabold tracking-tight">Practice Report Card 📊</h1>
@@ -99,9 +108,24 @@ export function PracticeReport({
         title="Kaksha Complete!"
         totalQuestions={totalAttempted}
         correctCount={totalCorrect}
+        xpGained={xpGained}
         onNextStep={() => window.location.href = '/dashboard'}
         nextStepLabel="Return to Dashboard"
       />
+
+      {/* Unlocked Badges */}
+      {newBadges.length > 0 && (
+        <Card className="border-indigo-200 dark:border-indigo-900 bg-indigo-50/50 dark:bg-indigo-950/20 max-w-2xl mx-auto p-4 rounded-2xl">
+          <p className="text-xs font-black uppercase tracking-wider text-indigo-700 dark:text-indigo-400 mb-2">🏅 Badges Earned!</p>
+          <div className="flex flex-wrap gap-2">
+            {newBadges.map((badge) => (
+              <Badge key={badge} className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3 py-1 text-xs">
+                {badge}
+              </Badge>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* AI Insights Section */}
       <Card className="border-indigo-200 dark:border-indigo-900 bg-indigo-50/50 dark:bg-indigo-950/20">

@@ -11,6 +11,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useSession } from 'next-auth/react';
 import { Loader2, Save, AlertTriangle, RefreshCw, Trash2, BrainCircuit } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { signOut } from 'next-auth/react';
+import Link from 'next/link';
+import Image from 'next/image';
+import { LogOut, Gift } from 'lucide-react';
 
 export default function SettingsPage() {
   const { data: session, update } = useSession();
@@ -98,13 +102,49 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-3xl">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-        <p className="text-muted-foreground">Manage your account and preferences.</p>
+    <div className="container mx-auto px-4 py-8 max-w-3xl pb-24">
+      <div className="mb-8 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          {session?.user?.image ? (
+            <Image
+              src={session.user.image}
+              alt="Profile"
+              width={64}
+              height={64}
+              className="h-16 w-16 rounded-full border-4 border-primary/20 shadow-sm"
+            />
+          ) : (
+            <div className="h-16 w-16 rounded-full bg-primary flex items-center justify-center text-3xl font-bold text-primary-foreground shadow-sm">
+              {session?.user?.name?.[0] || 'U'}
+            </div>
+          )}
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">{session?.user?.name || 'Profile'}</h1>
+            <p className="text-muted-foreground">{session?.user?.email}</p>
+          </div>
+        </div>
       </div>
 
       <div className="space-y-6">
+        {/* Quick Actions */}
+        <div className="grid grid-cols-2 gap-4">
+          <Link href="/whats-new">
+            <Button variant="outline" className="w-full h-14 flex items-center justify-start gap-3 rounded-xl border-green-500/20 hover:bg-green-500/10 hover:text-green-600">
+              <Gift className="h-5 w-5 text-green-500" />
+              <div className="flex flex-col items-start">
+                <span className="font-bold text-sm">What's New</span>
+                <span className="text-[10px] text-muted-foreground">Latest updates</span>
+              </div>
+            </Button>
+          </Link>
+          <Button variant="outline" className="w-full h-14 flex items-center justify-start gap-3 rounded-xl hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30" onClick={() => signOut()}>
+            <LogOut className="h-5 w-5" />
+            <div className="flex flex-col items-start">
+              <span className="font-bold text-sm">Log Out</span>
+              <span className="text-[10px] text-muted-foreground">Sign out of Kaksha</span>
+            </div>
+          </Button>
+        </div>
         {/* Profile Card */}
         <Card>
           <CardHeader>

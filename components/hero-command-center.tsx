@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SubtopicsExplorerModal } from './subtopics-explorer-modal';
+import { BadgeInfoModal } from './badge-info-modal';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { 
@@ -25,7 +26,8 @@ import {
   Target, 
   FileText,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Zap
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -76,6 +78,9 @@ interface HeroCommandCenterProps {
 
 export function HeroCommandCenter({ data, historyData }: HeroCommandCenterProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [badgeModalOpen, setBadgeModalOpen] = useState(false);
+  const [xpDialogOpen, setXpDialogOpen] = useState(false);
+  const [streakDialogOpen, setStreakDialogOpen] = useState(false);
   const todayStr = useMemo(() => formatLocalDateKey(new Date()), []);
   const [selectedDateStr, setSelectedDateStr] = useState<string>(todayStr);
 
@@ -281,7 +286,7 @@ export function HeroCommandCenter({ data, historyData }: HeroCommandCenterProps)
                 </div>
               </div>
 
-              <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-1">
+              <div className="flex flex-row sm:flex-col items-center sm:items-end justify-start gap-2 sm:gap-1 mt-2 sm:mt-0">
                 <Badge className="bg-indigo-600 hover:bg-indigo-700 text-white border-0 font-black text-sm px-3.5 py-1 shadow-md">
                   {getEstimatedPercentile(data.overallScore)} %ile
                 </Badge>
@@ -303,29 +308,53 @@ export function HeroCommandCenter({ data, historyData }: HeroCommandCenterProps)
             </div>
 
             <div className="flex gap-4 sm:gap-6 pt-4 border-t border-border/40 flex-wrap items-center">
-              <div>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold mb-0.5">XP</p>
+              {/* XP - Clickable */}
+              <button
+                onClick={() => setXpDialogOpen(true)}
+                className="group text-left hover:bg-muted/40 rounded-xl px-2 py-1 -mx-2 -my-1 transition-colors"
+              >
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold mb-0.5 flex items-center gap-1">
+                  XP <Info className="h-2.5 w-2.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </p>
                 <p className="text-lg font-black text-yellow-500 flex items-center gap-1">
                   <Star className="h-4 w-4 fill-yellow-500" /> {data.xp}
                 </p>
-              </div>
+              </button>
               <div className="h-8 w-px bg-border/60 hidden sm:block" />
-              <div>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold mb-0.5">Streak</p>
+              {/* Streak - Clickable */}
+              <button
+                onClick={() => setStreakDialogOpen(true)}
+                className="group text-left hover:bg-muted/40 rounded-xl px-2 py-1 -mx-2 -my-1 transition-colors"
+              >
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold mb-0.5 flex items-center gap-1">
+                  Streak <Info className="h-2.5 w-2.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </p>
                 <p className="text-lg font-black text-orange-500 flex items-center gap-1">
                   🔥 {data.currentStreak || 0}
                 </p>
-              </div>
+              </button>
               <div className="h-8 w-px bg-border/60 hidden sm:block" />
-              <div>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold mb-0.5">Best</p>
+              {/* Best - Clickable */}
+              <button
+                onClick={() => setStreakDialogOpen(true)}
+                className="group text-left hover:bg-muted/40 rounded-xl px-2 py-1 -mx-2 -my-1 transition-colors"
+              >
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold mb-0.5 flex items-center gap-1">
+                  Best <Info className="h-2.5 w-2.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </p>
                 <p className="text-lg font-black text-foreground flex items-center gap-1">
                   🏆 {data.longestStreak || 0}
                 </p>
-              </div>
+              </button>
               <div className="h-8 w-px bg-border/60 hidden sm:block" />
-              <div className="flex-1 min-w-[100px]">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold mb-0.5">Badges</p>
+              {/* Badges - Clickable */}
+              <button
+                onClick={() => setBadgeModalOpen(true)}
+                className="group flex-1 min-w-[100px] text-left hover:bg-muted/40 rounded-xl px-2 py-1 -mx-2 -my-1 transition-colors"
+              >
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold mb-0.5 flex items-center gap-1">
+                  Badges <Info className="h-2.5 w-2.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </p>
                 <div className="flex flex-wrap gap-1 mt-0.5">
                   {data.badges?.length > 0 ? (
                     data.badges.slice(0, 3).map((b: string) => (
@@ -334,11 +363,64 @@ export function HeroCommandCenter({ data, historyData }: HeroCommandCenterProps)
                       </Badge>
                     ))
                   ) : (
-                    <span className="text-xs text-muted-foreground font-medium">None yet</span>
+                    <span className="text-xs text-muted-foreground font-medium">None yet — keep going!</span>
+                  )}
+                  {data.badges?.length > 3 && (
+                    <Badge variant="outline" className="text-[10px] font-bold py-0 h-5 text-primary">
+                      +{data.badges.length - 3} more
+                    </Badge>
                   )}
                 </div>
-              </div>
+              </button>
             </div>
+
+          {/* XP Info Dialog */}
+          <Dialog open={xpDialogOpen} onOpenChange={setXpDialogOpen}>
+            <DialogContent className="max-w-sm">
+              <DialogHeader><DialogTitle className="flex items-center gap-2"><Star className="h-5 w-5 text-yellow-500 fill-yellow-500" /> How XP Works</DialogTitle></DialogHeader>
+              <div className="space-y-4 text-sm">
+                <p className="text-muted-foreground">XP (Experience Points) track your total effort on Kaksha.</p>
+                <div className="space-y-2">
+                  {[['✅ Correct Answer', '+10 XP'], ['❌ Wrong Answer', '+2 XP'], ['🎯 Perfect Session', '+20 XP Bonus']].map(([k, v]) => (
+                    <div key={k} className="flex items-center justify-between p-3 bg-muted/40 rounded-xl">
+                      <span className="font-medium">{k}</span>
+                      <span className="font-black text-yellow-500">{v}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">Your current XP: <span className="font-black text-yellow-500">{data.xp}</span></p>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Streak Info Dialog */}
+          <Dialog open={streakDialogOpen} onOpenChange={setStreakDialogOpen}>
+            <DialogContent className="max-w-sm">
+              <DialogHeader><DialogTitle className="flex items-center gap-2">🔥 Streak Guide</DialogTitle></DialogHeader>
+              <div className="space-y-4 text-sm">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 rounded-xl p-3 text-center">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-orange-600 dark:text-orange-400 mb-1">Current Streak</p>
+                    <p className="text-3xl font-black text-orange-500">🔥 {data.currentStreak || 0}</p>
+                    <p className="text-[10px] text-muted-foreground mt-1">days</p>
+                  </div>
+                  <div className="bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800 rounded-xl p-3 text-center">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-yellow-600 dark:text-yellow-400 mb-1">Best Streak</p>
+                    <p className="text-3xl font-black text-yellow-500">🏆 {data.longestStreak || 0}</p>
+                    <p className="text-[10px] text-muted-foreground mt-1">days</p>
+                  </div>
+                </div>
+                <p className="text-muted-foreground">Practice <strong>at least 1 question</strong> every day to keep your streak alive. Missing a day resets it to 0!</p>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Badge Catalog Modal */}
+          <BadgeInfoModal
+            earnedBadges={data.badges || []}
+            open={badgeModalOpen}
+            onClose={() => setBadgeModalOpen(false)}
+          />
           </div>
 
           {/* Right: Consistency Heatmap (Directly inside the row) */}

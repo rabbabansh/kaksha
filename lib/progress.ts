@@ -261,13 +261,38 @@ export async function updateUserProfile(userId: string): Promise<void> {
   const stats = await getUserProgressStats(userId);
   const xp = (stats.totalCorrect * 10) + ((stats.totalAttempts - stats.totalCorrect) * 2);
   
-  const badges = [];
+  const accuracy = stats.totalAttempts > 0 
+    ? Math.round((stats.totalCorrect / stats.totalAttempts) * 100) 
+    : 0;
+
+  const badges: string[] = [];
+
+  // --- Activity Badges ---
+  if (stats.totalAttempts >= 1) badges.push('First Step');
   if (stats.totalAttempts >= 10) badges.push('Novice');
   if (stats.totalAttempts >= 50) badges.push('Scholar');
   if (stats.totalAttempts >= 100) badges.push('Veteran');
+  if (stats.totalAttempts >= 250) badges.push('Dedicated');
+  if (stats.totalAttempts >= 500) badges.push('Legend');
+
+  // --- Accuracy Badges ---
+  if (stats.totalAttempts >= 20 && accuracy >= 70) badges.push('Accurate');
+  if (stats.totalAttempts >= 20 && accuracy >= 80) badges.push('Sharp Shooter');
+  if (stats.totalAttempts >= 20 && accuracy >= 90) badges.push('Sniper');
+  if (stats.totalAttempts >= 20 && accuracy >= 95) badges.push('Perfectionist');
+
+  // --- Score / Mastery Badges ---
+  if (stats.kakshaScore >= 30) badges.push('Getting There');
   if (stats.kakshaScore >= 50) badges.push('Rising Star');
+  if (stats.kakshaScore >= 70) badges.push('Proficient');
   if (stats.kakshaScore >= 80) badges.push('Kaksha Master');
+  if (stats.kakshaScore >= 90) badges.push('Elite');
   if (stats.kakshaScore >= 95) badges.push('CAT Conqueror');
+
+  // --- XP Badges ---
+  if (xp >= 100) badges.push('XP Earner');
+  if (xp >= 500) badges.push('XP Grinder');
+  if (xp >= 2000) badges.push('XP Champion');
 
   await prisma.userProfile.upsert({
     where: { userId },
@@ -292,3 +317,4 @@ export async function updateUserProfile(userId: string): Promise<void> {
     },
   });
 }
+

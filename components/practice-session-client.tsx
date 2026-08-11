@@ -6,7 +6,9 @@ import { MarkdownRenderer } from '@/components/markdown-renderer';
 import { AITutorPanel } from '@/components/ai-tutor-panel';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { CheckCircle, XCircle, Loader2, BrainCircuit, Trophy, BookOpen, ArrowRight } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, BrainCircuit, Trophy, BookOpen, ArrowRight, Clock } from 'lucide-react';
+import { XPToast } from '@/components/xp-toast';
+import { Badge } from '@/components/ui/badge';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Question = any;
@@ -31,6 +33,9 @@ export function PracticeSessionClient({ subtopic }: PracticeSessionClientProps) 
   const [errorMsg, setErrorMsg] = useState('');
   const [score, setScore] = useState(0);
   const [questionStartTime, setQuestionStartTime] = useState<number>(Date.now());
+  const [xpGained, setXpGained] = useState<number>(0);
+  const [newBadges, setNewBadges] = useState<string[]>([]);
+  const [timeTakenList, setTimeTakenList] = useState<number[]>([]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -69,6 +74,28 @@ export function PracticeSessionClient({ subtopic }: PracticeSessionClientProps) 
     initSession();
   }, [subtopic]);
 
+  useEffect(() => {
+    if (state === 'completed') {
+      async function completeSession() {
+        try {
+          const res = await fetch('/api/progress/session/complete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ subtopics: [subtopic] })
+          });
+          const json = await res.json();
+          if (json.success) {
+            setXpGained(json.xpGained || 0);
+            setNewBadges(json.newBadges || []);
+          }
+        } catch (e) {
+          console.error('Error completing session:', e);
+        }
+      }
+      completeSession();
+    }
+  }, [state, subtopic]);
+
   const handleStartQuestions = () => {
     setState('question');
     setQuestionStartTime(Date.now());
@@ -86,6 +113,12 @@ export function PracticeSessionClient({ subtopic }: PracticeSessionClientProps) 
     setIsCorrect(correct);
     setCorrectAnswer(question.answer);
     if (correct) setScore(s => s + 1);
+
+    setTimeTakenList(prev => {
+      const newList = [...prev];
+      newList[currentIndex] = timeTaken;
+      return newList;
+    });
 
     setAttemptResults(prev => {
       const newResults = [...prev];
@@ -154,12 +187,83 @@ export function PracticeSessionClient({ subtopic }: PracticeSessionClientProps) 
   }
 
   if (state === 'completed') {
+    const correctCount = attemptResults.filter(r => r === 'correct').length;
+    const clientXpGained = (correctCount * 10) + ((attemptResults.length - correctCount) * 2);
+    const displayXp = xpGained > 0 ? xpGained : clientXpGained;
+
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 text-center">
-        <Trophy className="h-16 w-16 text-yellow-500 mb-4" />
-        <h2 className="text-3xl font-bold mb-2">Kaksha Complete!</h2>
-        <p className="text-muted-foreground mb-8">You scored {score} out of {questions.length}. XP updated!</p>
-        <Button onClick={() => window.location.href = '/dashboard'}>Return to Dashboard</Button>
+      <div className="min-h-[60vh] px-4 py-8 max-w-2xl mx-auto space-y-6">
+        {/* XP Toast Animation */}
+        <XPToast xpGained={displayXp} newBadges={newBadges} />
+
+        <div className="relative">
+          <div className="text-center space-y-2 pb-6">
+            <div className="mx-auto w-20 h-20 bg-yellow-100 dark:bg-yellow-950/30 rounded-full flex items-center justify-center mb-4 shadow-lg animate-in zoom-in duration-500">
+              <Trophy className="h-10 w-10 text-yellow-500" />
+            </div>
+            <h2 className="text-3xl font-black tracking-tight">Kaksha Complete! 🎉</h2>
+            <p className="text-muted-foreground font-medium">You scored {score} out of {questions.length}</p>
+          </div>
+
+          {/* Stats row */}
+          <div className="grid grid-cols-3 gap-3 mb-6">
+            <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-2xl p-4 text-center">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-green-600 dark:text-green-400">Correct</p>
+              <p className="text-3xl font-black text-green-600 mt-1">{correctCount}</p>
+            </div>
+            <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-2xl p-4 text-center">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400">Wrong</p>
+              <p className="text-3xl font-black text-red-500 mt-1">{questions.length - correctCount}</p>
+            </div>
+            <div className="bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-2xl p-4 text-center">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-yellow-600 dark:text-yellow-400">XP Earned</p>
+              <p className="text-3xl font-black text-yellow-500 mt-1">+{displayXp}</p>
+            </div>
+          </div>
+
+          {/* Unlocked Badges */}
+          {newBadges.length > 0 && (
+            <div className="bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 rounded-2xl p-4 mb-6">
+              <p className="text-xs font-black uppercase tracking-wider text-indigo-700 dark:text-indigo-400 mb-2">🏅 Badges Earned!</p>
+              <div className="flex flex-wrap gap-2">
+                {newBadges.map((badge) => (
+                  <Badge key={badge} className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3 py-1 text-xs">
+                    {badge}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Per-question results */}
+          <div className="bg-muted/30 rounded-2xl p-5 mb-6 border border-border/60">
+            <p className="text-xs font-black uppercase tracking-wider text-muted-foreground mb-4">Per Question Breakdown</p>
+            <div className="flex flex-wrap gap-2.5">
+              {questions.map((q, idx) => (
+                <div
+                  key={q.question_id}
+                  className={`h-14 w-14 rounded-xl border flex flex-col items-center justify-center font-bold text-sm relative transition-all ${
+                    attemptResults[idx] === 'correct'
+                      ? 'bg-green-100 dark:bg-green-950/20 border-green-300 text-green-700'
+                      : attemptResults[idx] === 'incorrect'
+                      ? 'bg-red-100 dark:bg-red-950/20 border-red-300 text-red-700'
+                      : 'bg-muted border-border text-muted-foreground'
+                  }`}
+                  title={`Q${idx + 1}: ${q.subtopic || q.topic}`}
+                >
+                  <span className="text-xs font-bold">Q{idx + 1}</span>
+                  <span className="text-[9px] text-muted-foreground font-normal mt-1 flex items-center gap-0.5">
+                    <Clock className="h-2 w-2" /> {timeTakenList[idx] || 0}s
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <Button onClick={() => window.location.href = '/dashboard'} className="w-full h-12 font-bold" size="lg">
+            Return to Dashboard
+          </Button>
+        </div>
       </div>
     );
   }
@@ -197,8 +301,8 @@ export function PracticeSessionClient({ subtopic }: PracticeSessionClientProps) 
       {/* Top Header - Unified CBT Style for Practice */}
       <header className="bg-zinc-900 text-white px-6 py-2 flex items-center justify-between border-b-4 border-primary">
         <div className="flex items-center gap-4">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-black">
-            K
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-xl shadow-sm">
+            📕
           </div>
           <div>
             <h1 className="text-sm font-bold tracking-tight uppercase text-zinc-300">
@@ -330,8 +434,8 @@ export function PracticeSessionClient({ subtopic }: PracticeSessionClientProps) 
           )}
         </div>
 
-        {/* Right Side: Sidebar Navigation (CBT Style) */}
-        <aside className="w-full md:w-80 border-t md:border-t-0 md:border-l border-border/80 bg-muted/10 p-6 flex flex-col justify-between shrink-0 overflow-y-auto">
+        {/* Right Side: Sidebar Navigation (CBT Style) - Hidden on Mobile */}
+        <aside className="hidden md:flex w-80 border-l border-border/80 bg-muted/10 p-6 flex-col justify-between shrink-0 overflow-y-auto">
           <div className="space-y-6">
             <Card className="border bg-card shadow-sm">
               <CardContent className="p-4">
@@ -375,6 +479,44 @@ export function PracticeSessionClient({ subtopic }: PracticeSessionClientProps) 
           </div>
         </aside>
 
+      </div>
+
+      {/* Mobile Bottom Action Bar */}
+      <div className="md:hidden border-t bg-background p-4 pb-safe flex flex-col gap-3 shrink-0 relative z-10 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.2)]">
+        <div className="flex overflow-x-auto gap-2 pb-1 snap-x no-scrollbar">
+          {questions.map((q, idx) => {
+            let stateClass = "bg-muted text-muted-foreground border-transparent";
+            
+            if (attemptResults[idx] === 'correct') {
+              stateClass = idx === currentIndex 
+                ? "bg-green-600 text-white border-green-700 shadow-sm" 
+                : "bg-green-100 text-green-700 border-green-300 dark:bg-green-900 dark:text-green-300";
+            } else if (attemptResults[idx] === 'incorrect') {
+              stateClass = idx === currentIndex 
+                ? "bg-red-600 text-white border-red-700 shadow-sm" 
+                : "bg-red-100 text-red-700 border-red-300 dark:bg-red-900 dark:text-red-300";
+            } else if (idx === currentIndex) {
+              stateClass = "bg-primary text-primary-foreground border-primary";
+            }
+
+            return (
+              <div 
+                key={idx} 
+                className={`h-8 w-8 shrink-0 rounded-full border flex items-center justify-center text-xs font-bold snap-center ${stateClass}`}
+              >
+                {idx + 1}
+              </div>
+            );
+          })}
+        </div>
+        <Button
+          size="lg"
+          className="w-full font-bold text-base h-12 shadow-md rounded-xl"
+          onClick={moveToNextQuestion}
+          disabled={selectedAnswer === null}
+        >
+          {currentIndex + 1 >= questions.length ? 'Finish Module' : 'Next Question'} &rarr;
+        </Button>
       </div>
     </div>
   );

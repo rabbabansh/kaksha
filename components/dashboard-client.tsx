@@ -150,13 +150,8 @@ export function DashboardClient() {
       
       {/* 1. Overall Profile */}
       <HeroCommandCenter
-        totalAttempts={data.totalRawAttempts}
-        totalCorrect={data.totalRawCorrect}
-        targetExamYear={data.targetExamYear}
-        targetExamSlot={data.targetExamSlot}
-        heatmapData={data.heatmapData}
-        heatmapMax={data.heatmapMax}
-        streak={data.streak}
+        data={data}
+        historyData={historyData}
       />
 
       {/* 2. Diagnostic Alert Banner (if pending) */}

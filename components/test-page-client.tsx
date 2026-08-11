@@ -43,6 +43,16 @@ export function TestPageClient({
 }: TestPageClientProps) {
   const { data: session } = useSession();
 
+  // Mobile warning state — show overlay if on small screen
+  const [showMobileWarning, setShowMobileWarning] = useState(false);
+  const [mobileWarningDismissed, setMobileWarningDismissed] = useState(false);
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768 && !mobileWarningDismissed) {
+      setShowMobileWarning(true);
+    }
+  }, [mobileWarningDismissed]);
+
   // Initialize section index from saved progress
   const getInitialSectionIndex = () => {
     if (initialProgress?.currentSection) {
@@ -74,6 +84,39 @@ export function TestPageClient({
   const currentSection = sections[currentSectionIndex] || sections[0];
   const currentQuestions = useMemo(() => questionsBySection[currentSection] || [], [questionsBySection, currentSection]);
 
+  // Mobile warning overlay
+  if (showMobileWarning && !mobileWarningDismissed) {
+    return (
+      <div className="fixed inset-0 z-[999] bg-background flex flex-col items-center justify-center p-6 text-center">
+        <div className="max-w-sm mx-auto space-y-6">
+          <div className="text-6xl mb-2">🖥️</div>
+          <h1 className="text-2xl font-black tracking-tight">Best on Desktop</h1>
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            The CAT Mock CBT interface is designed for desktop and replicates the actual exam environment. 
+            For the best experience — and accurate simulation — we strongly recommend attempting mocks on a laptop or desktop.
+          </p>
+          <div className="flex flex-col gap-3">
+            <Button
+              className="w-full h-12 font-bold"
+              onClick={() => { setShowMobileWarning(false); setMobileWarningDismissed(true); }}
+            >
+              Continue Anyway
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full h-12 font-bold"
+              onClick={() => window.history.back()}
+            >
+              Go Back
+            </Button>
+          </div>
+          <p className="text-[11px] text-muted-foreground">You can always attempt this test on a laptop later.</p>
+        </div>
+      </div>
+    );
+  }
+
+
   // Order questions by ID
   const allQuestionsInSection = useMemo(() => {
     return currentQuestions.sort((a, b) => {
@@ -97,17 +140,19 @@ export function TestPageClient({
 
       // If we switched questions, record time for the previous one
       if (currentQuestionRef.current && currentQuestionRef.current !== currentQuestion.question_id) {
-        const elapsed = Math.floor((Date.now() - questionStartTime) / 1000);
-        setTimeTakenMap(prev => ({
-          ...prev,
-          [currentQuestionRef.current!]: (prev[currentQuestionRef.current!] || 0) + elapsed
-        }));
+        setQuestionStartTime((prevStartTime) => {
+          const elapsed = Math.floor((Date.now() - prevStartTime) / 1000);
+          setTimeTakenMap(prev => ({
+            ...prev,
+            [currentQuestionRef.current!]: (prev[currentQuestionRef.current!] || 0) + elapsed
+          }));
+          return Date.now();
+        });
       }
 
       currentQuestionRef.current = currentQuestion.question_id;
-      setQuestionStartTime(Date.now());
     }
-  }, [currentQuestion, questionStartTime]);
+  }, [currentQuestion?.question_id]);
 
   // Auto-save progress
   const saveProgress = useCallback(async () => {
@@ -357,16 +402,16 @@ export function TestPageClient({
       )}
 
       {/* Top Header - CAT CBT Style */}
-      <header className="bg-zinc-900 text-white px-6 py-2 flex items-center justify-between border-b-4 border-primary">
-        <div className="flex items-center gap-4">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-black">
-            K
+      <header className="bg-zinc-900 text-white px-4 py-1.5 flex items-center justify-between border-b-[3px] border-primary">
+        <div className="flex items-center gap-3">
+          <div className="flex h-7 w-7 items-center justify-center rounded bg-blue-100 text-lg shadow-sm">
+            📕
           </div>
           <div>
-            <h1 className="text-sm font-bold tracking-tight uppercase text-zinc-300">
+            <h1 className="text-[13px] font-bold tracking-tight uppercase text-zinc-300 leading-tight">
               CAT {year} Online Examination
             </h1>
-            <p className="text-xs text-zinc-400">Diagnostic Baseline Test</p>
+            <p className="text-[10px] text-zinc-400 leading-tight">Diagnostic Baseline Test</p>
           </div>
         </div>
 
@@ -454,8 +499,8 @@ export function TestPageClient({
           />
         </div>
 
-        {/* Right Side: Sidebar with Palette & Details */}
-        <aside className="w-full md:w-80 border-t md:border-t-0 md:border-l border-border/80 bg-muted/10 p-6 flex flex-col justify-between shrink-0 overflow-y-auto">
+        {/* Right Side: Sidebar with Palette & Details - Hidden on mobile */}
+        <aside className="hidden md:flex w-80 border-l border-border/80 bg-muted/10 p-6 flex-col justify-between shrink-0 overflow-y-auto">
           <div className="space-y-6">
 
             {/* Candidate Box */}
@@ -552,8 +597,8 @@ export function TestPageClient({
         </aside>
       </div>
 
-      {/* Bottom Control Bar - CBT Style */}
-      <footer className="bg-zinc-100 dark:bg-zinc-900 border-t border-border/80 px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 shrink-0">
+      {/* Desktop Bottom Control Bar - CBT Style */}
+      <footer className="hidden md:flex bg-zinc-100 dark:bg-zinc-900 border-t border-border/80 px-6 py-4 flex-row items-center justify-between gap-4 shrink-0">
 
         {/* Left Side Controls */}
         <div className="flex gap-2 w-full sm:w-auto">
@@ -675,6 +720,47 @@ export function TestPageClient({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Mobile Bottom Action Bar */}
+      <div className="md:hidden border-t bg-background p-4 pb-safe flex flex-col gap-3 shrink-0 relative z-10 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.2)]">
+        <div className="flex overflow-x-auto gap-2 pb-1 snap-x no-scrollbar">
+          {allQuestionsInSection.map((question, idx) => {
+            const isActive = idx === currentQuestionIndex;
+            return (
+              <Button
+                key={question.question_id}
+                variant="ghost"
+                size="icon"
+                className={`h-8 w-8 shrink-0 rounded-full text-xs font-bold border transition-all duration-200 snap-center ${getQuestionButtonStyles(question.question_id)} ${isActive ? 'ring-2 ring-primary ring-offset-2' : ''}`}
+                onClick={() => setCurrentQuestionIndex(idx)}
+              >
+                {idx + 1}
+              </Button>
+            );
+          })}
+        </div>
+        
+        <div className="flex gap-2">
+           <Button
+             variant="outline"
+             onClick={() => setCurrentQuestionIndex(Math.max(0, currentQuestionIndex - 1))}
+             disabled={currentQuestionIndex === 0}
+             className="flex-1 rounded-xl font-bold"
+           >
+             Prev
+           </Button>
+           
+           {!isCurrentSectionCompleted && !completed && (
+             <Button
+               onClick={saveAndNext}
+               disabled={currentQuestionIndex === allQuestionsInSection.length - 1}
+               className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold shadow-md"
+             >
+               Save & Next
+             </Button>
+           )}
+        </div>
+      </div>
     </div>
   );
 }

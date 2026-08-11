@@ -33,7 +33,7 @@ export default function WhatsNewPage() {
   useEffect(() => {
     setMounted(true);
     // Mark as seen so they don't get redirected here again automatically
-    localStorage.setItem('kaksha_whats_new_v1.4', 'true');
+    localStorage.setItem('kaksha_whats_new_v1.5', 'true');
   }, []);
 
   const handleContinue = () => {
@@ -66,6 +66,95 @@ export default function WhatsNewPage() {
 
       <div className="max-w-4xl mx-auto px-6 mt-8 space-y-16">
         
+        {/* Kaksha v1.5 — Latest */}
+        <div className="relative animate-in slide-in-from-bottom-12 fade-in duration-1000 delay-100">
+          <div className="flex items-center justify-center mb-12 relative z-10 hidden md:flex">
+             <div className="bg-primary text-primary-foreground font-black px-6 py-2 rounded-full border-4 border-background shadow-sm">
+                Kaksha v1.5 ✨ (Latest)
+             </div>
+          </div>
+          <div className="md:hidden mb-8">
+             <h2 className="text-2xl font-black text-primary">Kaksha v1.5 <span className="text-sm font-medium text-muted-foreground">(Latest)</span></h2>
+          </div>
+
+          <div className="space-y-6">
+            <Card className="border-primary/40 bg-gradient-to-br from-primary/10 to-transparent shadow-md transform transition-all hover:-translate-y-1 hover:shadow-xl">
+              <CardContent className="p-6 md:p-8 flex flex-col md:flex-row gap-6 items-center md:items-start">
+                <div className="bg-primary/20 p-4 rounded-2xl shrink-0">
+                  <Award className="w-8 h-8 text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-black mb-2 flex items-center gap-2">
+                    20+ Badges &amp; XP Animations <span className="bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded uppercase font-bold tracking-wider">New</span>
+                  </h3>
+                  <p className="text-muted-foreground text-lg">
+                    Earn badges across Activity, Accuracy, Mastery, and XP categories. Tap XP, Streak, or Badges on the dashboard to see info and your full badge collection — with locked/earned states.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card className="hover:shadow-md transition-shadow">
+                <CardContent className="p-6 flex gap-4 items-start">
+                  <div className="bg-yellow-100 dark:bg-yellow-950/30 p-3 rounded-xl shrink-0"><Star className="w-6 h-6 text-yellow-500" /></div>
+                  <div>
+                    <h4 className="font-black text-lg mb-1">XP Earn Animations</h4>
+                    <p className="text-muted-foreground text-sm">A bouncing +XP toast appears after every sprint or mock, showing exactly how many XP you earned and any new badges unlocked.</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="hover:shadow-md transition-shadow">
+                <CardContent className="p-6 flex gap-4 items-start">
+                  <div className="bg-indigo-100 dark:bg-indigo-950/30 p-3 rounded-xl shrink-0"><Sparkles className="w-6 h-6 text-indigo-500" /></div>
+                  <div>
+                    <h4 className="font-black text-lg mb-1">Floating Tutor Bubble</h4>
+                    <p className="text-muted-foreground text-sm">Kaksha Guru is now a persistent floating button on every page — tap to open a quick chat window or expand to full screen.</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="hover:shadow-md transition-shadow">
+                <CardContent className="p-6 flex gap-4 items-start">
+                  <div className="bg-green-100 dark:bg-green-950/30 p-3 rounded-xl shrink-0"><BarChart3 className="w-6 h-6 text-green-600" /></div>
+                  <div>
+                    <h4 className="font-black text-lg mb-1">Enhanced Report Cards</h4>
+                    <p className="text-muted-foreground text-sm">Post-sprint report cards now show per-question results, XP earned, correct/incorrect breakdown — all in one clear view.</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="hover:shadow-md transition-shadow">
+                <CardContent className="p-6 flex gap-4 items-start">
+                  <div className="bg-blue-100 dark:bg-blue-950/30 p-3 rounded-xl shrink-0"><LibraryBig className="w-6 h-6 text-blue-600" /></div>
+                  <div>
+                    <h4 className="font-black text-lg mb-1">Full-Text Question Search</h4>
+                    <p className="text-muted-foreground text-sm">The Practice Bank now searches question content — not just metadata. Find any question by typing keywords from the question text.</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="hover:shadow-md transition-shadow">
+                <CardContent className="p-6 flex gap-4 items-start">
+                  <div className="bg-orange-100 dark:bg-orange-950/30 p-3 rounded-xl shrink-0"><Monitor className="w-6 h-6 text-orange-600" /></div>
+                  <div>
+                    <h4 className="font-black text-lg mb-1">Mock Test Desktop Warning</h4>
+                    <p className="text-muted-foreground text-sm">Attempting a mock CBT on mobile? We now show a friendly warning recommending desktop for the best CAT simulation experience.</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="hover:shadow-md transition-shadow">
+                <CardContent className="p-6 flex gap-4 items-start">
+                  <div className="bg-purple-100 dark:bg-purple-950/30 p-3 rounded-xl shrink-0"><BookOpen className="w-6 h-6 text-purple-600" /></div>
+                  <div>
+                    <h4 className="font-black text-lg mb-1">New Learn Section</h4>
+                    <p className="text-muted-foreground text-sm">Practice Modules now live under a dedicated "Learn" tab in the navbar — a focused hub for your structured topic-wise practice sprints.</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+
+        <div className="relative h-8"><div className="absolute inset-x-0 top-1/2 h-0.5 bg-border" /></div>
+
         {/* Kaksha v1.4.2 */}
         <div className="relative animate-in slide-in-from-bottom-12 fade-in duration-1000 delay-300">
           <div className="absolute top-0 bottom-0 left-8 md:left-1/2 w-0.5 bg-border -translate-x-1/2 hidden md:block" />

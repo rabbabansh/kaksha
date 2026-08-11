@@ -6,6 +6,12 @@ import { redirect } from 'next/navigation';
 import { BrowseClient } from '@/components/browse-client';
 import { authOptions } from "@/lib/auth";
 
+// Strip HTML tags to get plain text for search
+function stripHtml(html: string | null | undefined): string {
+  if (!html) return '';
+  return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300);
+}
+
 export default async function BrowsePage() {
   try {
     const session = await getServerSession(authOptions);
@@ -14,8 +20,7 @@ export default async function BrowsePage() {
       redirect('/login');
     }
 
-    // Fetch only minimal metadata to avoid exceeding Prisma Accelerate's 5MB limit
-    // Full question data (HTML, options, explanations) will be fetched on demand via API
+    // Fetch metadata + question HTML (stripped) for full-text search
     const questions = await prisma.questions.findMany({
       select: {
         question_id: true,
@@ -26,10 +31,21 @@ export default async function BrowsePage() {
         subtopic: true,
         question_type: true,
         set_id: true,
-        // Exclude all HTML fields - they'll be fetched on demand when viewing a question
-        // This keeps the response well under 5MB
+        question_html: true,
       },
     });
+
+    // Build questionTexts map (strip HTML for client-side search)
+    const questionTexts: Record<string, string> = {};
+    questions.forEach(q => {
+      if (q.question_html) {
+        questionTexts[q.question_id] = stripHtml(q.question_html);
+      }
+    });
+
+    // Strip question_html from questions before passing to client (saves bandwidth)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const questionsForClient = questions.map(({ question_html: _qh, ...rest }) => rest) as any[];
 
     let userId = (session.user as { id?: string })?.id;
     if (!userId && session.user?.email) {
@@ -44,6 +60,7 @@ export default async function BrowsePage() {
     }) : [];
 
     // Map the most recent attempt for each question
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const attemptMap = attempts.reduce((acc: any, curr) => {
       if (!acc[curr.questionId]) {
         acc[curr.questionId] = curr;
@@ -51,7 +68,6 @@ export default async function BrowsePage() {
       return acc;
     }, {});
 
-    // Get unique topics and subtopics
     const topics = [...new Set(questions.map(q => q.topic).filter((t): t is string => Boolean(t)))].sort();
     const subtopics = [...new Set(questions.map(q => q.subtopic).filter((s): s is string => Boolean(s)))].sort();
 
@@ -71,15 +87,16 @@ export default async function BrowsePage() {
         <div className="mb-6">
           <h1 className="text-3xl font-bold mb-2">Browse Questions</h1>
           <p className="text-muted-foreground">
-            Search and filter questions by topic, subtopic, section, and more
+            Search by topic, subtopic, year, or question text
           </p>
         </div>
         <BrowseClient
-          questions={questions}
+          questions={questionsForClient}
           topics={topics}
           subtopics={subtopics}
           sections={sections}
           attemptMap={attemptMap}
+          questionTexts={questionTexts}
         />
       </div>
     );
@@ -97,5 +114,3 @@ export default async function BrowsePage() {
     );
   }
 }
-
-

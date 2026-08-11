@@ -26,14 +26,15 @@ export type ChatMessage = {
 
 interface ChatClientProps {
   userName?: string;
+  compact?: boolean; // when true, hides top-level header padding (used in TutorBubble)
 }
 
-export function ChatClient({ userName = 'there' }: ChatClientProps) {
+export function ChatClient({ userName = 'there', compact = false }: ChatClientProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: 'assistant',
       type: 'text',
-      content: `Hello ${userName}! I'm Kaksha AI, your personal CAT prep tutor. How can I help you today?`,
+      content: `Hello ${userName}! I'm Kaksha Guru, your personal CAT prep tutor. How can I help you today?`,
     },
   ]);
   const [input, setInput] = useState('');
@@ -268,7 +269,7 @@ export function ChatClient({ userName = 'there' }: ChatClientProps) {
       </div>
       
       {/* Input Area */}
-      <div className="p-4 bg-background border-t border-border/40">
+      <div className="p-4 pb-24 md:pb-4 bg-background border-t border-border/40 shrink-0">
         <form
           onSubmit={(e) => { e.preventDefault(); handleSend(); }}
           className="relative max-w-4xl mx-auto flex items-center"
@@ -276,7 +277,7 @@ export function ChatClient({ userName = 'there' }: ChatClientProps) {
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask Kaksha AI anything..."
+            placeholder="Ask Kaksha Guru anything..."
             disabled={isLoading}
             className="w-full pr-12 pl-5 py-6 rounded-2xl bg-muted/20 border-border/60 focus-visible:ring-primary focus-visible:ring-1 shadow-sm text-sm"
           />
@@ -290,7 +291,7 @@ export function ChatClient({ userName = 'there' }: ChatClientProps) {
           </Button>
         </form>
         <p className="text-center text-[10px] text-muted-foreground mt-2 font-medium">
-          Kaksha AI can make mistakes. Consider verifying important logic.
+          Kaksha Guru can make mistakes. Consider verifying important logic.
         </p>
       </div>
     </div>

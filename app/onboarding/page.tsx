@@ -219,26 +219,33 @@ export default function OnboardingPage() {
                 ))}
               </div>
 
-              <div className="flex gap-4">
+              <div className="bg-primary/5 border border-primary/20 rounded-xl p-6 text-center animate-in fade-in zoom-in duration-700">
+                <h3 className="font-bold text-lg text-primary mb-2">Final Step: Calibration</h3>
+                <p className="text-sm text-muted-foreground">
+                  Please take a short 15-minute diagnostic test so we can accurately gauge your current level and fully personalize your adaptive learning path.
+                </p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-4">
                 <Button variant="outline" onClick={handleBack} disabled={isSubmitting} className="h-14 px-8 rounded-xl">Back</Button>
-                <div className="flex-1 flex gap-2">
+                <div className="flex-1 flex flex-col sm:flex-row gap-2">
                   <Button 
-                    variant="secondary"
+                    variant="ghost"
                     onClick={() => handleSubmit(true)} 
                     disabled={isSubmitting} 
-                    className="flex-1 h-14 text-lg rounded-xl shadow-lg"
+                    className="flex-1 h-14 text-sm text-muted-foreground hover:text-foreground"
                   >
-                    Skip Diagnostic
+                    Skip for now
                   </Button>
                   <Button 
                     onClick={() => handleSubmit(false)} 
                     disabled={isSubmitting} 
-                    className="flex-1 h-14 text-lg rounded-xl shadow-lg hover:shadow-primary/20 bg-primary"
+                    className="flex-[2] h-14 text-lg rounded-xl shadow-lg shadow-primary/20 bg-primary text-primary-foreground hover:bg-primary/90"
                   >
                     {isSubmitting ? (
-                      <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Saving Profile...</>
+                      <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Preparing Test...</>
                     ) : (
-                      <>Start Diagnostic Test <ArrowRight className="ml-2 w-5 h-5" /></>
+                      <>Take 15-Min Diagnostic <ArrowRight className="ml-2 w-5 h-5" /></>
                     )}
                   </Button>
                 </div>
