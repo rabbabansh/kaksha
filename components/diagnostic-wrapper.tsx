@@ -46,18 +46,22 @@ export function DiagnosticWrapper({
   const [isUntimed, setIsUntimed] = useState(true);
   const [difficulty, setDifficulty] = useState<'easy' | 'hard'>('easy');
 
-  // Load configuration from localStorage if resuming
+  // Load configuration from localStorage if resuming an already-started test
   useEffect(() => {
     if (initialProgress) {
-      setStarted(true);
-      const savedConfig = localStorage.getItem('diagnostic_config');
-      if (savedConfig) {
-        try {
-          const { untimed, diff } = JSON.parse(savedConfig);
-          setIsUntimed(untimed);
-          setDifficulty(diff);
-        } catch (e) {
-          console.error(e);
+      // Only skip intro if test was actually started (has saved answers or question index)
+      const hasStarted = initialProgress.answers && Object.keys(initialProgress.answers).length > 0;
+      if (hasStarted) {
+        setStarted(true);
+        const savedConfig = localStorage.getItem('diagnostic_config');
+        if (savedConfig) {
+          try {
+            const { untimed, diff } = JSON.parse(savedConfig);
+            setIsUntimed(untimed);
+            setDifficulty(diff);
+          } catch (e) {
+            console.error(e);
+          }
         }
       }
     }
