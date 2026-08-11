@@ -2,20 +2,26 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
-import { ErrorCode, generateCorrelationId } from '@/lib/action-response';
 
 export async function POST(request: NextRequest) {
-  const correlationId = generateCorrelationId();
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return NextResponse.json({ success: false, error: 'Unauthorized', code: ErrorCode.UNAUTHORIZED, correlationId }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Resolve userId — NextAuth JWT may not have id in session.user directly
     let userId = (session.user as { id?: string })?.id;
     if (!userId && session.user?.email) {
-      const dbUser = await prisma.user.findUnique({ where: { email: session.user.email }, select: { id: true } });
+      const dbUser = await prisma.user.findUnique({
+        where: { email: session.user.email },
+        select: { id: true },
+      });
       if (dbUser) userId = dbUser.id;
+    }
+
+    if (!userId) {
+      return NextResponse.json({ error: 'User not found' }, { status: 401 });
     }
 
     const body = await request.json();
@@ -23,32 +29,39 @@ export async function POST(request: NextRequest) {
 
     if (!questionId || !reason) {
       return NextResponse.json(
-        { success: false, error: 'Missing questionId or reason', code: ErrorCode.VALIDATION_ERROR, correlationId },
+        { error: 'Missing questionId or reason' },
         { status: 400 }
       );
     }
 
+    // Verify the question exists before creating the report
+    const questionExists = await prisma.questions.findUnique({
+      where: { question_id: questionId },
+      select: { question_id: true },
+    });
+
+    if (!questionExists) {
+      return NextResponse.json({ error: 'Question not found' }, { status: 404 });
+    }
+
     const report = await prisma.reportedQuestion.create({
       data: {
-        userId: userId as string,
+        userId,
         questionId,
         reason,
-        details: customReason || null,
-        status: 'PENDING'
-      }
+        details: customReason?.trim() || null,
+        status: 'PENDING',
+      },
     });
 
-    return NextResponse.json({
-      success: true,
-      data: { reportId: report.id },
-      correlationId
-    });
+    return NextResponse.json({ success: true, data: { reportId: report.id } });
 
   } catch (error) {
-    console.error('Failed to submit report:', error);
+    console.error('[Report API] Failed to submit report:', error);
     return NextResponse.json(
-      { success: false, error: 'Internal server error', code: ErrorCode.INTERNAL_ERROR, correlationId },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }
 }
+

@@ -36,7 +36,7 @@ export function AdminReportsTable({ reports }: { reports: any[] }) {
               <TableRow key={report.id}>
                 <TableCell>{report.user?.name || report.user?.email || 'Unknown'}</TableCell>
                 <TableCell className="font-semibold">{report.reason}</TableCell>
-                <TableCell className="max-w-[200px] truncate">{report.customReason || '-'}</TableCell>
+                <TableCell className="max-w-[200px] truncate">{report.details || '-'}</TableCell>
                 <TableCell>{new Date(report.createdAt).toLocaleDateString()}</TableCell>
                 <TableCell>
                   <Dialog>

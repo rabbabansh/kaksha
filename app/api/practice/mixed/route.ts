@@ -39,9 +39,11 @@ export async function GET(request: NextRequest) {
     let selectedQuestions: any[] = [];
 
     if (topicParam) {
+      // topicParam is t.name from the UI — it's a topic (e.g. "DI", "LR", "Algebra")
+      // so we query WHERE topic = topicParam, NOT subtopic
       selectedQuestions = await prisma.$queryRaw<any[]>`
         SELECT * FROM "questions"
-        WHERE "subtopic" = ${topicParam}
+        WHERE "topic" = ${topicParam}
           AND "question_id" NOT IN (
             SELECT "questionId" FROM "QuestionAttempt" WHERE "userId" = ${userId}
           )
@@ -49,28 +51,42 @@ export async function GET(request: NextRequest) {
         LIMIT 10
       `;
 
+      // Fallback: if topic column doesn't match, try subtopic (backward compat)
+      if (selectedQuestions.length === 0) {
+        selectedQuestions = await prisma.$queryRaw<any[]>`
+          SELECT * FROM "questions"
+          WHERE "subtopic" = ${topicParam}
+            AND "question_id" NOT IN (
+              SELECT "questionId" FROM "QuestionAttempt" WHERE "userId" = ${userId}
+            )
+          ORDER BY RANDOM()
+          LIMIT 10
+        `;
+      }
+
       if (selectedQuestions.length < 10) {
         const needed = 10 - selectedQuestions.length;
-        const selectedIds = selectedQuestions.map(q => q.question_id);
-        
-        // Find Attempted IDs in JS to use for fallback
+        const selectedIds = selectedQuestions.map((q: any) => q.question_id);
+
         const attemptedIds = await prisma.questionAttempt.findMany({
           where: { userId },
           select: { questionId: true },
         });
         const attemptedIdSet = new Set(attemptedIds.map(a => a.questionId));
 
+        // Fill up with already-attempted questions from the same topic (recycled)
         const fallback = await prisma.questions.findMany({
           where: {
-            subtopic: topicParam,
-            question_id: {
-              in: Array.from(attemptedIdSet),
-              notIn: selectedIds
-            }
+            OR: [
+              { topic: topicParam },
+              { subtopic: topicParam },
+            ],
+            question_id: { notIn: selectedIds },
           },
-          take: needed
+          take: needed,
         });
-        selectedQuestions.push(...shuffle(fallback));
+        const filteredFallback = fallback.filter(q => !attemptedIdSet.has(q.question_id) || selectedQuestions.length < 5);
+        selectedQuestions.push(...shuffle(filteredFallback));
       }
     } else {
       const stats = await getUserProgressStats(userId);
