@@ -80,8 +80,8 @@ export default function OnboardingPage() {
     <div className="min-h-screen bg-muted/30 flex items-center justify-center p-4">
       <div className="w-full max-w-2xl">
         <div className="mb-8 flex justify-center space-x-2">
-          {[1, 2, 3].map(i => (
-            <div key={i} className={`h-2 rounded-full transition-all duration-300 ${step >= i ? 'bg-primary w-16' : 'bg-primary/20 w-8'}`} />
+          {[1, 2, 3, 4, 5].map(i => (
+            <div key={i} className={`h-2 rounded-full transition-all duration-300 ${step >= i ? 'bg-primary w-12' : 'bg-primary/20 w-8'}`} />
           ))}
         </div>
 
@@ -89,13 +89,80 @@ export default function OnboardingPage() {
           <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-primary/50 to-primary" />
           
           {step === 1 && (
-            <div className="space-y-8 animate-in fade-in zoom-in-95 duration-500">
+            <div className="space-y-8 animate-in fade-in zoom-in-95 duration-500 text-center">
+              <div className="space-y-3">
+                <div className="mx-auto w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center text-4xl shadow-md mb-4">
+                  📕
+                </div>
+                <h1 className="text-4xl font-extrabold tracking-tight">Welcome to Kaksha</h1>
+                <p className="text-xl text-muted-foreground max-w-md mx-auto leading-relaxed">
+                  Your smart, adaptive companion built by engineers and top percentilers to ace the CAT.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-lg mx-auto text-left pt-2">
+                <div className="p-4 border rounded-xl bg-muted/20">
+                  <h3 className="font-bold text-base flex items-center gap-2">🧠 Smart Diagnostic</h3>
+                  <p className="text-xs text-muted-foreground mt-1">Calibrates your level with a quick 15-min baseline test.</p>
+                </div>
+                <div className="p-4 border rounded-xl bg-muted/20">
+                  <h3 className="font-bold text-base flex items-center gap-2">📈 Cognitive Mastery</h3>
+                  <p className="text-xs text-muted-foreground mt-1">Tracks your growth dynamically subtopic-by-subtopic via BKT algorithms.</p>
+                </div>
+              </div>
+
+              <Button 
+                onClick={handleNext} 
+                className="w-full h-14 text-lg rounded-xl shadow-lg hover:shadow-primary/20 transition-all"
+              >
+                Let&apos;s get started! <ArrowRight className="ml-2 w-5 h-5" />
+              </Button>
+            </div>
+          )}
+
+          {step === 2 && (
+            <div className="space-y-8 animate-in slide-in-from-right-8 duration-500 text-center">
+              <div className="space-y-3">
+                <div className="mx-auto w-16 h-16 bg-indigo-500/10 rounded-2xl flex items-center justify-center text-3xl shadow-sm mb-4">
+                  ✨
+                </div>
+                <h1 className="text-3xl font-extrabold tracking-tight">Adaptive Prep & Coach</h1>
+                <p className="text-lg text-muted-foreground max-w-md mx-auto leading-relaxed">
+                  Learn actively by solving instead of getting lost in long hours of video lectures.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-lg mx-auto text-left pt-2">
+                <div className="p-4 border rounded-xl bg-muted/20">
+                  <h3 className="font-bold text-base flex items-center gap-2">💬 24/7 AI Coach</h3>
+                  <p className="text-xs text-muted-foreground mt-1">Personalised mentor that answers questions and guides your plan step-by-step.</p>
+                </div>
+                <div className="p-4 border rounded-xl bg-muted/20">
+                  <h3 className="font-bold text-base flex items-center gap-2">🎯 Gamified Targets</h3>
+                  <p className="text-xs text-muted-foreground mt-1">Keep a daily streak, earn XP and unlock badges along the way.</p>
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <Button variant="outline" onClick={handleBack} className="h-14 px-8 rounded-xl">Back</Button>
+                <Button 
+                  onClick={handleNext} 
+                  className="flex-1 h-14 text-lg rounded-xl shadow-lg hover:shadow-primary/20 transition-all"
+                >
+                  Configure My Profile <ArrowRight className="ml-2 w-5 h-5" />
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="space-y-8 animate-in slide-in-from-right-8 duration-500">
               <div className="text-center space-y-3">
                 <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
                   <Calendar className="w-6 h-6 text-primary" />
                 </div>
                 <h1 className="text-3xl font-bold tracking-tight">Set Your Target</h1>
-                <p className="text-muted-foreground">Let's personalise your Kaksha experience.</p>
+                <p className="text-muted-foreground">Let&apos;s personalise your Kaksha experience.</p>
               </div>
 
               <div className="space-y-6 max-w-sm mx-auto">
@@ -134,17 +201,20 @@ export default function OnboardingPage() {
                 </div>
               )}
 
-              <Button 
-                onClick={handleNext} 
-                disabled={!age || !targetYear} 
-                className="w-full h-14 text-lg rounded-xl shadow-lg hover:shadow-primary/20 transition-all"
-              >
-                Continue <ArrowRight className="ml-2 w-5 h-5" />
-              </Button>
+              <div className="flex gap-4">
+                <Button variant="outline" onClick={handleBack} className="h-14 px-8 rounded-xl">Back</Button>
+                <Button 
+                  onClick={handleNext} 
+                  disabled={!age || !targetYear} 
+                  className="flex-1 h-14 text-lg rounded-xl shadow-lg hover:shadow-primary/20 transition-all"
+                >
+                  Continue <ArrowRight className="ml-2 w-5 h-5" />
+                </Button>
+              </div>
             </div>
           )}
 
-          {step === 2 && (
+          {step === 4 && (
             <div className="space-y-8 animate-in slide-in-from-right-8 duration-500">
               <div className="text-center space-y-3">
                 <div className="mx-auto w-12 h-12 bg-green-500/10 rounded-full flex items-center justify-center mb-4">
@@ -186,7 +256,7 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {step === 3 && (
+          {step === 5 && (
             <div className="space-y-8 animate-in slide-in-from-right-8 duration-500">
               <div className="text-center space-y-3">
                 <div className="mx-auto w-12 h-12 bg-orange-500/10 rounded-full flex items-center justify-center mb-4">
