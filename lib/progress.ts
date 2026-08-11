@@ -1,4 +1,4 @@
-import prisma from './prisma';
+import prisma, { getSyllabus } from './prisma';
 
 export interface SubtopicProgress {
   section: string;
@@ -143,10 +143,7 @@ export async function getUserProgressStats(userId: string): Promise<UserProgress
   const totalAttempts = await prisma.questionAttempt.count({ where: { userId } });
   const totalCorrect = await prisma.questionAttempt.count({ where: { userId, isCorrect: true } });
 
-  const allSubtopics = await prisma.questions.findMany({
-    select: { section: true, topic: true, subtopic: true },
-    distinct: ['section', 'topic', 'subtopic']
-  });
+  const allSubtopics = await getSyllabus();
 
   const hierarchy: any = {};
   allSubtopics.forEach(q => {

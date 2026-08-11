@@ -34,7 +34,7 @@ export function ChatClient({ userName = 'there', compact = false }: ChatClientPr
     {
       role: 'assistant',
       type: 'text',
-      content: `Hello ${userName}! I'm Kaksha Guru, your personal CAT prep tutor. How can I help you today?`,
+      content: `Hello ${userName}! I'm Koach, your personal CAT prep tutor. How can I help you today?`,
     },
   ]);
   const [input, setInput] = useState('');
@@ -277,7 +277,7 @@ export function ChatClient({ userName = 'there', compact = false }: ChatClientPr
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask Kaksha Guru anything..."
+            placeholder="Ask Koach anything..."
             disabled={isLoading}
             className="w-full pr-12 pl-5 py-6 rounded-2xl bg-muted/20 border-border/60 focus-visible:ring-primary focus-visible:ring-1 shadow-sm text-sm"
           />
@@ -291,7 +291,7 @@ export function ChatClient({ userName = 'there', compact = false }: ChatClientPr
           </Button>
         </form>
         <p className="text-center text-[10px] text-muted-foreground mt-2 font-medium">
-          Kaksha Guru can make mistakes. Consider verifying important logic.
+          Koach can make mistakes. Consider verifying important logic.
         </p>
       </div>
     </div>

@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import prisma, { getSyllabus } from '@/lib/prisma';
 import { ErrorCode, generateCorrelationId } from '@/lib/action-response';
 import { getUserProgressStats } from '@/lib/progress';
 
@@ -51,10 +51,7 @@ export async function GET(request: NextRequest) {
     let totalScoreSum = 0;
     let totalCount = 0;
 
-    const allTopics = await prisma.questions.findMany({
-      select: { section: true, topic: true, subtopic: true },
-      distinct: ['section', 'topic', 'subtopic']
-    });
+    const allTopics = await getSyllabus();
 
     allTopics.forEach(q => {
       const { section, topic, subtopic } = q;

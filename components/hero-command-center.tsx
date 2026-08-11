@@ -96,31 +96,31 @@ export function HeroCommandCenter({ data, historyData }: HeroCommandCenterProps)
 
   // Build day map for heatmap
   const weaknesses = data?.weaknesses || [];
+  const reviewTopic = weaknesses[0]?.split(' > ').pop() || 'Percentage';
+
+  const getEmptyDay = (dateStr: string): DayDetail => {
+    const dateObj = parseLocalDateKey(dateStr);
+    const displayDate = dateObj.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+
+    const dailyTasks = [
+      { id: 'daily_rc', name: 'Daily RC Passage', desc: 'CAT Reading Comprehension', subtopic: 'Reading Comprehension', action: 'Solve Passage', link: '/practice/daily/rc', completed: false },
+      { id: 'daily_dilr', name: 'Daily DILR Set', desc: 'Logic & Data Caselet', subtopic: 'Logical Reasoning', action: 'Solve Set', link: '/practice/daily/dilr', completed: false },
+      { id: 'review', name: 'Review Weakness', desc: 'Strengthen weak areas', subtopic: reviewTopic, action: 'Practice Sprint', link: `/practice/modules/${encodeURIComponent(reviewTopic)}`, completed: false },
+      { id: 'challenge', name: 'Daily Challenge', desc: 'Mixed concepts sprint', subtopic: 'Mixed Arena', action: 'Enter Arena', link: '/practice/mixed', completed: false }
+    ];
+
+    return {
+      dateStr, displayDate, totalAttempts: 0, totalCorrect: 0, accuracy: 0, topics: [], mockTests: [], practiceSprints: [], mixedSessions: [], dailyTasks, allDailiesCompleted: false
+    };
+  };
+
   const dayMap = useMemo(() => {
     const map: Record<string, DayDetail> = {};
-
-    const reviewTopic = weaknesses[0]?.split(' > ').pop() || 'Percentage';
-
-    const getEmptyDay = (dateStr: string): DayDetail => {
-      const dateObj = parseLocalDateKey(dateStr);
-      const displayDate = dateObj.toLocaleDateString('en-US', {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric'
-      });
-
-      const dailyTasks = [
-        { id: 'daily_rc', name: 'Daily RC Passage', desc: 'CAT Reading Comprehension', subtopic: 'Reading Comprehension', action: 'Solve Passage', link: '/practice/daily/rc', completed: false },
-        { id: 'daily_dilr', name: 'Daily DILR Set', desc: 'Logic & Data Caselet', subtopic: 'Logical Reasoning', action: 'Solve Set', link: '/practice/daily/dilr', completed: false },
-        { id: 'review', name: 'Review Weakness', desc: 'Strengthen weak areas', subtopic: reviewTopic, action: 'Practice Sprint', link: `/practice/modules/${encodeURIComponent(reviewTopic)}`, completed: false },
-        { id: 'challenge', name: 'Daily Challenge', desc: 'Mixed concepts sprint', subtopic: 'Mixed Arena', action: 'Enter Arena', link: '/practice/mixed', completed: false }
-      ];
-
-      return {
-        dateStr, displayDate, totalAttempts: 0, totalCorrect: 0, accuracy: 0, topics: [], mockTests: [], practiceSprints: [], mixedSessions: [], dailyTasks, allDailiesCompleted: false
-      };
-    };
 
     if (historyData?.attempts) {
       historyData.attempts.forEach((att: any) => {
@@ -222,13 +222,7 @@ export function HeroCommandCenter({ data, historyData }: HeroCommandCenterProps)
 
   const currentDayDetail = useMemo((): DayDetail => {
     if (dayMap[selectedDateStr]) return dayMap[selectedDateStr];
-    const dateObj = parseLocalDateKey(selectedDateStr);
-    return {
-      dateStr: selectedDateStr,
-      displayDate: dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }),
-      totalAttempts: 0, totalCorrect: 0, accuracy: 0, topics: [], mockTests: [], practiceSprints: [], mixedSessions: [],
-      dailyTasks: [], allDailiesCompleted: false
-    };
+    return getEmptyDay(selectedDateStr);
   }, [dayMap, selectedDateStr]);
 
   const getHeatmapColor = (totalAttempts: number, allDailies: boolean) => {
@@ -287,7 +281,7 @@ export function HeroCommandCenter({ data, historyData }: HeroCommandCenterProps)
               </div>
 
               <div className="flex flex-row sm:flex-col items-center sm:items-end justify-start gap-2 sm:gap-1 mt-2 sm:mt-0">
-                <Badge className="bg-indigo-600 hover:bg-indigo-700 text-white border-0 font-black text-sm px-3.5 py-1 shadow-md">
+                <Badge className="bg-indigo-600 dark:bg-indigo-700 hover:bg-indigo-700 dark:hover:bg-indigo-800 text-white border-0 font-black text-sm px-3.5 py-1 shadow-md">
                   {getEstimatedPercentile(data.overallScore)} %ile
                 </Badge>
                 <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">

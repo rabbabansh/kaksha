@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
       },
       select: { set_id: true, subtopic: true, topic: true, year: true },
       distinct: ['set_id'],
-      orderBy: { year: 'desc' }
+      orderBy: [{ set_id: 'asc' }, { year: 'desc' }]
     });
 
     const dilrSets = await prisma.questions.findMany({
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
       },
       select: { set_id: true, subtopic: true, topic: true, year: true },
       distinct: ['set_id'],
-      orderBy: { year: 'desc' }
+      orderBy: [{ set_id: 'asc' }, { year: 'desc' }]
     });
 
     const seed = getDaySeed(dateStr);

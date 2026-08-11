@@ -109,7 +109,7 @@ export default function WhatsNewPage() {
                   <div className="bg-indigo-100 dark:bg-indigo-950/30 p-3 rounded-xl shrink-0"><Sparkles className="w-6 h-6 text-indigo-500" /></div>
                   <div>
                     <h4 className="font-black text-lg mb-1">Floating Tutor Bubble</h4>
-                    <p className="text-muted-foreground text-sm">Kaksha Guru is now a persistent floating button on every page — tap to open a quick chat window or expand to full screen.</p>
+                    <p className="text-muted-foreground text-sm">Coach is now a persistent floating button on every page — tap to open a quick chat window or expand to full screen.</p>
                   </div>
                 </CardContent>
               </Card>

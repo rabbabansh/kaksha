@@ -23,7 +23,7 @@ export default async function ChatPage() {
           📕
         </div>
         <div>
-          <h1 className="text-xl font-extrabold tracking-tight">Kaksha Guru</h1>
+          <h1 className="text-xl font-extrabold tracking-tight">Coach</h1>
           <p className="text-xs text-muted-foreground font-medium">Your personal 24/7 CAT prep companion</p>
         </div>
       </div>

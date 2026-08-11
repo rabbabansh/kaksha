@@ -20,6 +20,7 @@ import {
   RotateCcw
 } from 'lucide-react';
 import Link from 'next/link';
+import { ReportDialog } from '@/components/report-dialog';
 
 interface DailySetClientProps {
   type: 'RC' | 'DILR';
@@ -243,9 +244,12 @@ export function DailySetClient({ type }: DailySetClientProps) {
                   <span className="text-xs font-black text-muted-foreground uppercase tracking-wider">
                     Question {currentIndex + 1} of {questions.length}
                   </span>
-                  <Badge variant="secondary" className="text-[10px] font-bold">
-                    {currentQ.question_type || 'MCQ'}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="text-[10px] font-bold">
+                      {currentQ.question_type || 'MCQ'}
+                    </Badge>
+                    <ReportDialog questionId={currentQ.question_id} />
+                  </div>
                 </div>
               </CardHeader>
 

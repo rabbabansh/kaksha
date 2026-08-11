@@ -195,7 +195,7 @@ const SECTIONALS_MOCKS = [
 ];
 
 export function PracticeLibraryClient({ progressRecords }: PracticeLibraryClientProps) {
-  const [activeTab, setActiveTab] = useState<'paths' | 'sprints' | 'mixed' | 'sectionals'>('paths');
+  const [activeTab, setActiveTab] = useState<'sprints' | 'mixed' | 'sectionals'>('sprints');
   const [searchQuery, setSearchQuery] = useState('');
   const [sectionFilter, setSectionFilter] = useState<string>('All');
 
@@ -288,15 +288,22 @@ export function PracticeLibraryClient({ progressRecords }: PracticeLibraryClient
           <DailyTargetsWidget />
         </div>
 
+        {/* Practice Bank Access Button / Search Bar */}
+        <div className="max-w-xl mx-auto mb-6">
+          <Link href="/practice/bank" className="block w-full">
+            <div className="flex items-center gap-3 px-4 py-3 bg-muted/40 hover:bg-muted/80 border border-border/60 hover:border-primary/40 rounded-2xl text-left transition-all duration-200 cursor-pointer shadow-sm">
+              <Search className="h-5 w-5 text-muted-foreground shrink-0" />
+              <div className="flex-1">
+                <span className="block font-bold text-sm text-foreground">Looking for a specific PYQ?</span>
+                <span className="block text-[10px] text-muted-foreground">Search and filter all past CAT questions by year, section, topic, or content in the Practice Bank →</span>
+              </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
+            </div>
+          </Link>
+        </div>
+
         {/* Tab Switcher */}
         <div className="inline-flex p-1 bg-muted rounded-xl gap-1 overflow-x-auto max-w-full">
-          <Button 
-            variant={activeTab === 'paths' ? 'default' : 'ghost'} 
-            onClick={() => setActiveTab('paths')}
-            className="rounded-lg px-6"
-          >
-            <MapIcon className="h-4 w-4 mr-2" /> Master Paths
-          </Button>
           <Button 
             variant={activeTab === 'sprints' ? 'default' : 'ghost'} 
             onClick={() => setActiveTab('sprints')}
@@ -320,11 +327,6 @@ export function PracticeLibraryClient({ progressRecords }: PracticeLibraryClient
           </Button>
         </div>
       </div>
-
-      {/* ---------------- Master Paths Tab ---------------- */}
-      {activeTab === 'paths' && (
-        <MasterPathsClient progressRecords={progressRecords} />
-      )}
 
       {/* ---------------- Sprint Modules Tab ---------------- */}
       {activeTab === 'sprints' && (

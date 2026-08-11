@@ -166,8 +166,8 @@ export function DailyTargetsWidget() {
               }`}
             >
               <div>
-                <div className="flex items-center justify-between mb-2.5">
-                  <Badge variant={t.isBonus ? "default" : "outline"} className={`text-[10px] font-black tracking-wider uppercase ${t.isBonus ? 'bg-orange-500 hover:bg-orange-600' : ''}`}>
+                <div className="flex flex-wrap items-center justify-between gap-1 mb-2.5">
+                  <Badge variant={t.isBonus ? "default" : "outline"} className={`text-[10px] font-black tracking-wider uppercase whitespace-nowrap shrink-0 ${t.isBonus ? 'bg-orange-500 hover:bg-orange-600' : ''}`}>
                     {t.badge}
                   </Badge>
                   {t.attemptedToday ? (
