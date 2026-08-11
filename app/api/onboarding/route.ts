@@ -27,20 +27,24 @@ export async function POST(request: NextRequest) {
         const body = await request.json();
         const { age, targetExamYear, selfStrengths, selfWeaknesses } = body;
 
+        // Sanitize values to prevent NaN or undefined crashes (especially for "Skip for now" actions)
+        const parsedAge = (age && !isNaN(parseInt(age))) ? parseInt(age) : null;
+        const examYear = targetExamYear ? targetExamYear.toString() : '';
+
         // Upsert user profile
         await prisma.userProfile.upsert({
             where: { userId: user.id },
             update: {
-                age: parseInt(age),
-                targetExamYear: targetExamYear.toString(),
+                age: parsedAge,
+                targetExamYear: examYear,
                 selfStrengths: JSON.stringify(selfStrengths || []),
                 selfWeaknesses: JSON.stringify(selfWeaknesses || []),
                 onboardingCompleted: true,
             },
             create: {
                 userId: user.id,
-                age: parseInt(age),
-                targetExamYear: targetExamYear.toString(),
+                age: parsedAge,
+                targetExamYear: examYear,
                 selfStrengths: JSON.stringify(selfStrengths || []),
                 selfWeaknesses: JSON.stringify(selfWeaknesses || []),
                 onboardingCompleted: true,
