@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { ReportDialog } from '@/components/report-dialog';
+import { Input } from '@/components/ui/input';
 
 interface DailySetClientProps {
   type: 'RC' | 'DILR';
@@ -259,39 +260,67 @@ export function DailySetClient({ type }: DailySetClientProps) {
                   <MarkdownRenderer content={currentQ.question_html || ''} />
                 </div>
 
-                {/* Options List */}
+                {/* Options List / TITA input */}
                 <div className="space-y-2.5">
-                  {['option_a_html', 'option_b_html', 'option_c_html', 'option_d_html', 'option_e_html'].map((optKey, idx) => {
-                    const optVal = currentQ[optKey];
-                    if (!optVal) return null;
-                    const letter = String.fromCharCode(65 + idx);
-                    const isSelected = answers[currentQ.question_id] === letter;
-                    const isCorrectAnswer = (currentQ.answer || '').trim().toUpperCase() === letter;
+                  {currentQ.question_type === 'TITA' ? (
+                    <div className="space-y-2">
+                      <label className="text-xs font-semibold text-muted-foreground uppercase">Type in the answer (TITA)</label>
+                      <Input
+                        placeholder="Type your answer here..."
+                        value={answers[currentQ.question_id] || ''}
+                        onChange={(e) => {
+                          if (!submitted) {
+                            setAnswers(prev => ({
+                              ...prev,
+                              [currentQ.question_id]: e.target.value
+                            }));
+                          }
+                        }}
+                        disabled={submitted}
+                        className={`h-12 rounded-xl text-base font-semibold ${
+                          submitted
+                            ? (answers[currentQ.question_id]?.trim().toLowerCase() === (currentQ.answer || '').trim().toLowerCase()
+                              ? 'border-emerald-500 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300'
+                              : 'border-red-500 bg-red-500/10 text-red-800 dark:text-red-300')
+                            : answers[currentQ.question_id]
+                              ? 'border-primary ring-2 ring-primary/20'
+                              : ''
+                        }`}
+                      />
+                    </div>
+                  ) : (
+                    ['option_a_html', 'option_b_html', 'option_c_html', 'option_d_html', 'option_e_html'].map((optKey, idx) => {
+                      const optVal = currentQ[optKey];
+                      if (!optVal || optVal === 'N/A') return null;
+                      const letter = String.fromCharCode(65 + idx);
+                      const isSelected = answers[currentQ.question_id] === letter;
+                      const isCorrectAnswer = (currentQ.answer || '').trim().toUpperCase() === letter;
 
-                    let optStyle = 'border-border/70 hover:border-primary/50 hover:bg-muted/30';
-                    if (isSelected) optStyle = 'border-primary bg-primary/5 ring-1 ring-primary';
-                    if (submitted) {
-                      if (isCorrectAnswer) optStyle = 'border-emerald-500 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300';
-                      else if (isSelected && !isCorrectAnswer) optStyle = 'border-red-500 bg-red-500/10 text-red-800 dark:text-red-300';
-                    }
+                      let optStyle = 'border-border/70 hover:border-primary/50 hover:bg-muted/30';
+                      if (isSelected) optStyle = 'border-primary bg-primary/5 ring-1 ring-primary';
+                      if (submitted) {
+                        if (isCorrectAnswer) optStyle = 'border-emerald-500 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300';
+                        else if (isSelected && !isCorrectAnswer) optStyle = 'border-red-500 bg-red-500/10 text-red-800 dark:text-red-300';
+                      }
 
-                    return (
-                      <div
-                        key={letter}
-                        onClick={() => handleSelectAnswer(letter)}
-                        className={`p-3.5 rounded-xl border text-xs flex items-start gap-3 cursor-pointer transition-all ${optStyle}`}
-                      >
-                        <span className={`h-6 w-6 rounded-lg font-black text-xs flex items-center justify-center shrink-0 border ${
-                          isSelected ? 'bg-primary text-primary-foreground border-primary' : 'bg-muted text-foreground border-border'
-                        }`}>
-                          {letter}
-                        </span>
-                        <div className="flex-1 min-w-0 pt-0.5">
-                          <MarkdownRenderer content={optVal} />
+                      return (
+                        <div
+                          key={letter}
+                          onClick={() => handleSelectAnswer(letter)}
+                          className={`p-3.5 rounded-xl border text-xs flex items-start gap-3 cursor-pointer transition-all ${optStyle}`}
+                        >
+                          <span className={`h-6 w-6 rounded-lg font-black text-xs flex items-center justify-center shrink-0 border ${
+                            isSelected ? 'bg-primary text-primary-foreground border-primary' : 'bg-muted text-foreground border-border'
+                          }`}>
+                            {letter}
+                          </span>
+                          <div className="flex-1 min-w-0 pt-0.5">
+                            <MarkdownRenderer content={optVal} />
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })
+                  )}
                 </div>
 
                 {/* Explanation (After submission) */}

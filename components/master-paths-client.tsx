@@ -74,7 +74,7 @@ const PATHS: Record<string, any[]> = {
 };
 
 export function MasterPathsClient({ progressRecords }: { progressRecords: ProgressRecord[] }) {
-  const [activeSection, setActiveSection] = useState('QA');
+  const [activeSection, setActiveSection] = useState('VARC');
 
   const { nodeStates, progressPercent, currentUnlockIndex } = useMemo(() => {
     const states: Record<string, { status: 'locked' | 'unlocked' | 'mastered' | 'cracked', accuracy: number }> = {};
@@ -118,7 +118,7 @@ export function MasterPathsClient({ progressRecords }: { progressRecords: Progre
              states[node.id] = { status: 'unlocked', accuracy: states[node.id]?.accuracy || 0 };
           }
        }
-    });
+     });
     
     // Overall completion %
     const masteredCount = path.filter(n => states[n.id]?.status === 'mastered').length;
@@ -131,7 +131,7 @@ export function MasterPathsClient({ progressRecords }: { progressRecords: Progre
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       
       <div className="flex gap-2 bg-muted p-1 rounded-xl w-fit mx-auto mb-10 shadow-sm border border-border/50">
-         {['QA', 'VARC', 'DILR'].map(sec => (
+         {['VARC', 'DILR', 'QA'].map(sec => (
             <Button 
                key={sec} 
                variant={activeSection === sec ? 'default' : 'ghost'} 

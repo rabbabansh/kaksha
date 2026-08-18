@@ -66,7 +66,27 @@ export default async function TestPage({
     questionsBySection[sName].push(q);
   });
 
-  const sections = Object.keys(questionsBySection).filter(s => s !== 'Unknown');
+  const SECTION_ORDER = [
+    'Verbal Ability & Reading Comprehension',
+    'Data Interpretation & Logical Reasoning',
+    'Quantitative Ability'
+  ];
+
+  const sections = Object.keys(questionsBySection)
+    .filter(s => s !== 'Unknown')
+    .sort((a, b) => SECTION_ORDER.indexOf(a) - SECTION_ORDER.indexOf(b));
+
+  // Sort the questions array itself according to the custom section order, then question_id
+  questions.sort((a, b) => {
+    const aSecIndex = SECTION_ORDER.indexOf(a.section || '');
+    const bSecIndex = SECTION_ORDER.indexOf(b.section || '');
+    if (aSecIndex !== bSecIndex) {
+      return aSecIndex - bSecIndex;
+    }
+    const aId = parseInt(a.question_id) || 0;
+    const bId = parseInt(b.question_id) || 0;
+    return aId - bId;
+  });
 
   // If explore mode, show explore view
   if (mode === 'explore') {

@@ -261,9 +261,9 @@ export function PYQView({ byYearSlot }: PYQViewProps) {
         {selectedYear && selectedSlot && (
           <div className="space-y-4">
             <Card>
-              <CardHeader><CardTitle>QA</CardTitle></CardHeader>
+              <CardHeader><CardTitle>VARC</CardTitle></CardHeader>
               <QuestionGrid 
-                questions={qaQuestions} 
+                questions={varcQuestions} 
                 onQuestionSelect={setActiveQuestion}
                 userAnswers={testAnswers}
                 isTestMode={isTestMode}
@@ -279,9 +279,9 @@ export function PYQView({ byYearSlot }: PYQViewProps) {
               />
             </Card>
             <Card>
-              <CardHeader><CardTitle>VARC</CardTitle></CardHeader>
+              <CardHeader><CardTitle>QA</CardTitle></CardHeader>
               <QuestionGrid 
-                questions={varcQuestions} 
+                questions={qaQuestions} 
                 onQuestionSelect={setActiveQuestion}
                 userAnswers={testAnswers}
                 isTestMode={isTestMode}

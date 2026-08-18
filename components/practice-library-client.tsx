@@ -342,7 +342,7 @@ export function PracticeLibraryClient({ progressRecords }: PracticeLibraryClient
               />
             </div>
             <div className="flex gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
-              {['All', 'QA', 'DILR', 'VARC'].map((abbr) => (
+              {['All', 'VARC', 'DILR', 'QA'].map((abbr) => (
                 <Button
                   key={abbr}
                   variant={sectionFilter === abbr ? 'default' : 'outline'}

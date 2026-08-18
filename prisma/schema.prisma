@@ -185,7 +185,7 @@ model ReportedQuestion {
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   reason      String
-  details     String?
+  details     String?   @map("customReason")
   status      String   @default("PENDING") // PENDING, REVIEWED, RESOLVED
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
