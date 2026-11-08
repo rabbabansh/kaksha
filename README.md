@@ -1,36 +1,29 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Kaksha 
 
-## Getting Started
+> An AI-driven, highly targeted preparation platform for the Common Admission Test (CAT). 
 
-First, run the development server:
+Kaksha replaces generic mock tests with a personalized, data-backed study engine. By combining advanced diagnostic logic with a massive structured database, it maps out individualized learning paths to optimize study outcomes and boost percentile scores.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+* **🧠 AI-Driven Diagnostic Engine:** Adapts to your performance, identifying weak concepts and serving targeted questions to patch knowledge gaps.
+* **📚 Comprehensive PYQ Database:** A cleanly structured, tagged database of 4,200+ Past Year Questions (PYQs) with rich metadata for hyper-specific filtering.
+* **📊 Personalized Analytics:** Tracks accuracy, time-per-question, and topic-wise proficiency, giving users a real-time dashboard of their CAT readiness.
+* **🎯 Dynamic Learning Paths:** Moves away from static testing by generating custom practice blocks based on historical performance data.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🤝 Contributing
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Contributions are welcome! If you have suggestions to improve the diagnostic algorithms or want to add to the question database:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-## Learn More
+## 📄 License
 
-To learn more about Next.js, take a look at the following resources:
+Distributed under the MIT License. See `LICENSE` for more information.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 📬 Contact
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+**Ansh Babbar**  
+[LinkedIn](https://linkedin.com/in/anshbabbar) | [X (Twitter)](https://x.com/Rabbabansh) | anshlbabbar@gmail.com
